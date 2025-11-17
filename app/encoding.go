@@ -1,26 +1,39 @@
 package app
 
-// NOTE:
-// This file will later contain the encoding configuration for NOORCHAIN,
-// wiring together the Protobuf and JSON codecs required by the Cosmos SDK
-// and Ethermint (for EVM compatibility).
-//
-// For now, we only define minimal placeholder types and functions so that
-// the project structure is clear and ready to be extended.
+import (
+	"github.com/cosmos/cosmos-sdk/client"
+	sdkcodec "github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+)
 
+// EncodingConfig holds the concrete encoding types used by NOORCHAIN.
+//
+// This is the standard pattern used by modern Cosmos SDK chains:
+// - InterfaceRegistry: used to register interfaces and implementations
+// - Marshaler (Codec): protobuf codec used to (de)serialize messages
+// - TxConfig: configuration and encoder/decoder for transactions
+// - Amino: legacy codec (optional but still often kept for backwards compatibility)
 type EncodingConfig struct {
-    // In a full Cosmos SDK app, this struct usually contains the following:
-    // - InterfaceRegistry
-    // - Codec (Proto codec)
-    // - TxConfig
-    // - Amino (legacy codec)
-    //
-    // We keep it empty for now and will replace it when we wire Cosmos SDK.
+	InterfaceRegistry codectypes.InterfaceRegistry
+	Marshaler         sdkcodec.Codec
+	TxConfig          client.TxConfig
+	Amino             *sdkcodec.LegacyAmino
 }
 
 // MakeEncodingConfig returns a placeholder encoding configuration.
-// In the next phases, it will be updated to build a real Cosmos SDK
-// encoding configuration, including all NOORCHAIN modules.
+//
+// IMPORTANT:
+// - For now, all fields are nil / zero values.
+// - In next phases, this function will be updated to:
+//   - build a proper InterfaceRegistry
+//   - create a Protobuf codec
+//   - create a TxConfig
+//   - register all NOORCHAIN modules (including PoSS)
 func MakeEncodingConfig() EncodingConfig {
-    return EncodingConfig{}
+	return EncodingConfig{
+		InterfaceRegistry: nil,
+		Marshaler:         nil,
+		TxConfig:          nil,
+		Amino:             nil,
+	}
 }
