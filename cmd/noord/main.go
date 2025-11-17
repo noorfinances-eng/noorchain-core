@@ -1,9 +1,17 @@
 package main
 
 import (
-	"fmt"
+    "log"
+
+    "github.com/noorfinances-eng/noorchain-core/app"
 )
 
 func main() {
-	fmt.Println("NOORCHAIN node placeholder - Cosmos SDK + Ethermint will be wired here.")
+    // For now we only create and start a very simple placeholder application.
+    // In the next steps, this will be replaced by a full Cosmos SDK + Ethermint node.
+    noa := app.NewNoorchainApp()
+
+    if err := noa.Start(); err != nil {
+        log.Fatalf("failed to start NOORCHAIN node: %v", err)
+    }
 }
