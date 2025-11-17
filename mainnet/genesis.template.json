@@ -1,0 +1,14 @@
+{
+  "//note": "This is a template for NOORCHAIN mainnet genesis. It is NOT final.",
+  "chain_id": "noorchain-1",
+  "app_state": {
+    "//distribution": "Genesis distribution 5% Foundation / 5% Dev / 5% PoSS Stimulus / 5% Pre-sale / 80% PoSS will be added here.",
+    "auth": {},
+    "bank": {},
+    "staking": {},
+    "gov": {},
+    "evm": {},
+    "noorsignal": {}
+  },
+  "genesis_time": "2025-12-01T00:00:00Z"
+}
