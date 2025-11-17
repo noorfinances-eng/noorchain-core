@@ -8,19 +8,19 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-// NewNoorchainAppWithCosmos defines the *future* real Cosmos SDK application
+// NewNoorchainAppWithCosmos defines the future real Cosmos SDK application
 // constructor for NOORCHAIN.
 //
-// IMPORTANT:
-// - This is a **skeleton only** at this stage.
-// - It is NOT yet used by cmd/noord/main.go.
-// - It exists to define the structure and parameters we will use later.
+// At this stage, this function only:
+// - receives the classical Cosmos SDK constructor parameters
+// - creates the encoding config
+// - returns a minimal App with BaseApp still nil
 //
-// In the next technical phases, this function will be expanded to:
-// - create a real BaseApp
-// - configure encoding
-// - register all modules and keepers
-// - wire Ethermint (EVM) and the PoSS module.
+// In the next phases, we will:
+// - create baseapp.NewBaseApp()
+// - wire encoding, keepers, module manager
+// - integrate Ethermint (EVM)
+// - integrate PoSS
 func NewNoorchainAppWithCosmos(
 	logger sdk.Logger,
 	db dbm.DB,
@@ -28,23 +28,24 @@ func NewNoorchainAppWithCosmos(
 	loadLatest bool,
 	appOpts interface{},
 ) *App {
-	// Placeholder: in the future we will build a real BaseApp here using:
-	//
-	// baseapp.NewBaseApp(
+
+	// --- 1) Create encoding configuration (currently empty skeleton)
+	encCfg := MakeEncodingConfig()
+	_ = encCfg // placeholder usage to avoid unused variable
+
+	// --- 2) Placeholder: in future we will create BaseApp like:
+	// base := baseapp.NewBaseApp(
 	//     AppName,
 	//     logger,
 	//     db,
-	//     txDecoder,
+	//     encCfg.TxConfig.TxDecoder(),
 	//     baseapp.SetChainID(ChainID),
-	//     ...
 	// )
 	//
-	// For now, we simply create the same placeholder App as in NewNoorchainApp(),
-	// but we keep this separate so that we can progressively migrate the code
-	// without breaking the minimal node skeleton.
+	// And assign: BaseApp: base,
 
 	return &App{
-		BaseApp: nil, // will be set to a real BaseApp later
+		BaseApp: nil,                 // will be replaced later
 		Name:    "NOORCHAIN",
 		Version: "0.0.1-dev",
 	}
