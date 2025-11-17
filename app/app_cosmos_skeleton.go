@@ -10,17 +10,6 @@ import (
 
 // NewNoorchainAppWithCosmos defines the future real Cosmos SDK application
 // constructor for NOORCHAIN.
-//
-// At this stage, this function only:
-// - receives the classical Cosmos SDK constructor parameters
-// - creates the encoding config
-// - returns a minimal App with BaseApp still nil
-//
-// In the next phases, we will:
-// - create baseapp.NewBaseApp()
-// - wire encoding, keepers, module manager
-// - integrate Ethermint (EVM)
-// - integrate PoSS
 func NewNoorchainAppWithCosmos(
 	logger sdk.Logger,
 	db dbm.DB,
@@ -29,23 +18,18 @@ func NewNoorchainAppWithCosmos(
 	appOpts interface{},
 ) *App {
 
-	// --- 1) Create encoding configuration (currently empty skeleton)
+	// --- 1) Create encoding configuration (still empty skeleton)
 	encCfg := MakeEncodingConfig()
-	_ = encCfg // placeholder usage to avoid unused variable
+	_ = encCfg
 
-	// --- 2) Placeholder: in future we will create BaseApp like:
-	// base := baseapp.NewBaseApp(
-	//     AppName,
-	//     logger,
-	//     db,
-	//     encCfg.TxConfig.TxDecoder(),
-	//     baseapp.SetChainID(ChainID),
-	// )
-	//
-	// And assign: BaseApp: base,
+	// --- 2) Prepare BaseApp variable (not initialized yet)
+	// In future steps:
+	// base = baseapp.NewBaseApp(...)
+	var base *baseapp.BaseApp = nil
 
+	// --- 3) Return a partially prepared App
 	return &App{
-		BaseApp: nil,                 // will be replaced later
+		BaseApp: base,   // nil for now
 		Name:    "NOORCHAIN",
 		Version: "0.0.1-dev",
 	}
