@@ -1,32 +1,34 @@
 # NOORCHAIN Core — Technical Architecture (Draft)
 
-This document describes the **technical architecture** of the NOORCHAIN core
-repository. It is focused on code structure, modules, and how the Cosmos SDK
-and Ethermint (EVM) will be wired in future steps.
+This document describes the **technical architecture** of the NOORCHAIN Core
+repository. It explains the current structure, the planned modules, and how
+Cosmos SDK + Ethermint + PoSS will be integrated.
 
-> Status: skeleton only — will be updated as we integrate Cosmos SDK, Ethermint and PoSS.
-
----
-
-## 1. High-level goals
-
-- Independent Swiss blockchain (**NOORCHAIN**)
-- Built on **Cosmos SDK** + **CometBFT**
-- EVM compatibility via **Ethermint**
-- Custom consensus layer logic via a PoS-like validator set,
-  plus a **Proof of Signal Social (PoSS)** module that mints rewards
-  according to social signals instead of hash power.
-
-Token:
-
-- Native token: `NUR`
-- Fixed supply: `299,792,458 NUR`
-- Halving every 8 years (time-based, not block-based)
-- Genesis distribution: 5% / 5% / 5% / 5% / 80% (Foundation, Dev, PoSS Stimulus, Pre-sale, PoSS)
+> Status: draft — will be updated progressively as we integrate Cosmos SDK,
+> Ethermint (EVM), and the custom PoSS module.
 
 ---
 
-## 2. Repository structure (current)
+## 1. High-Level Technical Goals
+
+- Build an independent Swiss blockchain: **NOORCHAIN**
+- Based on:
+  - **Cosmos SDK**
+  - **CometBFT (Tendermint)** for consensus
+  - **Ethermint** for EVM compatibility
+- Add a custom module: **PoSS (Proof of Signal Social)**  
+  → social signals validated on-chain  
+  → NUR rewards distributed automatically (70/30 split)
+
+### Token Economics (technical reference)
+- Native token: **NUR**
+- Fixed supply: **299,792,458 NUR**
+- Halving: every **8 years** (time-based)
+- Genesis distribution: **5% / 5% / 5% / 5% / 80%**
+
+---
+
+## 2. Current Repository Structure
 
 ```text
 noorchain-core/
@@ -39,7 +41,8 @@ noorchain-core/
 │   └── encoding.go
 │
 ├── docs/
-│   └── architecture.md   (this file)
+│   ├── architecture.md
+│   └── setup-dev.md
 │
 ├── go.mod
 ├── Makefile
