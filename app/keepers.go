@@ -1,45 +1,56 @@
 package app
 
+import (
+	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
+	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
+	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
+)
+
 // AppKeepers définit la liste des "keepers" (gestionnaires de modules)
 // que NOORCHAIN utilisera.
 //
-// IMPORTANT :
-// - À ce stade, tous les champs sont de type interface{} (placeholders).
-// - Dans des phases techniques futures, chaque champ sera remplacé
-//   par le type concret du keeper correspondant (ex: authkeeper.AccountKeeper).
+// PROVISOIREMENT :
+// - Certains champs ont déjà leur type concret (modules de base).
+// - Les autres restent en interface{} (placeholders) pour simplifier.
+// - Plus tard, tous les champs seront remplacés par leurs types réels.
 //
 // L'objectif de ce fichier est de poser une structure claire de
-// l'architecture des modules, sans encore entrer dans les détails
-// d'implémentation Cosmos SDK / Ethermint.
+// l'architecture des modules, en avançant étape par étape.
 type AppKeepers struct {
 	// --- Modules Cosmos de base ---
 
-	// Gestion des comptes (adresses, comptes de base, etc.)
-	AccountKeeper interface{}
+	// Gestion des comptes (adresses, comptes de base, etc.).
+	AccountKeeper authkeeper.AccountKeeper
 
 	// Gestion des soldes & transferts de tokens.
-	BankKeeper interface{}
+	BankKeeper bankkeeper.Keeper
 
 	// Gestion du staking (validateurs, délégations, etc.).
-	StakingKeeper interface{}
+	StakingKeeper stakingkeeper.Keeper
 
 	// Module de "mint" standard (NOORCHAIN n'utilisera pas forcément
 	// ce module pour la logique PoSS, mais il reste présent par structure).
+	// TODO: remplacer interface{} par le type concret du MintKeeper.
 	MintKeeper interface{}
 
 	// Gestion du slashing des validateurs (sanctions).
+	// TODO: remplacer interface{} par le type concret du SlashingKeeper.
 	SlashingKeeper interface{}
 
 	// Gouvernance on-chain (votes, propositions, etc.).
-	GovKeeper interface{}
+	GovKeeper govkeeper.Keeper
 
 	// Gestion centralisée des paramètres de modules.
-	ParamsKeeper interface{}
+	ParamsKeeper paramskeeper.Keeper
 
 	// Module de gestion des crises (haltes de la chaîne, checks invariants).
+	// TODO: remplacer interface{} par le type concret du CrisisKeeper.
 	CrisisKeeper interface{}
 
 	// Gestion des mises à jour de la chaîne (upgrades).
+	// TODO: remplacer interface{} par le type concret de l'UpgradeKeeper.
 	UpgradeKeeper interface{}
 
 	// --- Modules IBC / transfert (future) ---
@@ -52,7 +63,7 @@ type AppKeepers struct {
 
 	// --- Modules Ethermint / EVM (future) ---
 
-	// Module EVM principal (execution de smart contracts Solidity).
+	// Module EVM principal (exécution de smart contracts Solidity).
 	EvmKeeper interface{}
 
 	// Module de gestion du "fee market" EVM (EIP-1559 style).
