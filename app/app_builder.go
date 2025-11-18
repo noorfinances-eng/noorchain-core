@@ -18,10 +18,6 @@ import (
 // - "load latest" flag
 // - app options (config)
 // - encoding configuration
-//
-// For now, it only prepares the structure and returns a nil BaseApp.
-// In later phases, BuildBaseApp will construct a real baseapp.BaseApp
-// with all modules wired.
 type AppBuilder struct {
 	logger     sdk.Logger
 	db         dbm.DB
@@ -52,11 +48,45 @@ func NewAppBuilder(
 	}
 }
 
-// BuildBaseApp will, in future phases, create and configure a real
-// baseapp.BaseApp instance using Cosmos SDK and Ethermint.
+// BuildBaseApp creates a minimal baseapp.BaseApp instance.
 //
-// For now, it only returns nil as a placeholder so that the structure
-// compiles and can be filled step by step.
+// For now, this is still a very early version:
+// - it uses the encoding config skeleton (TxConfig may be nil)
+// - it sets the chain ID
+// - it optionally loads the latest version from the DB
+//
+// Later, this method will be extended to:
+// - use a real TxDecoder from encCfg.TxConfig
+// - set all necessary BaseApp options
+// - integrate Ethermint (EVM) and other modules.
 func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
-	return nil
+	// Derive the transaction decoder from the encoding config if available.
+	var txDecoder sdk.TxDecoder
+	if b.encCfg.TxConfig != nil {
+		txDecoder = b.encCfg.TxConfig.TxDecoder()
+	} else {
+		// For now, we allow a nil decoder; this will be replaced later when
+		// the encoding configuration is fully wired.
+		txDecoder = nil
+	}
+
+	// Create a minimal BaseApp instance.
+	base := baseapp.NewBaseApp(
+		AppName,
+		b.logger,
+		b.db,
+		txDecoder,
+		baseapp.SetChainID(ChainID),
+	)
+
+	// Optionally load the latest version from the DB.
+	// NOTE:
+	// - In a future iteration, we will return an error instead of panicking.
+	if b.loadLatest && base != nil {
+		if err := base.LoadLatestVersion(); err != nil {
+			panic(err)
+		}
+	}
+
+	return base
 }
