@@ -8,16 +8,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-// AppBuilder is a helper struct that will progressively build the full
-// NOORCHAIN Cosmos SDK application.
-//
-// It centralises:
-// - logger
-// - database handle
-// - tracing writer
-// - "load latest" flag
-// - app options (config)
-// - encoding configuration
+// AppBuilder est un helper qui va progressivement construire
+// l'application Cosmos SDK complète de NOORCHAIN.
 type AppBuilder struct {
 	logger     sdk.Logger
 	db         dbm.DB
@@ -27,8 +19,8 @@ type AppBuilder struct {
 	encCfg     EncodingConfig
 }
 
-// NewAppBuilder creates a new AppBuilder instance using the given
-// Cosmos-style constructor parameters.
+// NewAppBuilder crée un nouveau AppBuilder en utilisant les paramètres
+// de constructeur classiques Cosmos (logger, DB, trace, etc.).
 func NewAppBuilder(
 	logger sdk.Logger,
 	db dbm.DB,
@@ -48,29 +40,15 @@ func NewAppBuilder(
 	}
 }
 
-// BuildBaseApp creates a minimal baseapp.BaseApp instance.
+// BuildBaseApp crée une instance minimale de baseapp.BaseApp.
 //
-// For now, this is still a very early version:
-// - it uses the encoding config skeleton (TxConfig may be nil)
-// - it sets the chain ID
-// - it optionally loads the latest version from the DB
-//
-// Later, this method will be extended to:
-// - use a real TxDecoder from encCfg.TxConfig
-// - set all necessary BaseApp options
-// - integrate Ethermint (EVM) and other modules.
+// Maintenant que MakeEncodingConfig() est réel, on utilise toujours
+// un TxDecoder valide provenant de encCfg.TxConfig.
 func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
-	// Derive the transaction decoder from the encoding config if available.
-	var txDecoder sdk.TxDecoder
-	if b.encCfg.TxConfig != nil {
-		txDecoder = b.encCfg.TxConfig.TxDecoder()
-	} else {
-		// For now, we allow a nil decoder; this will be replaced later when
-		// the encoding configuration is fully wired.
-		txDecoder = nil
-	}
+	// Récupérer le décodeur de transactions depuis la config d'encodage.
+	txDecoder := b.encCfg.TxConfig.TxDecoder()
 
-	// Create a minimal BaseApp instance.
+	// Créer une BaseApp minimale.
 	base := baseapp.NewBaseApp(
 		AppName,
 		b.logger,
@@ -79,11 +57,10 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 		baseapp.SetChainID(ChainID),
 	)
 
-	// Optionally load the latest version from the DB.
-	// NOTE:
-	// - In a future iteration, we will return an error instead of panicking.
+	// Charger la dernière version stockée en DB si demandé.
 	if b.loadLatest && base != nil {
 		if err := base.LoadLatestVersion(); err != nil {
+			// Plus tard, on remplacera ce panic par une gestion propre de l'erreur.
 			panic(err)
 		}
 	}
