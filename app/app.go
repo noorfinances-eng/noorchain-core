@@ -6,40 +6,46 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 )
 
-// App is the main NOORCHAIN application type.
+// App est le type principal de l'application NOORCHAIN.
 //
-// For now, it is a very simple skeleton that only holds:
-// - a reference to a Cosmos SDK BaseApp (currently nil, will be wired later)
-// - a name
-// - a version
-//
-// In the next technical phases, this struct will be extended to embed
-// all required Cosmos SDK keepers, module managers, and configuration.
+// Il encapsule :
+// - BaseApp : le cœur Cosmos SDK
+// - Name / Version : métadonnées simples
+// - Keepers : structure des gestionnaires de modules (remplie plus tard)
+// - Encoding : configuration d'encodage (codecs, TxConfig, etc.)
 type App struct {
 	*baseapp.BaseApp
 
 	Name    string
 	Version string
+
+	Keepers  AppKeepers
+	Encoding EncodingConfig
 }
 
-// NewNoorchainApp creates a new placeholder instance of the NOORCHAIN app.
+// NewNoorchainApp crée une instance très simple de l'application NOORCHAIN.
 //
-// IMPORTANT:
-// - At this stage, BaseApp is still nil.
-// - Later, this function will be rewritten to fully initialize a Cosmos SDK
-//   application (with logger, DB, encoding, modules, etc.).
+// Cette version est encore "minimaliste" :
+// - BaseApp = nil
+// - Keepers = structure vide
+// - Encoding = MakeEncodingConfig() (codec standard Cosmos)
 func NewNoorchainApp() *App {
+	encCfg := MakeEncodingConfig()
+
 	return &App{
 		BaseApp: nil,
 		Name:    "NOORCHAIN",
 		Version: "0.0.1-dev",
+		Keepers: AppKeepers{},
+		Encoding: encCfg,
 	}
 }
 
-// Start is a placeholder method that will later start the full node logic.
+// Start est une méthode placeholder qui, pour l'instant,
+// se contente d'afficher un message.
 //
-// For now, it just prints a message. In future steps, this will be replaced
-// by proper Cosmos SDK + Ethermint wiring and ABCI server startup.
+// Plus tard, cette méthode pourra démarrer le node complet
+// (ABCI, CometBFT, services, etc.).
 func (a *App) Start() error {
 	fmt.Printf("%s node (version %s) starting...\n", a.Name, a.Version)
 	fmt.Println("Cosmos SDK + Ethermint wiring will be added in the next technical phases.")
