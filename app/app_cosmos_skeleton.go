@@ -8,11 +8,13 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-// NewNoorchainAppWithCosmos defines the future real Cosmos SDK application
-// constructor for NOORCHAIN.
+// NewNoorchainAppWithCosmos définit le constructeur "Cosmos" futur
+// pour l'application NOORCHAIN.
 //
-// It now uses the AppBuilder helper to prepare the application. The builder
-// will progressively be extended to create a real BaseApp and wire all modules.
+// Il utilise AppBuilder pour :
+// - construire un BaseApp réel
+// - récupérer la configuration d'encodage
+// (les keepers et modules seront ajoutés plus tard).
 func NewNoorchainAppWithCosmos(
 	logger sdk.Logger,
 	db dbm.DB,
@@ -21,7 +23,7 @@ func NewNoorchainAppWithCosmos(
 	appOpts interface{},
 ) *App {
 
-	// 1) Create an AppBuilder with all Cosmos-style constructor parameters.
+	// 1) Créer un builder avec les paramètres Cosmos standard.
 	builder := NewAppBuilder(
 		logger,
 		db,
@@ -30,14 +32,18 @@ func NewNoorchainAppWithCosmos(
 		appOpts,
 	)
 
-	// 2) Build the BaseApp using the builder.
-	//    For now, BuildBaseApp() still returns nil as a placeholder.
+	// 2) Construire la BaseApp via le builder.
 	var base *baseapp.BaseApp = builder.BuildBaseApp()
 
-	// 3) Return the NOORCHAIN App instance.
+	// 3) Récupérer la config d'encodage utilisée par ce builder.
+	encCfg := builder.EncodingConfig()
+
+	// 4) Retourner l'instance de l'application NOORCHAIN.
 	return &App{
-		BaseApp: base, // will be non-nil once BuildBaseApp is fully implemented
+		BaseApp: base,   // non-nil quand tout sera câblé
 		Name:    "NOORCHAIN",
 		Version: "0.0.1-dev",
+		Keepers: AppKeepers{}, // sera rempli plus tard
+		Encoding: encCfg,
 	}
 }
