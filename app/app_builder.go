@@ -40,6 +40,12 @@ func NewAppBuilder(
 	}
 }
 
+// EncodingConfig retourne la configuration d'encodage utilisée
+// par ce builder (codec, TxConfig, etc.).
+func (b *AppBuilder) EncodingConfig() EncodingConfig {
+	return b.encCfg
+}
+
 // BuildBaseApp crée une instance minimale de baseapp.BaseApp.
 //
 // Maintenant que MakeEncodingConfig() est réel, on utilise toujours
