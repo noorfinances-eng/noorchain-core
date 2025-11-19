@@ -6,115 +6,67 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-// Signal représente un "signal social" PoSS émis par un participant.
+// Signal représente un signal social PoSS émis sur NOORCHAIN.
 //
-// Il peut s'agir par exemple :
-// - d'une participation vérifiée
-// - d'un micro-don
-// - d'un contenu certifié NOOR
+// Il est d'abord créé par un participant via MsgSubmitSignal, puis
+// potentiellement validé par un curator via MsgValidateSignal.
 //
-// Remarque :
-// - La version finale sera définie en Protobuf (.proto).
-// - Cette struct Go sert de point de départ conceptuel.
+// Les champs de récompense (TotalReward, RewardParticipant,
+// RewardCurator) sont remplis lors de la validation, sur la base de
+// la configuration PoSS (BaseReward, EraIndex, 70/30, etc.).
 type Signal struct {
-	// Identifiant unique du signal (clé simple auto-incrémentée ou dérivée).
-	Id uint64
+	Id          uint64         `json:"id" protobuf:"varint,1,opt,name=id,proto3"`
+	Participant sdk.AccAddress `json:"participant" protobuf:"bytes,2,opt,name=participant,proto3"`
+	Curator     sdk.AccAddress `json:"curator" protobuf:"bytes,3,opt,name=curator,proto3"`
+	Weight      uint32         `json:"weight" protobuf:"varint,4,opt,name=weight,proto3"`
+	Time        time.Time      `json:"time" protobuf:"bytes,5,opt,name=time,proto3,stdtime"`
+	Metadata    string         `json:"metadata" protobuf:"bytes,6,opt,name=metadata,proto3"`
 
-	// Adresse du participant qui a émis le signal.
-	Participant sdk.AccAddress
-
-	// Adresse du curator qui a validé le signal (peut être vide avant validation).
-	Curator sdk.AccAddress
-
-	// Poids du signal (barème PoSS : 0.5x, 1x, 2x, etc. → converti ici en entier).
-	// Exemple : 1 = 1x, 2 = 2x, 5 = 5x.
-	Weight uint32
-
-	// Timestamp approximatif de l'émission / validation du signal.
-	Time time.Time
-
-	// Informations additionnelles (hash de contenu, ID externe, etc.).
-	Metadata string
+	// Champs de récompense PoSS, remplis lors de la validation du signal.
+	TotalReward       uint64 `json:"total_reward" protobuf:"varint,7,opt,name=total_reward,json=totalReward,proto3"`
+	RewardParticipant uint64 `json:"reward_participant" protobuf:"varint,8,opt,name=reward_participant,json=rewardParticipant,proto3"`
+	RewardCurator     uint64 `json:"reward_curator" protobuf:"varint,9,opt,name=reward_curator,json=rewardCurator,proto3"`
 }
 
-// Curator représente un "validateur social" dans le système PoSS.
-//
-// C'est un acteur NOORCHAIN particulier (association, école, ONG, etc.)
-// qui valide des signaux et reçoit une part des récompenses (ex: 30%).
+// Curator représente un validateur de signaux PoSS (Curator NOOR).
 type Curator struct {
-	// Adresse on-chain du curator.
-	Address sdk.AccAddress
-
-	// Niveau / rôle du curator (ex: "bronze", "silver", "gold").
-	// La logique précise sera définie plus tard.
-	Level string
-
-	// Indicateurs simples pour le suivi (non strictement nécessaires
-	// au consensus, mais utiles pour la gouvernance / stats).
-	TotalSignalsValidated uint64
-	Active                bool
+	Address              sdk.AccAddress `json:"address" protobuf:"bytes,1,opt,name=address,proto3"`
+	Level                string         `json:"level" protobuf:"bytes,2,opt,name=level,proto3"`
+	TotalSignalsValidated uint64        `json:"total_signals_validated" protobuf:"varint,3,opt,name=total_signals_validated,json=totalSignalsValidated,proto3"`
+	Active               bool           `json:"active" protobuf:"varint,4,opt,name=active,proto3"`
 }
 
-// PossConfig représente une configuration globale PoSS.
+// PossConfig contient la configuration globale du système PoSS.
 //
-// Elle regroupe les paramètres qui contrôlent :
-// - les récompenses de base
-// - la répartition 70% / 30%
-// - les limites quotidiennes
-// - l'activation / désactivation du module
-// - l'indice d'ère pour le halving (tous les 8 ans).
+// BaseReward : unité de base (ex: 100) pour le calcul, avant halving.
+// ParticipantShare / CuratorShare : parts en pourcentage (ex: 70 / 30).
+// MaxSignalsPerDay : limite de signaux par participant et par jour.
+// Enabled : active ou non le système PoSS.
+// EraIndex : indice d'ère pour le halving (0 = pas de division, 1 = /2, 2 = /4, etc.).
 type PossConfig struct {
-	// Montant de base en NUR (ou en "unur") attribué à un signal de poids 1x.
-	// Pour l'instant, on garde un entier simple; plus tard, ce sera
-	// probablement un sdk.Int ou une DecCoin.
-	BaseReward uint64
-
-	// Part du participant (en pourcentage entier, ex: 70).
-	ParticipantShare uint32
-
-	// Part du curator (en pourcentage entier, ex: 30).
-	CuratorShare uint32
-
-	// Limite max de signaux comptabilisés par jour et par participant.
-	MaxSignalsPerDay uint32
-
-	// Indicateur si le module PoSS est actif.
-	Enabled bool
-
-	// EraIndex représente l'"ère" PoSS actuelle pour le halving :
-	// - 0 : première période de 8 ans (aucun halving, facteur 1)
-	// - 1 : deuxième période (premier halving, facteur 2)
-	// - 2 : troisième période (deuxième halving, facteur 4)
-	// etc.
-	//
-	// La gestion de l'évolution de ce champ (tous les 8 ans) pourra être
-	// faite via gouvernance, paramètres on-chain ou logique externe.
-	EraIndex uint32
+	BaseReward       uint64 `json:"base_reward" protobuf:"varint,1,opt,name=base_reward,json=baseReward,proto3"`
+	ParticipantShare uint32 `json:"participant_share" protobuf:"varint,2,opt,name=participant_share,json=participantShare,proto3"`
+	CuratorShare     uint32 `json:"curator_share" protobuf:"varint,3,opt,name=curator_share,json=curatorShare,proto3"`
+	MaxSignalsPerDay uint32 `json:"max_signals_per_day" protobuf:"varint,4,opt,name=max_signals_per_day,json=maxSignalsPerDay,proto3"`
+	Enabled          bool   `json:"enabled" protobuf:"varint,5,opt,name=enabled,proto3"`
+	EraIndex         uint32 `json:"era_index" protobuf:"varint,6,opt,name=era_index,json=eraIndex,proto3"`
 }
 
-// DefaultPossConfig retourne une configuration PoSS par défaut
-// cohérente avec le modèle NOORCHAIN :
-// - 70% pour le participant
-// - 30% pour le curator
-// - module activé
-// - baseReward et limite journalière placés à des valeurs symboliques
-//   (ajustables plus tard dans le genesis ou par gouvernance).
+// DefaultPossConfig retourne une configuration PoSS par défaut.
 func DefaultPossConfig() PossConfig {
 	return PossConfig{
-		// Exemple symbolique : 100 unités de base par signal 1x.
-		// L'unité réelle (NUR vs unur) sera clarifiée plus tard.
-		BaseReward: 100,
-
+		BaseReward:       100, // valeur symbolique pour V1
 		ParticipantShare: 70,
 		CuratorShare:     30,
-
-		// Exemple : 50 signaux max / jour / participant.
-		MaxSignalsPerDay: 50,
-
-		Enabled: true,
-
-		// Au lancement de NOORCHAIN (année 0 à 8),
-		// aucun halving n'a encore eu lieu.
-		EraIndex: 0,
+		MaxSignalsPerDay: 50, // limite quotidienne par participant
+		Enabled:          true,
+		EraIndex:         0,
 	}
+}
+
+// GenesisState représente l'état initial du module noorsignal.
+type GenesisState struct {
+	Config   PossConfig `json:"config" protobuf:"bytes,1,opt,name=config,proto3"`
+	Signals  []Signal   `json:"signals" protobuf:"bytes,2,rep,name=signals,proto3"`
+	Curators []Curator  `json:"curators" protobuf:"bytes,3,rep,name=curators,proto3"`
 }
