@@ -61,7 +61,8 @@ type Curator struct {
 // - les récompenses de base
 // - la répartition 70% / 30%
 // - les limites quotidiennes
-// - le comportement de halving (géré côté supply globale)
+// - l'activation / désactivation du module
+// - l'indice d'ère pour le halving (tous les 8 ans).
 type PossConfig struct {
 	// Montant de base en NUR (ou en "unur") attribué à un signal de poids 1x.
 	// Pour l'instant, on garde un entier simple; plus tard, ce sera
@@ -79,6 +80,16 @@ type PossConfig struct {
 
 	// Indicateur si le module PoSS est actif.
 	Enabled bool
+
+	// EraIndex représente l'"ère" PoSS actuelle pour le halving :
+	// - 0 : première période de 8 ans (aucun halving, facteur 1)
+	// - 1 : deuxième période (premier halving, facteur 2)
+	// - 2 : troisième période (deuxième halving, facteur 4)
+	// etc.
+	//
+	// La gestion de l'évolution de ce champ (tous les 8 ans) pourra être
+	// faite via gouvernance, paramètres on-chain ou logique externe.
+	EraIndex uint32
 }
 
 // DefaultPossConfig retourne une configuration PoSS par défaut
@@ -101,5 +112,9 @@ func DefaultPossConfig() PossConfig {
 		MaxSignalsPerDay: 50,
 
 		Enabled: true,
+
+		// Au lancement de NOORCHAIN (année 0 à 8),
+		// aucun halving n'a encore eu lieu.
+		EraIndex: 0,
 	}
 }
