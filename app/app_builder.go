@@ -10,13 +10,24 @@ import (
 
 // AppBuilder est un helper qui va progressivement construire
 // l'application Cosmos SDK complète de NOORCHAIN.
+//
+// Il centralise :
+// - logger
+// - base de données
+// - trace store
+// - flag loadLatest
+// - options d'application
+// - configuration d'encodage
+// - clés de store (StoreKeys) pour les modules Cosmos / PoSS.
 type AppBuilder struct {
 	logger     sdk.Logger
 	db         dbm.DB
 	traceStore io.Writer
 	loadLatest bool
 	appOpts    interface{}
-	encCfg     EncodingConfig
+
+	encCfg    EncodingConfig
+	storeKeys StoreKeys
 }
 
 // NewAppBuilder crée un nouveau AppBuilder en utilisant les paramètres
@@ -29,6 +40,7 @@ func NewAppBuilder(
 	appOpts interface{},
 ) *AppBuilder {
 	encCfg := MakeEncodingConfig()
+	storeKeys := NewStoreKeys()
 
 	return &AppBuilder{
 		logger:     logger,
@@ -37,6 +49,7 @@ func NewAppBuilder(
 		loadLatest: loadLatest,
 		appOpts:    appOpts,
 		encCfg:     encCfg,
+		storeKeys:  storeKeys,
 	}
 }
 
@@ -44,6 +57,12 @@ func NewAppBuilder(
 // par ce builder (codec, TxConfig, etc.).
 func (b *AppBuilder) EncodingConfig() EncodingConfig {
 	return b.encCfg
+}
+
+// StoreKeys retourne les clés de store (KV + transient) associées
+// aux modules principaux de NOORCHAIN.
+func (b *AppBuilder) StoreKeys() StoreKeys {
+	return b.storeKeys
 }
 
 // BuildBaseApp crée une instance minimale de baseapp.BaseApp.
