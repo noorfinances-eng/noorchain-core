@@ -8,6 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 )
 
@@ -100,7 +101,8 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 //
 // Étape actuelle :
 // - instanciation réelle du ParamsKeeper
-// - instanciation minimale d'un AccountKeeper
+// - instanciation réelle d'un AccountKeeper
+// - instanciation réelle d'un BankKeeper minimal
 // Les autres keepers seront ajoutés dans des étapes futures.
 func (b *AppBuilder) BuildKeepers() AppKeepers {
 	sk := b.storeKeys
@@ -121,13 +123,6 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 	maccPerms := map[string][]string{}
 
 	// 3) Créer un AccountKeeper minimal.
-	//
-	// NewAccountKeeper utilise :
-	// - codec binaire
-	// - store key pour les comptes
-	// - permissions des comptes module
-	// - une fonction de création de compte de base
-	// - le préfixe Bech32 principal
 	accountKeeper := authkeeper.NewAccountKeeper(
 		enc.Marshaler,
 		sk.AuthKey,
@@ -136,13 +131,33 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 		authtypes.ProtoBaseAccount,
 	)
 
-	// 4) Construire la structure AppKeepers.
+	// 4) Préparer la liste des adresses "bloquées" pour le BankKeeper.
+	//
+	// Ces adresses ne pourront pas recevoir certains types de fonds.
+	// Pour l'instant, on laisse la map vide; elle sera complétée plus tard.
+	blockedAddrs := map[string]bool{}
+
+	// 5) Créer un BankKeeper minimal.
+	//
+	// NewBaseKeeper(cdc, storeKey, accountKeeper, blockedAddrs, authority)
+	// authority est une adresse "autorité" pour certaines opérations
+	// (gov, etc.). Ici, on met une chaîne vide et on l'ajustera plus tard.
+	bankKeeper := bankkeeper.NewBaseKeeper(
+		enc.Marshaler,
+		sk.BankKey,
+		accountKeeper,
+		blockedAddrs,
+		"", // authority (sera défini plus clairement plus tard)
+	)
+
+	// 6) Construire la structure AppKeepers.
 	//
 	// Pour le moment :
-	// - AccountKeeper et ParamsKeeper sont instanciés
+	// - AccountKeeper, BankKeeper et ParamsKeeper sont instanciés.
 	// - les autres keepers seront ajoutés plus tard.
 	return AppKeepers{
 		AccountKeeper: accountKeeper,
+		BankKeeper:    bankKeeper,
 		ParamsKeeper:  paramsKeeper,
 	}
 }
