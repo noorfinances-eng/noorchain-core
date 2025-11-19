@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/cosmos/cosmos-sdk/store/prefix"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 // ModuleName est le nom officiel du module PoSS dans NOORCHAIN.
@@ -38,6 +39,10 @@ var (
 
 	// KeyPrefixConfig indique le préfixe pour la configuration globale PoSS.
 	KeyPrefixConfig = []byte{0x03}
+
+	// KeyPrefixDailyCounters indique le préfixe pour les compteurs quotidiens
+	// "(participant, jour) -> nombre de signaux".
+	KeyPrefixDailyCounters = []byte{0x04}
 )
 
 // GetSignalStore retourne un store préfixé pour les signaux.
@@ -55,6 +60,12 @@ func GetConfigStore(parent prefix.Store) prefix.Store {
 	return prefix.NewStore(parent, KeyPrefixConfig)
 }
 
+// GetDailyCounterStore retourne un store préfixé pour les compteurs
+// quotidiens PoSS.
+func GetDailyCounterStore(parent prefix.Store) prefix.Store {
+	return prefix.NewStore(parent, KeyPrefixDailyCounters)
+}
+
 // SignalKey construit la clé de stockage pour un signal individuel
 // à partir de son identifiant numérique.
 //
@@ -68,4 +79,26 @@ func SignalKey(id uint64) []byte {
 	bz := make([]byte, 8)
 	binary.BigEndian.PutUint64(bz, id)
 	return bz
+}
+
+// DailyCounterKey construit la clé "(participant, jour)" utilisée pour
+// stocker le nombre de signaux émis par un participant donné sur un jour donné.
+//
+// Paramètres :
+// - addr      : adresse du participant
+// - dayBucket : indice de jour (ex: timestampUnix / 86400)
+//
+// Format :
+//   key = addr.Bytes() || dayBucket(8 octets big-endian)
+//
+// Le préfixe KeyPrefixDailyCounters est déjà appliqué par
+// GetDailyCounterStore, donc on ne le rajoute pas ici.
+func DailyCounterKey(addr sdk.AccAddress, dayBucket uint64) []byte {
+	addrBz := addr.Bytes()
+
+	dayBz := make([]byte, 8)
+	binary.BigEndian.PutUint64(dayBz, dayBucket)
+
+	// concaténation : [addr || day]
+	return append(addrBz, dayBz...)
 }
