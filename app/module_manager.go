@@ -2,6 +2,8 @@ package app
 
 import (
 	"github.com/cosmos/cosmos-sdk/types/module"
+
+	noorsignalmodule "github.com/noorfinances-eng/noorchain-core/x/noorsignal"
 )
 
 // AppModules regroupe les éléments liés aux modules Cosmos de NOORCHAIN.
@@ -16,20 +18,19 @@ type AppModules struct {
 // NewAppModuleManager crée un module.Manager pour NOORCHAIN.
 //
 // Étape actuelle :
-// - crée un module.Manager "vide"
-// - ne référence encore aucun module concret
+// - crée un module.Manager avec les modules disponibles
+//   (pour l'instant : seulement le module PoSS noorsignal).
 //
-// Dans des phases futures, on ajoutera ici les modules Cosmos
-// (auth, bank, staking, gov, params, evm, noorsignal, etc.) en appelant
+// Dans des phases futures, on ajoutera ici les autres modules Cosmos
+// (auth, bank, staking, gov, evm, etc.) en appelant
 // module.NewManager(authModule, bankModule, ...).
 func NewAppModuleManager(keepers AppKeepers, encCfg EncodingConfig) AppModules {
-	// Manager vide pour le moment.
+	// 1) Construire le module PoSS (noorsignal) à partir de son Keeper.
+	noorSignalModule := noorsignalmodule.NewAppModule(keepers.NoorSignalKeeper)
+
+	// 2) Créer le module.Manager avec le module PoSS.
 	mm := module.NewManager(
-		// TODO: ajouter les AppModule concrets:
-		// auth.NewAppModule(...),
-		// bank.NewAppModule(...),
-		// gov.NewAppModule(...),
-		// noorsignal.NewAppModule(...), etc.
+		noorSignalModule,
 	)
 
 	return AppModules{
