@@ -90,3 +90,18 @@ func (k Keeper) GetConfig(ctx sdk.Context) (noorsignaltypes.PossConfig, bool) {
 
 	return cfg, true
 }
+
+// InitDefaultConfig initialise la configuration PoSS avec les valeurs
+// par défaut si aucune configuration n'est encore présente.
+//
+// Si une configuration existe déjà, cette fonction ne fait rien.
+func (k Keeper) InitDefaultConfig(ctx sdk.Context) {
+	_, found := k.GetConfig(ctx)
+	if found {
+		// Une configuration existe déjà : on ne la remplace pas.
+		return
+	}
+
+	defaultCfg := noorsignaltypes.DefaultPossConfig()
+	k.SetConfig(ctx, defaultCfg)
+}
