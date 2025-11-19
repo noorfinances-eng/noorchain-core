@@ -11,9 +11,9 @@ import (
 // MsgServer est le point d'entrée pour les transactions (Msg)
 // du module PoSS (noorsignal).
 //
-// À ce stade, il ne contient que des squelettes de méthodes.
-// La logique métier (création de signaux, validation, récompenses)
-// sera ajoutée dans des phases ultérieures.
+// À ce stade, il commence à implémenter une logique simple pour
+// l'émission de signaux (SubmitSignal). La validation, les limites
+// et les récompenses seront ajoutées progressivement.
 type MsgServer struct {
 	Keeper
 }
@@ -23,27 +23,58 @@ func NewMsgServer(k Keeper) MsgServer {
 	return MsgServer{Keeper: k}
 }
 
-// SubmitSignal gérera plus tard la réception d'un MsgSubmitSignal
+// SubmitSignal gère la réception d'un MsgSubmitSignal
 // (émission d'un nouveau signal social PoSS).
 //
-// Pour l'instant, la fonction est un simple squelette.
+// Étapes actuelles :
+// - conversion de l'adresse du participant
+// - création d'une struct Signal (sans curator)
+// - assignation d'un ID auto-incrémenté via CreateSignal
+// - stockage du signal dans le KVStore
+//
+// TODO (plus tard) :
+// - valider le poids (Weight)
+// - appliquer les limites quotidiennes (MaxSignalsPerDay)
+// - éventuellement déclencher le calcul des récompenses PoSS
+//   et les transferts de NUR via BankKeeper.
 func (s MsgServer) SubmitSignal(
 	goCtx context.Context,
 	msg *noorsignaltypes.MsgSubmitSignal,
 ) (*sdk.Result, error) {
-	// TODO: implémenter la logique de création de signal PoSS :
-	// - valider les champs
-	// - appliquer les limites (MaxSignalsPerDay)
-	// - enregistrer le signal dans le store
-	// - éventuellement générer des événements
-	// - déclencher (ou préparer) les récompenses PoSS
+	// 1) Récupérer le sdk.Context à partir du context gRPC.
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	// 2) Convertir l'adresse du participant (Bech32 -> sdk.AccAddress).
+	participantAddr, err := msg.GetParticipantAddress()
+	if err != nil {
+		return nil, err
+	}
+
+	// 3) Construire un Signal de base (sans curator pour l'instant).
+	signal := noorsignaltypes.Signal{
+		// Id sera rempli par CreateSignal.
+		Participant: participantAddr,
+		// Curator vide à ce stade (sera renseigné lors de la validation).
+		Curator:  nil,
+		Weight:   msg.Weight,
+		Time:     ctx.BlockTime(),
+		Metadata: msg.Metadata,
+	}
+
+	// 4) Créer et stocker le signal via le Keeper.
+	// CreateSignal attribue un Id et l'enregistre.
+	_ = s.Keeper.CreateSignal(ctx, signal)
+
+	// 5) Retourner un sdk.Result simple (sans events pour l'instant).
+	// Plus tard, on pourra ajouter des événements (events) pour
+	// faciliter l'indexation et l'exploration.
 	return &sdk.Result{}, nil
 }
 
 // ValidateSignal gérera plus tard la réception d'un MsgValidateSignal
 // (validation d'un signal existant par un curator).
 //
-// Pour l'instant, la fonction est un simple squelette.
+// Pour l'instant, la fonction reste un squelette.
 func (s MsgServer) ValidateSignal(
 	goCtx context.Context,
 	msg *noorsignaltypes.MsgValidateSignal,
