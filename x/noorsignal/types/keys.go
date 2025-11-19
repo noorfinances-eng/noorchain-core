@@ -28,12 +28,7 @@ var (
 //
 // Remarque :
 // - Chaque préfixe est un byte distinct.
-// - On pourra les utiliser avec prefix.NewStore(...) dans le keeper.
-//
-// Exemples futurs :
-// - stockage des signaux
-// - stockage des curators
-// - stockage de la config PoSS (barème, limites...)
+// - On les utilise avec prefix.NewStore(...) dans le keeper.
 var (
 	// KeyPrefixSignals indique le préfixe pour les enregistrements de signaux.
 	KeyPrefixSignals = []byte{0x01}
@@ -63,16 +58,14 @@ func GetConfigStore(parent prefix.Store) prefix.Store {
 // SignalKey construit la clé de stockage pour un signal individuel
 // à partir de son identifiant numérique.
 //
-// Format choisi :
-// - KeyPrefixSignals (0x01)
-// - suivi de l'identifiant encodé sur 8 octets (big-endian).
-//
-// Cela permet de parcourir les signaux dans l'ordre des IDs.
+// IMPORTANT :
+// - le store utilisé dans le keeper est déjà préfixé par KeyPrefixSignals,
+//   via GetSignalStore(...) et prefix.NewStore(...).
+// - la clé retournée ici est donc UNIQUEMENT l'ID encodé sur 8 octets
+//   (sans ré-ajouter le préfixe).
 func SignalKey(id uint64) []byte {
 	// 8 octets pour uint64 en big-endian.
 	bz := make([]byte, 8)
 	binary.BigEndian.PutUint64(bz, id)
-
-	// Préfixe + ID encodé.
-	return append(KeyPrefixSignals, bz...)
+	return bz
 }
