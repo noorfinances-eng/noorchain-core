@@ -16,8 +16,7 @@ import (
 // - construire la structure des keepers
 // - récupérer la configuration d'encodage
 // - construire le ModuleManager (AppModules) et appliquer l'ordre des modules.
-//
-// Les keepers concrets et les AppModules seront enrichis progressivement.
+// - enregistrer les hooks (BeginBlock, EndBlock, InitGenesis).
 func NewNoorchainAppWithCosmos(
 	logger sdk.Logger,
 	db dbm.DB,
@@ -66,9 +65,10 @@ func NewNoorchainAppWithCosmos(
 	if app.BaseApp != nil {
 		app.SetBeginBlocker(app.BeginBlocker)
 		app.SetEndBlocker(app.EndBlocker)
+
+		// 9) Enregistrer l'InitChainer pour le genesis.
+		app.SetInitChainer(app.InitChainer)
 	}
 
-	// InitChainer (gestion du genesis) sera branché plus tard, lorsqu'on
-	// définira clairement la structure du genesis NOORCHAIN.
 	return app
 }
