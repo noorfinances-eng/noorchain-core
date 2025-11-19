@@ -1,6 +1,8 @@
 package keeper
 
 import (
+	"encoding/binary"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
@@ -15,10 +17,7 @@ import (
 // - lire / écrire les signaux dans le store
 // - lire / écrire les curators
 // - gérer la configuration globale PoSS
-//
-// À ce stade, la structure contient déjà :
-// - un stockage de configuration PoSS
-// - un helper de calcul de récompenses à partir de la config.
+// - fournir des helpers de calcul pour les récompenses PoSS.
 type Keeper struct {
 	storeKey storetypes.StoreKey
 	cdc      codec.Codec
@@ -62,6 +61,10 @@ func (k Keeper) configStore(ctx sdk.Context) prefix.Store {
 	parent := k.getStore(ctx)
 	return noorsignaltypes.GetConfigStore(parent)
 }
+
+// ---------------------------
+// Gestion de la configuration
+// ---------------------------
 
 // SetConfig enregistre la configuration globale PoSS dans le store.
 //
@@ -107,6 +110,10 @@ func (k Keeper) InitDefaultConfig(ctx sdk.Context) {
 	k.SetConfig(ctx, defaultCfg)
 }
 
+// ---------------------------------
+// Calcul des récompenses PoSS (aide)
+// ---------------------------------
+
 // ComputeSignalRewardsFromConfig calcule les récompenses PoSS pour un signal
 // en utilisant la configuration actuellement stockée dans le module.
 //
@@ -150,11 +157,6 @@ func (k Keeper) ComputeSignalRewardsFromConfig(
 // - participant : part pour le participant
 // - curator     : part pour le curator
 // - found       : booléen indiquant si une configuration PoSS était présente
-//
-// Remarques :
-// - cette fonction lit cfg.EraIndex et l'utilise comme paramètre "era"
-//   pour le halving.
-// - si aucune configuration n'est trouvée, elle retourne (0, 0, 0, false).
 func (k Keeper) ComputeSignalRewardsCurrentEra(
 	ctx sdk.Context,
 	weight uint32,
@@ -167,4 +169,75 @@ func (k Keeper) ComputeSignalRewardsCurrentEra(
 	era := cfg.EraIndex
 	total, participant, curator = noorsignaltypes.ComputeSignalRewards(cfg, weight, era)
 	return total, participant, curator, true
+}
+
+// -------------------------------------
+// Gestion des identifiants et des signaux
+// -------------------------------------
+
+// getNextSignalID lit le prochain identifiant de signal à utiliser.
+// Si aucune valeur n'est encore stockée, on commence à 1.
+func (k Keeper) getNextSignalID(ctx sdk.Context) uint64 {
+	store := k.getStore(ctx)
+
+	bz := store.Get(noorsignaltypes.KeyNextSignalID)
+	if bz == nil {
+		return 1
+	}
+
+	return binary.BigEndian.Uint64(bz)
+}
+
+// setNextSignalID met à jour le prochain identifiant de signal.
+func (k Keeper) setNextSignalID(ctx sdk.Context, nextID uint64) {
+	store := k.getStore(ctx)
+
+	bz := make([]byte, 8)
+	binary.BigEndian.PutUint64(bz, nextID)
+	store.Set(noorsignaltypes.KeyNextSignalID, bz)
+}
+
+// CreateSignal crée un nouveau signal PoSS, lui attribue un ID unique,
+// le stocke dans le KVStore, et retourne la version enrichie avec Id.
+//
+// Remarques :
+// - le champ Id du signal passé en paramètre est ignoré et remplacé.
+// - la fonction n'implémente pas encore de logique métier (validation
+//   du poids, du curator, limites quotidiennes, etc.).
+func (k Keeper) CreateSignal(ctx sdk.Context, sig noorsignaltypes.Signal) noorsignaltypes.Signal {
+	// 1) Récupérer et incrémenter l'ID global.
+	nextID := k.getNextSignalID(ctx)
+	sig.Id = nextID
+
+	// 2) Stocker le signal dans le store préfixé.
+	sstore := k.signalStore(ctx)
+	key := noorsignaltypes.SignalKey(sig.Id)
+
+	bz := k.cdc.MustMarshal(&sig)
+	sstore.Set(key, bz)
+
+	// 3) Incrémenter le compteur pour le prochain signal.
+	k.setNextSignalID(ctx, nextID+1)
+
+	return sig
+}
+
+// GetSignal récupère un signal PoSS par son identifiant.
+//
+// Retourne :
+// - le Signal
+// - un booléen "found" indiquant si le signal existe.
+func (k Keeper) GetSignal(ctx sdk.Context, id uint64) (noorsignaltypes.Signal, bool) {
+	sstore := k.signalStore(ctx)
+	key := noorsignaltypes.SignalKey(id)
+
+	bz := sstore.Get(key)
+	if bz == nil {
+		return noorsignaltypes.Signal{}, false
+	}
+
+	var sig noorsignaltypes.Signal
+	k.cdc.MustUnmarshal(bz, &sig)
+
+	return sig, true
 }
