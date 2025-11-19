@@ -12,9 +12,9 @@ import (
 // MsgServer est le point d'entrée pour les transactions (Msg)
 // du module PoSS (noorsignal).
 //
-// À ce stade, il commence à implémenter une logique simple pour
-// l'émission de signaux (SubmitSignal). La validation, les limites
-// et les récompenses seront ajoutées progressivement.
+// À ce stade, il implémente une logique simple pour :
+// - l'émission de signaux (SubmitSignal)
+// - la validation de signaux (ValidateSignal, sans récompenses pour l'instant).
 type MsgServer struct {
 	Keeper
 }
@@ -26,18 +26,6 @@ func NewMsgServer(k Keeper) MsgServer {
 
 // SubmitSignal gère la réception d'un MsgSubmitSignal
 // (émission d'un nouveau signal social PoSS).
-//
-// Étapes actuelles :
-// - validation simple du poids (Weight)
-// - conversion de l'adresse du participant
-// - création d'une struct Signal (sans curator)
-// - assignation d'un ID auto-incrémenté via CreateSignal
-// - stockage du signal dans le KVStore
-//
-// TODO (plus tard) :
-// - appliquer les limites quotidiennes (MaxSignalsPerDay)
-// - éventuellement déclencher le calcul des récompenses PoSS
-//   et les transferts de NUR via BankKeeper.
 func (s MsgServer) SubmitSignal(
 	goCtx context.Context,
 	msg *noorsignaltypes.MsgSubmitSignal,
@@ -46,12 +34,6 @@ func (s MsgServer) SubmitSignal(
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	// 2) Valider le poids du signal.
-	//
-	// Règle simple (version 1) :
-	// - Weight doit être >= 1
-	// - Weight ne doit pas être démesuré (par ex. <= 100)
-	// Ces bornes sont symboliques et pourront être affinées
-	// ou rendues configurables plus tard.
 	if msg.Weight == 0 {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "weight must be >= 1")
 	}
@@ -67,38 +49,66 @@ func (s MsgServer) SubmitSignal(
 
 	// 4) Construire un Signal de base (sans curator pour l'instant).
 	signal := noorsignaltypes.Signal{
-		// Id sera rempli par CreateSignal.
 		Participant: participantAddr,
-		// Curator vide à ce stade (sera renseigné lors de la validation).
-		Curator:  nil,
-		Weight:   msg.Weight,
-		Time:     ctx.BlockTime(),
-		Metadata: msg.Metadata,
+		Curator:     nil,
+		Weight:      msg.Weight,
+		Time:        ctx.BlockTime(),
+		Metadata:    msg.Metadata,
 	}
 
 	// 5) Créer et stocker le signal via le Keeper.
-	// CreateSignal attribue un Id et l'enregistre.
 	_ = s.Keeper.CreateSignal(ctx, signal)
 
 	// 6) Retourner un sdk.Result simple (sans events pour l'instant).
-	// Plus tard, on pourra ajouter des événements (events) pour
-	// faciliter l'indexation et l'exploration.
 	return &sdk.Result{}, nil
 }
 
-// ValidateSignal gérera plus tard la réception d'un MsgValidateSignal
+// ValidateSignal gère la réception d'un MsgValidateSignal
 // (validation d'un signal existant par un curator).
 //
-// Pour l'instant, la fonction reste un squelette.
+// Étapes actuelles :
+// - récupérer le contexte
+// - convertir l'adresse du curator
+// - lire le signal via son ID
+// - vérifier qu'il existe
+// - vérifier qu'il n'est pas déjà validé
+// - enregistrer l'adresse du curator sur le signal
+//
+// TODO (plus tard) :
+// - vérifier que l'adresse est bien un curator autorisé
+// - attribuer les récompenses 70% / 30% via BankKeeper
+//   en utilisant ComputeSignalRewardsCurrentEra
+// - générer des événements pour l'exploration / indexation.
 func (s MsgServer) ValidateSignal(
 	goCtx context.Context,
 	msg *noorsignaltypes.MsgValidateSignal,
 ) (*sdk.Result, error) {
-	// TODO: implémenter la logique de validation de signal :
-	// - vérifier le curator
-	// - vérifier l'existence du signal
-	// - marquer le signal comme validé
-	// - attribuer les récompenses 70% / 30%
-	// - générer des événements
+	// 1) Récupérer le sdk.Context.
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	// 2) Convertir l'adresse du curator (Bech32 -> sdk.AccAddress).
+	curatorAddr, err := msg.GetCuratorAddress()
+	if err != nil {
+		return nil, err
+	}
+
+	// 3) Récupérer le signal à valider.
+	signal, found := s.Keeper.GetSignal(ctx, msg.SignalId)
+	if !found {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrNotFound, "signal not found")
+	}
+
+	// 4) Vérifier qu'il n'est pas déjà validé.
+	if signal.Curator != nil && len(signal.Curator) > 0 {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "signal already validated")
+	}
+
+	// 5) Associer le curator au signal.
+	signal.Curator = curatorAddr
+
+	// 6) Mettre à jour le signal dans le store.
+	s.Keeper.SetSignal(ctx, signal)
+
+	// 7) Retourner un sdk.Result simple (sans events ni récompenses pour l'instant).
 	return &sdk.Result{}, nil
 }
