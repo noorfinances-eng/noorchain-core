@@ -1,0 +1,63 @@
+package keeper
+
+import (
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	"github.com/cosmos/cosmos-sdk/store/prefix"
+
+	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
+)
+
+// Keeper est le gestionnaire principal du module PoSS (noorsignal) pour NOORCHAIN.
+//
+// Rôle général :
+// - lire / écrire les signaux dans le store
+// - lire / écrire les curators
+// - gérer la configuration globale PoSS
+//
+// À ce stade, la structure est un squelette : aucune logique métier
+// (calcul des récompenses, halving, limites) n'est encore implémentée.
+type Keeper struct {
+	storeKey storetypes.StoreKey
+	cdc      codec.Codec
+
+	// Plus tard, on pourra ajouter ici des références à d'autres keepers :
+	// - BankKeeper (pour envoyer des NUR)
+	// - StakingKeeper / GovKeeper (si nécessaire)
+	// Pour l'instant, on garde le keeper le plus simple possible.
+}
+
+// NewKeeper construit un nouveau Keeper PoSS pour NOORCHAIN.
+func NewKeeper(
+	cdc codec.Codec,
+	storeKey storetypes.StoreKey,
+) Keeper {
+	return Keeper{
+		storeKey: storeKey,
+		cdc:      cdc,
+	}
+}
+
+// getStore retourne le KVStore brut du module à partir du contexte.
+func (k Keeper) getStore(ctx sdk.Context) sdk.KVStore {
+	return ctx.KVStore(k.storeKey)
+}
+
+// signalStore retourne un store préfixé pour les signaux PoSS.
+func (k Keeper) signalStore(ctx sdk.Context) prefix.Store {
+	parent := k.getStore(ctx)
+	return noorsignaltypes.GetSignalStore(parent)
+}
+
+// curatorStore retourne un store préfixé pour les curators PoSS.
+func (k Keeper) curatorStore(ctx sdk.Context) prefix.Store {
+	parent := k.getStore(ctx)
+	return noorsignaltypes.GetCuratorStore(parent)
+}
+
+// configStore retourne un store préfixé pour la configuration PoSS.
+func (k Keeper) configStore(ctx sdk.Context) prefix.Store {
+	parent := k.getStore(ctx)
+	return noorsignaltypes.GetConfigStore(parent)
+}
