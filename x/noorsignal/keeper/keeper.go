@@ -16,9 +16,9 @@ import (
 // - lire / écrire les curators
 // - gérer la configuration globale PoSS
 //
-// À ce stade, la structure est un squelette : une première brique
-// de logique de récompense existe, mais la logique complète (supply,
-// limites globales, etc.) n'est pas encore implémentée.
+// À ce stade, la structure contient déjà :
+// - un stockage de configuration PoSS
+// - un helper de calcul de récompenses à partir de la config.
 type Keeper struct {
 	storeKey storetypes.StoreKey
 	cdc      codec.Codec
@@ -134,6 +134,37 @@ func (k Keeper) ComputeSignalRewardsFromConfig(
 		return 0, 0, 0, false
 	}
 
+	total, participant, curator = noorsignaltypes.ComputeSignalRewards(cfg, weight, era)
+	return total, participant, curator, true
+}
+
+// ComputeSignalRewardsCurrentEra calcule les récompenses PoSS pour un signal
+// en utilisant l'ère courante définie dans la configuration PoSS.
+//
+// Paramètres :
+// - ctx    : contexte d'exécution
+// - weight : poids du signal (1, 2, 5, etc.)
+//
+// Retourne :
+// - total       : récompense totale (après halving avec cfg.EraIndex)
+// - participant : part pour le participant
+// - curator     : part pour le curator
+// - found       : booléen indiquant si une configuration PoSS était présente
+//
+// Remarques :
+// - cette fonction lit cfg.EraIndex et l'utilise comme paramètre "era"
+//   pour le halving.
+// - si aucune configuration n'est trouvée, elle retourne (0, 0, 0, false).
+func (k Keeper) ComputeSignalRewardsCurrentEra(
+	ctx sdk.Context,
+	weight uint32,
+) (total uint64, participant uint64, curator uint64, found bool) {
+	cfg, ok := k.GetConfig(ctx)
+	if !ok {
+		return 0, 0, 0, false
+	}
+
+	era := cfg.EraIndex
 	total, participant, curator = noorsignaltypes.ComputeSignalRewards(cfg, weight, era)
 	return total, participant, curator, true
 }
