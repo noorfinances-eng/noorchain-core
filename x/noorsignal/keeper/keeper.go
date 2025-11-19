@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 
@@ -270,7 +270,6 @@ func (k Keeper) IncrementCuratorValidatedCount(
 ) {
 	curator, found := k.GetCurator(ctx, addr)
 	if !found {
-		// Si le curator n'existe pas, on ne fait rien.
 		return
 	}
 
