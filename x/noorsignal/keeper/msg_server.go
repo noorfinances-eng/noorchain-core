@@ -4,6 +4,7 @@ import (
 	"context"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
 )
@@ -27,13 +28,13 @@ func NewMsgServer(k Keeper) MsgServer {
 // (émission d'un nouveau signal social PoSS).
 //
 // Étapes actuelles :
+// - validation simple du poids (Weight)
 // - conversion de l'adresse du participant
 // - création d'une struct Signal (sans curator)
 // - assignation d'un ID auto-incrémenté via CreateSignal
 // - stockage du signal dans le KVStore
 //
 // TODO (plus tard) :
-// - valider le poids (Weight)
 // - appliquer les limites quotidiennes (MaxSignalsPerDay)
 // - éventuellement déclencher le calcul des récompenses PoSS
 //   et les transferts de NUR via BankKeeper.
@@ -44,13 +45,27 @@ func (s MsgServer) SubmitSignal(
 	// 1) Récupérer le sdk.Context à partir du context gRPC.
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	// 2) Convertir l'adresse du participant (Bech32 -> sdk.AccAddress).
+	// 2) Valider le poids du signal.
+	//
+	// Règle simple (version 1) :
+	// - Weight doit être >= 1
+	// - Weight ne doit pas être démesuré (par ex. <= 100)
+	// Ces bornes sont symboliques et pourront être affinées
+	// ou rendues configurables plus tard.
+	if msg.Weight == 0 {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "weight must be >= 1")
+	}
+	if msg.Weight > 100 {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "weight must be <= 100")
+	}
+
+	// 3) Convertir l'adresse du participant (Bech32 -> sdk.AccAddress).
 	participantAddr, err := msg.GetParticipantAddress()
 	if err != nil {
 		return nil, err
 	}
 
-	// 3) Construire un Signal de base (sans curator pour l'instant).
+	// 4) Construire un Signal de base (sans curator pour l'instant).
 	signal := noorsignaltypes.Signal{
 		// Id sera rempli par CreateSignal.
 		Participant: participantAddr,
@@ -61,11 +76,11 @@ func (s MsgServer) SubmitSignal(
 		Metadata: msg.Metadata,
 	}
 
-	// 4) Créer et stocker le signal via le Keeper.
+	// 5) Créer et stocker le signal via le Keeper.
 	// CreateSignal attribue un Id et l'enregistre.
 	_ = s.Keeper.CreateSignal(ctx, signal)
 
-	// 5) Retourner un sdk.Result simple (sans events pour l'instant).
+	// 6) Retourner un sdk.Result simple (sans events pour l'instant).
 	// Plus tard, on pourra ajouter des événements (events) pour
 	// faciliter l'indexation et l'exploration.
 	return &sdk.Result{}, nil
