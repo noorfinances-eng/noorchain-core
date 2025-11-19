@@ -61,3 +61,32 @@ func (k Keeper) configStore(ctx sdk.Context) prefix.Store {
 	parent := k.getStore(ctx)
 	return noorsignaltypes.GetConfigStore(parent)
 }
+
+// SetConfig enregistre la configuration globale PoSS dans le store.
+//
+// Cette méthode écrase simplement la configuration précédente.
+func (k Keeper) SetConfig(ctx sdk.Context, cfg noorsignaltypes.PossConfig) {
+	store := k.configStore(ctx)
+
+	bz := k.cdc.MustMarshal(&cfg)
+	store.Set([]byte("config"), bz)
+}
+
+// GetConfig lit la configuration globale PoSS depuis le store.
+//
+// Retourne :
+// - la configuration (PossConfig)
+// - un booléen "found" qui indique si une config existe déjà.
+func (k Keeper) GetConfig(ctx sdk.Context) (noorsignaltypes.PossConfig, bool) {
+	store := k.configStore(ctx)
+
+	bz := store.Get([]byte("config"))
+	if bz == nil {
+		return noorsignaltypes.PossConfig{}, false
+	}
+
+	var cfg noorsignaltypes.PossConfig
+	k.cdc.MustUnmarshal(bz, &cfg)
+
+	return cfg, true
+}
