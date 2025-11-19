@@ -127,10 +127,6 @@ func (k Keeper) InitDefaultConfig(ctx sdk.Context) {
 // - participant : part pour le participant
 // - curator     : part pour le curator
 // - found       : booléen indiquant si une configuration PoSS était présente
-//
-// Remarque :
-// - si aucune configuration n'est trouvée, la fonction retourne
-//   (0, 0, 0, false).
 func (k Keeper) ComputeSignalRewardsFromConfig(
 	ctx sdk.Context,
 	weight uint32,
@@ -220,6 +216,17 @@ func (k Keeper) CreateSignal(ctx sdk.Context, sig noorsignaltypes.Signal) noorsi
 	k.setNextSignalID(ctx, nextID+1)
 
 	return sig
+}
+
+// SetSignal met à jour un signal existant dans le store.
+//
+// Si le signal n'existe pas encore, cette fonction l'ajoute simplement.
+func (k Keeper) SetSignal(ctx sdk.Context, sig noorsignaltypes.Signal) {
+	sstore := k.signalStore(ctx)
+	key := noorsignaltypes.SignalKey(sig.Id)
+
+	bz := k.cdc.MustMarshal(&sig)
+	sstore.Set(key, bz)
 }
 
 // GetSignal récupère un signal PoSS par son identifiant.
