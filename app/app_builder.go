@@ -73,3 +73,17 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 
 	return base
 }
+
+// BuildKeepers crée et retourne la structure AppKeepers.
+//
+// Pour l'instant, cette fonction renvoie une structure vide.
+// Dans des phases futures, elle instanciera réellement :
+// - AccountKeeper
+// - BankKeeper
+// - StakingKeeper
+// - GovKeeper
+// - ParamsKeeper
+// - et plus tard EVM + PoSS (NoorSignalKeeper).
+func (b *AppBuilder) BuildKeepers() AppKeepers {
+	return AppKeepers{}
+}
