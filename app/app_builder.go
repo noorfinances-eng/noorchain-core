@@ -10,6 +10,8 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
+
+	noorsignalkeeper "github.com/noorfinances-eng/noorchain-core/x/noorsignal/keeper"
 )
 
 // AppBuilder est un helper qui va progressivement construire
@@ -90,9 +92,6 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 	)
 
 	// Monter les KVStores des modules principaux.
-	//
-	// Même si certains modules/keepers ne sont pas encore instanciés,
-	// on prépare déjà les stores nécessaires.
 	if base != nil {
 		base.MountKVStore(sk.AuthKey)
 		base.MountKVStore(sk.BankKey)
@@ -122,6 +121,7 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 // - instanciation réelle du ParamsKeeper
 // - instanciation réelle d'un AccountKeeper
 // - instanciation réelle d'un BankKeeper minimal
+// - instanciation réelle du NoorSignalKeeper (PoSS)
 // Les autres keepers seront ajoutés dans des étapes futures.
 func (b *AppBuilder) BuildKeepers() AppKeepers {
 	sk := b.storeKeys
@@ -152,7 +152,6 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 
 	// 4) Préparer la liste des adresses "bloquées" pour le BankKeeper.
 	//
-	// Ces adresses ne pourront pas recevoir certains types de fonds.
 	// Pour l'instant, on laisse la map vide; elle sera complétée plus tard.
 	blockedAddrs := map[string]bool{}
 
@@ -165,14 +164,21 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 		"", // authority (sera défini plus clairement plus tard)
 	)
 
-	// 6) Construire la structure AppKeepers.
+	// 6) Créer le NoorSignalKeeper (PoSS).
 	//
-	// Pour le moment :
-	// - AccountKeeper, BankKeeper et ParamsKeeper sont instanciés.
-	// - les autres keepers seront ajoutés plus tard.
+	// Il utilise :
+	// - le codec binaire principal (enc.Marshaler)
+	// - la store key dédiée au module PoSS (sk.NoorSignalKey)
+	noorSignalKeeper := noorsignalkeeper.NewKeeper(
+		enc.Marshaler,
+		sk.NoorSignalKey,
+	)
+
+	// 7) Construire la structure AppKeepers.
 	return AppKeepers{
-		AccountKeeper: accountKeeper,
-		BankKeeper:    bankKeeper,
-		ParamsKeeper:  paramsKeeper,
+		AccountKeeper:    accountKeeper,
+		BankKeeper:       bankKeeper,
+		ParamsKeeper:     paramsKeeper,
+		NoorSignalKeeper: noorSignalKeeper,
 	}
 }
