@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cdk/types"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 
@@ -228,12 +228,10 @@ func (k Keeper) incrementDailySignalCount(
 // Gestion des Curators PoSS
 // -------------------------------------
 
-// curatorKey utilise l'adresse comme clé directe dans le store des curators.
 func (k Keeper) curatorKey(addr sdk.AccAddress) []byte {
 	return addr.Bytes()
 }
 
-// SetCurator enregistre ou met à jour un Curator dans le store.
 func (k Keeper) SetCurator(ctx sdk.Context, curator noorsignaltypes.Curator) {
 	store := k.curatorStore(ctx)
 	key := k.curatorKey(curator.Address)
@@ -242,7 +240,6 @@ func (k Keeper) SetCurator(ctx sdk.Context, curator noorsignaltypes.Curator) {
 	store.Set(key, bz)
 }
 
-// GetCurator lit un Curator à partir de son adresse.
 func (k Keeper) GetCurator(ctx sdk.Context, addr sdk.AccAddress) (noorsignaltypes.Curator, bool) {
 	store := k.curatorStore(ctx)
 	key := k.curatorKey(addr)
@@ -257,12 +254,26 @@ func (k Keeper) GetCurator(ctx sdk.Context, addr sdk.AccAddress) (noorsignaltype
 	return curator, true
 }
 
-// IsActiveCurator retourne true si l'adresse correspond à un Curator
-// enregistré et marqué comme actif.
 func (k Keeper) IsActiveCurator(ctx sdk.Context, addr sdk.AccAddress) bool {
 	curator, found := k.GetCurator(ctx, addr)
 	if !found {
 		return false
 	}
 	return curator.Active
+}
+
+// IncrementCuratorValidatedCount augmente de 1 le nombre total de signaux
+// validés par ce Curator, si le Curator existe.
+func (k Keeper) IncrementCuratorValidatedCount(
+	ctx sdk.Context,
+	addr sdk.AccAddress,
+) {
+	curator, found := k.GetCurator(ctx, addr)
+	if !found {
+		// Si le curator n'existe pas, on ne fait rien.
+		return
+	}
+
+	curator.TotalSignalsValidated++
+	k.SetCurator(ctx, curator)
 }
