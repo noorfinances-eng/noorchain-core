@@ -26,10 +26,6 @@ var (
 )
 
 // Prefixes pour différents types de données stockées par le module PoSS.
-//
-// Remarque :
-// - Chaque préfixe est un byte distinct.
-// - On les utilise avec prefix.NewStore(...) dans le keeper.
 var (
 	// KeyPrefixSignals indique le préfixe pour les enregistrements de signaux.
 	KeyPrefixSignals = []byte{0x01}
@@ -46,36 +42,28 @@ var (
 )
 
 // GetSignalStore retourne un store préfixé pour les signaux.
-func GetSignalStore(parent prefix.Store) prefix.Store {
+func GetSignalStore(parent sdk.KVStore) prefix.Store {
 	return prefix.NewStore(parent, KeyPrefixSignals)
 }
 
 // GetCuratorStore retourne un store préfixé pour les curators.
-func GetCuratorStore(parent prefix.Store) prefix.Store {
+func GetCuratorStore(parent sdk.KVStore) prefix.Store {
 	return prefix.NewStore(parent, KeyPrefixCurators)
 }
 
 // GetConfigStore retourne un store préfixé pour la configuration globale PoSS.
-func GetConfigStore(parent prefix.Store) prefix.Store {
+func GetConfigStore(parent sdk.KVStore) prefix.Store {
 	return prefix.NewStore(parent, KeyPrefixConfig)
 }
 
 // GetDailyCounterStore retourne un store préfixé pour les compteurs
 // quotidiens PoSS.
-func GetDailyCounterStore(parent prefix.Store) prefix.Store {
+func GetDailyCounterStore(parent sdk.KVStore) prefix.Store {
 	return prefix.NewStore(parent, KeyPrefixDailyCounters)
 }
 
-// SignalKey construit la clé de stockage pour un signal individuel
-// à partir de son identifiant numérique.
-//
-// IMPORTANT :
-// - le store utilisé dans le keeper est déjà préfixé par KeyPrefixSignals,
-//   via GetSignalStore(...) et prefix.NewStore(...).
-// - la clé retournée ici est donc UNIQUEMENT l'ID encodé sur 8 octets
-//   (sans ré-ajouter le préfixe).
+// SignalKey construit la clé de stockage pour un signal individuel.
 func SignalKey(id uint64) []byte {
-	// 8 octets pour uint64 en big-endian.
 	bz := make([]byte, 8)
 	binary.BigEndian.PutUint64(bz, id)
 	return bz
@@ -88,17 +76,12 @@ func SignalKey(id uint64) []byte {
 // - addr      : adresse du participant
 // - dayBucket : indice de jour (ex: timestampUnix / 86400)
 //
-// Format :
-//   key = addr.Bytes() || dayBucket(8 octets big-endian)
-//
-// Le préfixe KeyPrefixDailyCounters est déjà appliqué par
-// GetDailyCounterStore, donc on ne le rajoute pas ici.
+// Format : key = addr.Bytes() || dayBucket(8 octets big-endian)
 func DailyCounterKey(addr sdk.AccAddress, dayBucket uint64) []byte {
 	addrBz := addr.Bytes()
 
 	dayBz := make([]byte, 8)
 	binary.BigEndian.PutUint64(dayBz, dayBucket)
 
-	// concaténation : [addr || day]
 	return append(addrBz, dayBz...)
 }
