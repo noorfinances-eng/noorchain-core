@@ -183,8 +183,6 @@ func (k Keeper) GetSignal(ctx sdk.Context, id uint64) (noorsignaltypes.Signal, b
 // Compteurs quotidiens PoSS (limites)
 // -------------------------------------
 
-// getDailySignalCount lit le nombre de signaux déjà émis par un participant
-// pour un "jour" donné (dayBucket).
 func (k Keeper) getDailySignalCount(
 	ctx sdk.Context,
 	addr sdk.AccAddress,
@@ -201,8 +199,6 @@ func (k Keeper) getDailySignalCount(
 	return binary.BigEndian.Uint32(bz)
 }
 
-// setDailySignalCount met à jour le compteur de signaux pour un participant
-// sur un "jour" donné (dayBucket).
 func (k Keeper) setDailySignalCount(
 	ctx sdk.Context,
 	addr sdk.AccAddress,
@@ -217,7 +213,6 @@ func (k Keeper) setDailySignalCount(
 	store.Set(key, bz)
 }
 
-// incrementDailySignalCount incrémente le compteur et renvoie la nouvelle valeur.
 func (k Keeper) incrementDailySignalCount(
 	ctx sdk.Context,
 	addr sdk.AccAddress,
@@ -227,4 +222,47 @@ func (k Keeper) incrementDailySignalCount(
 	next := current + 1
 	k.setDailySignalCount(ctx, addr, dayBucket, next)
 	return next
+}
+
+// -------------------------------------
+// Gestion des Curators PoSS
+// -------------------------------------
+
+// curatorKey utilise l'adresse comme clé directe dans le store des curators.
+func (k Keeper) curatorKey(addr sdk.AccAddress) []byte {
+	return addr.Bytes()
+}
+
+// SetCurator enregistre ou met à jour un Curator dans le store.
+func (k Keeper) SetCurator(ctx sdk.Context, curator noorsignaltypes.Curator) {
+	store := k.curatorStore(ctx)
+	key := k.curatorKey(curator.Address)
+
+	bz := k.cdc.MustMarshal(&curator)
+	store.Set(key, bz)
+}
+
+// GetCurator lit un Curator à partir de son adresse.
+func (k Keeper) GetCurator(ctx sdk.Context, addr sdk.AccAddress) (noorsignaltypes.Curator, bool) {
+	store := k.curatorStore(ctx)
+	key := k.curatorKey(addr)
+
+	bz := store.Get(key)
+	if bz == nil {
+		return noorsignaltypes.Curator{}, false
+	}
+
+	var curator noorsignaltypes.Curator
+	k.cdc.MustUnmarshal(bz, &curator)
+	return curator, true
+}
+
+// IsActiveCurator retourne true si l'adresse correspond à un Curator
+// enregistré et marqué comme actif.
+func (k Keeper) IsActiveCurator(ctx sdk.Context, addr sdk.AccAddress) bool {
+	curator, found := k.GetCurator(ctx, addr)
+	if !found {
+		return false
+	}
+	return curator.Active
 }
