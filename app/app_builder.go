@@ -6,6 +6,7 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 )
 
 // AppBuilder est un helper qui va progressivement construire
@@ -95,14 +96,29 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 
 // BuildKeepers crée et retourne la structure AppKeepers.
 //
-// Pour l'instant, cette fonction renvoie une structure vide.
-// Dans des phases futures, elle instanciera réellement :
-// - AccountKeeper
-// - BankKeeper
-// - StakingKeeper
-// - GovKeeper
-// - ParamsKeeper
-// - et plus tard EVM + PoSS (NoorSignalKeeper).
+// Étape actuelle :
+// - instanciation réelle du ParamsKeeper
+// - les autres keepers restent à leur valeur zéro et seront ajoutés
+//   dans des étapes futures.
 func (b *AppBuilder) BuildKeepers() AppKeepers {
-	return AppKeepers{}
+	sk := b.storeKeys
+	enc := b.encCfg
+
+	// 1) Créer un ParamsKeeper réel.
+	//
+	// NewKeeper(cdc, legacyAmino, key, tkey) retourne un paramskeeper.Keeper.
+	paramsKeeper := paramskeeper.NewKeeper(
+		enc.Marshaler,     // codec binaire (Protobuf)
+		enc.Amino,         // codec legacy Amino pour JSON
+		sk.ParamsKey,      // KVStoreKey pour les params
+		sk.ParamsTransientKey, // TransientStoreKey pour les params temporaires
+	)
+
+	// 2) Construire la structure AppKeepers.
+	//
+	// Pour le moment, seul ParamsKeeper est réellement instancié.
+	// Les autres seront remplis plus tard (AccountKeeper, BankKeeper, etc.).
+	return AppKeepers{
+		ParamsKeeper: paramsKeeper,
+	}
 }
