@@ -51,8 +51,8 @@ func NewNoorchainAppWithCosmos(
 	// défini dans modules_layout.go.
 	ConfigureModuleManagerOrder(modules.Manager)
 
-	// 7) Retourner l'instance de l'application NOORCHAIN.
-	return &App{
+	// 7) Construire l'instance de l'application NOORCHAIN.
+	app := &App{
 		BaseApp:  base,
 		Name:     "NOORCHAIN",
 		Version:  "0.0.1-dev",
@@ -60,4 +60,15 @@ func NewNoorchainAppWithCosmos(
 		Encoding: encCfg,
 		Modules:  modules,
 	}
+
+	// 8) Enregistrer les hooks de cycle de vie (BeginBlock / EndBlock)
+	// auprès de BaseApp, pour que le ModuleManager soit appelé à chaque bloc.
+	if app.BaseApp != nil {
+		app.SetBeginBlocker(app.BeginBlocker)
+		app.SetEndBlocker(app.EndBlocker)
+	}
+
+	// InitChainer (gestion du genesis) sera branché plus tard, lorsqu'on
+	// définira clairement la structure du genesis NOORCHAIN.
+	return app
 }
