@@ -12,10 +12,12 @@ import (
 // pour l'application NOORCHAIN.
 //
 // Il utilise AppBuilder pour :
-// - construire un BaseApp réel
+// - construire un BaseApp réel (stores montés)
 // - construire la structure des keepers
 // - récupérer la configuration d'encodage
-// (les keepers concrets et les modules seront ajoutés plus tard).
+// - construire le ModuleManager (AppModules) et appliquer l'ordre des modules.
+//
+// Les keepers concrets et les AppModules seront enrichis progressivement.
 func NewNoorchainAppWithCosmos(
 	logger sdk.Logger,
 	db dbm.DB,
@@ -36,18 +38,26 @@ func NewNoorchainAppWithCosmos(
 	// 2) Construire la BaseApp via le builder.
 	var base *baseapp.BaseApp = builder.BuildBaseApp()
 
-	// 3) Construire la structure des keepers (placeholder pour l'instant).
+	// 3) Construire la structure des keepers.
 	keepers := builder.BuildKeepers()
 
 	// 4) Récupérer la config d'encodage utilisée par ce builder.
 	encCfg := builder.EncodingConfig()
 
-	// 5) Retourner l'instance de l'application NOORCHAIN.
+	// 5) Créer le ModuleManager (AppModules) à partir des keepers + encCfg.
+	modules := NewAppModuleManager(keepers, encCfg)
+
+	// 6) Appliquer l'ordre des modules (BeginBlock, EndBlock, InitGenesis)
+	// défini dans modules_layout.go.
+	ConfigureModuleManagerOrder(modules.Manager)
+
+	// 7) Retourner l'instance de l'application NOORCHAIN.
 	return &App{
-		BaseApp:  base,    // non-nil quand tout sera câblé
+		BaseApp:  base,
 		Name:     "NOORCHAIN",
 		Version:  "0.0.1-dev",
-		Keepers:  keepers, // pour l'instant vide
+		Keepers:  keepers,
 		Encoding: encCfg,
+		Modules:  modules,
 	}
 }
