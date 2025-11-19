@@ -1,6 +1,10 @@
 package types
 
-import "github.com/cosmos/cosmos-sdk/store/prefix"
+import (
+	"encoding/binary"
+
+	"github.com/cosmos/cosmos-sdk/store/prefix"
+)
 
 // ModuleName est le nom officiel du module PoSS dans NOORCHAIN.
 const ModuleName = "noorsignal"
@@ -13,6 +17,12 @@ const RouterKey = ModuleName
 
 // QuerierRoute peut être utilisé pour les requêtes legacy (si besoin).
 const QuerierRoute = ModuleName
+
+// Clé spéciale (non préfixée) pour stocker le prochain identifiant
+// de signal auto-incrémenté.
+var (
+	KeyNextSignalID = []byte("next_signal_id")
+)
 
 // Prefixes pour différents types de données stockées par le module PoSS.
 //
@@ -48,4 +58,21 @@ func GetCuratorStore(parent prefix.Store) prefix.Store {
 // GetConfigStore retourne un store préfixé pour la configuration globale PoSS.
 func GetConfigStore(parent prefix.Store) prefix.Store {
 	return prefix.NewStore(parent, KeyPrefixConfig)
+}
+
+// SignalKey construit la clé de stockage pour un signal individuel
+// à partir de son identifiant numérique.
+//
+// Format choisi :
+// - KeyPrefixSignals (0x01)
+// - suivi de l'identifiant encodé sur 8 octets (big-endian).
+//
+// Cela permet de parcourir les signaux dans l'ordre des IDs.
+func SignalKey(id uint64) []byte {
+	// 8 octets pour uint64 en big-endian.
+	bz := make([]byte, 8)
+	binary.BigEndian.PutUint64(bz, id)
+
+	// Préfixe + ID encodé.
+	return append(KeyPrefixSignals, bz...)
 }
