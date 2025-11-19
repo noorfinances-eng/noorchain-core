@@ -16,8 +16,9 @@ import (
 // - lire / écrire les curators
 // - gérer la configuration globale PoSS
 //
-// À ce stade, la structure est un squelette : aucune logique métier
-// (calcul des récompenses, halving, limites) n'est encore implémentée.
+// À ce stade, la structure est un squelette : une première brique
+// de logique de récompense existe, mais la logique complète (supply,
+// limites globales, etc.) n'est pas encore implémentée.
 type Keeper struct {
 	storeKey storetypes.StoreKey
 	cdc      codec.Codec
@@ -104,4 +105,35 @@ func (k Keeper) InitDefaultConfig(ctx sdk.Context) {
 
 	defaultCfg := noorsignaltypes.DefaultPossConfig()
 	k.SetConfig(ctx, defaultCfg)
+}
+
+// ComputeSignalRewardsFromConfig calcule les récompenses PoSS pour un signal
+// en utilisant la configuration actuellement stockée dans le module.
+//
+// Paramètres :
+// - ctx    : contexte d'exécution
+// - weight : poids du signal (1, 2, 5, etc.)
+// - era    : indice d'ère pour le halving (0 = aucune division, 1 = /2, etc.)
+//
+// Retourne :
+// - total       : récompense totale (après halving)
+// - participant : part pour le participant
+// - curator     : part pour le curator
+// - found       : booléen indiquant si une configuration PoSS était présente
+//
+// Remarque :
+// - si aucune configuration n'est trouvée, la fonction retourne
+//   (0, 0, 0, false).
+func (k Keeper) ComputeSignalRewardsFromConfig(
+	ctx sdk.Context,
+	weight uint32,
+	era uint32,
+) (total uint64, participant uint64, curator uint64, found bool) {
+	cfg, ok := k.GetConfig(ctx)
+	if !ok {
+		return 0, 0, 0, false
+	}
+
+	total, participant, curator = noorsignaltypes.ComputeSignalRewards(cfg, weight, era)
+	return total, participant, curator, true
 }
