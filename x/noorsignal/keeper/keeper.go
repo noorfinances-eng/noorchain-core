@@ -12,20 +12,9 @@ import (
 )
 
 // Keeper est le gestionnaire principal du module PoSS (noorsignal) pour NOORCHAIN.
-//
-// Rôle général :
-// - lire / écrire les signaux dans le store
-// - lire / écrire les curators
-// - gérer la configuration globale PoSS
-// - fournir des helpers de calcul pour les récompenses PoSS.
 type Keeper struct {
 	storeKey storetypes.StoreKey
 	cdc      codec.Codec
-
-	// Plus tard, on pourra ajouter ici des références à d'autres keepers :
-	// - BankKeeper (pour envoyer des NUR)
-	// - StakingKeeper / GovKeeper (si nécessaire)
-	// Pour l'instant, on garde le keeper le plus simple possible.
 }
 
 // NewKeeper construit un nouveau Keeper PoSS pour NOORCHAIN.
@@ -44,43 +33,38 @@ func (k Keeper) getStore(ctx sdk.Context) sdk.KVStore {
 	return ctx.KVStore(k.storeKey)
 }
 
-// signalStore retourne un store préfixé pour les signaux PoSS.
+// ---------- Stores préfixés ----------
+
 func (k Keeper) signalStore(ctx sdk.Context) prefix.Store {
 	parent := k.getStore(ctx)
 	return noorsignaltypes.GetSignalStore(parent)
 }
 
-// curatorStore retourne un store préfixé pour les curators PoSS.
 func (k Keeper) curatorStore(ctx sdk.Context) prefix.Store {
 	parent := k.getStore(ctx)
 	return noorsignaltypes.GetCuratorStore(parent)
 }
 
-// configStore retourne un store préfixé pour la configuration PoSS.
 func (k Keeper) configStore(ctx sdk.Context) prefix.Store {
 	parent := k.getStore(ctx)
 	return noorsignaltypes.GetConfigStore(parent)
+}
+
+func (k Keeper) dailyCounterStore(ctx sdk.Context) prefix.Store {
+	parent := k.getStore(ctx)
+	return noorsignaltypes.GetDailyCounterStore(parent)
 }
 
 // ---------------------------
 // Gestion de la configuration
 // ---------------------------
 
-// SetConfig enregistre la configuration globale PoSS dans le store.
-//
-// Cette méthode écrase simplement la configuration précédente.
 func (k Keeper) SetConfig(ctx sdk.Context, cfg noorsignaltypes.PossConfig) {
 	store := k.configStore(ctx)
-
 	bz := k.cdc.MustMarshal(&cfg)
 	store.Set([]byte("config"), bz)
 }
 
-// GetConfig lit la configuration globale PoSS depuis le store.
-//
-// Retourne :
-// - la configuration (PossConfig)
-// - un booléen "found" qui indique si une config existe déjà.
 func (k Keeper) GetConfig(ctx sdk.Context) (noorsignaltypes.PossConfig, bool) {
 	store := k.configStore(ctx)
 
@@ -91,18 +75,12 @@ func (k Keeper) GetConfig(ctx sdk.Context) (noorsignaltypes.PossConfig, bool) {
 
 	var cfg noorsignaltypes.PossConfig
 	k.cdc.MustUnmarshal(bz, &cfg)
-
 	return cfg, true
 }
 
-// InitDefaultConfig initialise la configuration PoSS avec les valeurs
-// par défaut si aucune configuration n'est encore présente.
-//
-// Si une configuration existe déjà, cette fonction ne fait rien.
 func (k Keeper) InitDefaultConfig(ctx sdk.Context) {
 	_, found := k.GetConfig(ctx)
 	if found {
-		// Une configuration existe déjà : on ne la remplace pas.
 		return
 	}
 
@@ -114,19 +92,6 @@ func (k Keeper) InitDefaultConfig(ctx sdk.Context) {
 // Calcul des récompenses PoSS (aide)
 // ---------------------------------
 
-// ComputeSignalRewardsFromConfig calcule les récompenses PoSS pour un signal
-// en utilisant la configuration actuellement stockée dans le module.
-//
-// Paramètres :
-// - ctx    : contexte d'exécution
-// - weight : poids du signal (1, 2, 5, etc.)
-// - era    : indice d'ère pour le halving (0 = aucune division, 1 = /2, etc.)
-//
-// Retourne :
-// - total       : récompense totale (après halving)
-// - participant : part pour le participant
-// - curator     : part pour le curator
-// - found       : booléen indiquant si une configuration PoSS était présente
 func (k Keeper) ComputeSignalRewardsFromConfig(
 	ctx sdk.Context,
 	weight uint32,
@@ -141,18 +106,6 @@ func (k Keeper) ComputeSignalRewardsFromConfig(
 	return total, participant, curator, true
 }
 
-// ComputeSignalRewardsCurrentEra calcule les récompenses PoSS pour un signal
-// en utilisant l'ère courante définie dans la configuration PoSS.
-//
-// Paramètres :
-// - ctx    : contexte d'exécution
-// - weight : poids du signal (1, 2, 5, etc.)
-//
-// Retourne :
-// - total       : récompense totale (après halving avec cfg.EraIndex)
-// - participant : part pour le participant
-// - curator     : part pour le curator
-// - found       : booléen indiquant si une configuration PoSS était présente
 func (k Keeper) ComputeSignalRewardsCurrentEra(
 	ctx sdk.Context,
 	weight uint32,
@@ -171,8 +124,6 @@ func (k Keeper) ComputeSignalRewardsCurrentEra(
 // Gestion des identifiants et des signaux
 // -------------------------------------
 
-// getNextSignalID lit le prochain identifiant de signal à utiliser.
-// Si aucune valeur n'est encore stockée, on commence à 1.
 func (k Keeper) getNextSignalID(ctx sdk.Context) uint64 {
 	store := k.getStore(ctx)
 
@@ -184,7 +135,6 @@ func (k Keeper) getNextSignalID(ctx sdk.Context) uint64 {
 	return binary.BigEndian.Uint64(bz)
 }
 
-// setNextSignalID met à jour le prochain identifiant de signal.
 func (k Keeper) setNextSignalID(ctx sdk.Context, nextID uint64) {
 	store := k.getStore(ctx)
 
@@ -193,34 +143,20 @@ func (k Keeper) setNextSignalID(ctx sdk.Context, nextID uint64) {
 	store.Set(noorsignaltypes.KeyNextSignalID, bz)
 }
 
-// CreateSignal crée un nouveau signal PoSS, lui attribue un ID unique,
-// le stocke dans le KVStore, et retourne la version enrichie avec Id.
-//
-// Remarques :
-// - le champ Id du signal passé en paramètre est ignoré et remplacé.
-// - la fonction n'implémente pas encore de logique métier (validation
-//   du poids, du curator, limites quotidiennes, etc.).
 func (k Keeper) CreateSignal(ctx sdk.Context, sig noorsignaltypes.Signal) noorsignaltypes.Signal {
-	// 1) Récupérer et incrémenter l'ID global.
 	nextID := k.getNextSignalID(ctx)
 	sig.Id = nextID
 
-	// 2) Stocker le signal dans le store préfixé.
 	sstore := k.signalStore(ctx)
 	key := noorsignaltypes.SignalKey(sig.Id)
 
 	bz := k.cdc.MustMarshal(&sig)
 	sstore.Set(key, bz)
 
-	// 3) Incrémenter le compteur pour le prochain signal.
 	k.setNextSignalID(ctx, nextID+1)
-
 	return sig
 }
 
-// SetSignal met à jour un signal existant dans le store.
-//
-// Si le signal n'existe pas encore, cette fonction l'ajoute simplement.
 func (k Keeper) SetSignal(ctx sdk.Context, sig noorsignaltypes.Signal) {
 	sstore := k.signalStore(ctx)
 	key := noorsignaltypes.SignalKey(sig.Id)
@@ -229,11 +165,6 @@ func (k Keeper) SetSignal(ctx sdk.Context, sig noorsignaltypes.Signal) {
 	sstore.Set(key, bz)
 }
 
-// GetSignal récupère un signal PoSS par son identifiant.
-//
-// Retourne :
-// - le Signal
-// - un booléen "found" indiquant si le signal existe.
 func (k Keeper) GetSignal(ctx sdk.Context, id uint64) (noorsignaltypes.Signal, bool) {
 	sstore := k.signalStore(ctx)
 	key := noorsignaltypes.SignalKey(id)
@@ -245,6 +176,55 @@ func (k Keeper) GetSignal(ctx sdk.Context, id uint64) (noorsignaltypes.Signal, b
 
 	var sig noorsignaltypes.Signal
 	k.cdc.MustUnmarshal(bz, &sig)
-
 	return sig, true
+}
+
+// -------------------------------------
+// Compteurs quotidiens PoSS (limites)
+// -------------------------------------
+
+// getDailySignalCount lit le nombre de signaux déjà émis par un participant
+// pour un "jour" donné (dayBucket).
+func (k Keeper) getDailySignalCount(
+	ctx sdk.Context,
+	addr sdk.AccAddress,
+	dayBucket uint64,
+) uint32 {
+	store := k.dailyCounterStore(ctx)
+	key := noorsignaltypes.DailyCounterKey(addr, dayBucket)
+
+	bz := store.Get(key)
+	if bz == nil {
+		return 0
+	}
+
+	return binary.BigEndian.Uint32(bz)
+}
+
+// setDailySignalCount met à jour le compteur de signaux pour un participant
+// sur un "jour" donné (dayBucket).
+func (k Keeper) setDailySignalCount(
+	ctx sdk.Context,
+	addr sdk.AccAddress,
+	dayBucket uint64,
+	count uint32,
+) {
+	store := k.dailyCounterStore(ctx)
+	key := noorsignaltypes.DailyCounterKey(addr, dayBucket)
+
+	bz := make([]byte, 4)
+	binary.BigEndian.PutUint32(bz, count)
+	store.Set(key, bz)
+}
+
+// incrementDailySignalCount incrémente le compteur et renvoie la nouvelle valeur.
+func (k Keeper) incrementDailySignalCount(
+	ctx sdk.Context,
+	addr sdk.AccAddress,
+	dayBucket uint64,
+) uint32 {
+	current := k.getDailySignalCount(ctx, addr, dayBucket)
+	next := current + 1
+	k.setDailySignalCount(ctx, addr, dayBucket, next)
+	return next
 }
