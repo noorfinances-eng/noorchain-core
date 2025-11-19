@@ -7,7 +7,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
-	sdk "github.com/cosmos/cdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
 	noorsignalkeeper "github.com/noorfinances-eng/noorchain-core/x/noorsignal/keeper"
@@ -117,7 +117,7 @@ func (am AppModule) InitGenesis(
 		return []abci.ValidatorUpdate{}
 	}
 
-	// 1) Config PoSS (BaseReward, 70/30, MaxSignalsPerDay, EraIndex, etc.).
+	// 1) Config PoSS.
 	am.keeper.SetConfig(ctx, state.Config)
 
 	// 2) Enregistrer les Curators fournis dans le genesis (s'ils existent).
@@ -125,20 +125,12 @@ func (am AppModule) InitGenesis(
 		am.keeper.SetCurator(ctx, curator)
 	}
 
-	// 3) Les signaux éventuels fournis dans le genesis (state.Signals)
-	// sont pour l'instant ignorés. On pourrait plus tard :
-	// - les restaurer un par un
-	// - recalculer nextSignalID
-	// etc.
-	// Pour V1, on assume un genesis sans signaux pré-existants.
+	// 3) Les signaux éventuels fournis dans le genesis sont ignorés pour V1.
 
 	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis exporte l'état du module vers un genesis JSON.
-//
-// Pour l'instant, on exporte uniquement la configuration PoSS,
-// avec des listes vides pour signaux et curators.
 func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
 	cfg, found := am.keeper.GetConfig(ctx)
 	if !found {
