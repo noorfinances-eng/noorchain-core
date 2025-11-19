@@ -6,6 +6,8 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 )
 
@@ -98,27 +100,49 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 //
 // Étape actuelle :
 // - instanciation réelle du ParamsKeeper
-// - les autres keepers restent à leur valeur zéro et seront ajoutés
-//   dans des étapes futures.
+// - instanciation minimale d'un AccountKeeper
+// Les autres keepers seront ajoutés dans des étapes futures.
 func (b *AppBuilder) BuildKeepers() AppKeepers {
 	sk := b.storeKeys
 	enc := b.encCfg
 
 	// 1) Créer un ParamsKeeper réel.
-	//
-	// NewKeeper(cdc, legacyAmino, key, tkey) retourne un paramskeeper.Keeper.
 	paramsKeeper := paramskeeper.NewKeeper(
-		enc.Marshaler,     // codec binaire (Protobuf)
-		enc.Amino,         // codec legacy Amino pour JSON
-		sk.ParamsKey,      // KVStoreKey pour les params
-		sk.ParamsTransientKey, // TransientStoreKey pour les params temporaires
+		enc.Marshaler,          // codec binaire (Protobuf)
+		enc.Amino,              // codec legacy Amino pour JSON
+		sk.ParamsKey,           // KVStoreKey pour les params
+		sk.ParamsTransientKey,  // TransientStoreKey pour les params temporaires
 	)
 
-	// 2) Construire la structure AppKeepers.
+	// 2) Préparer les permissions des comptes module (maccPerms).
 	//
-	// Pour le moment, seul ParamsKeeper est réellement instancié.
-	// Les autres seront remplis plus tard (AccountKeeper, BankKeeper, etc.).
+	// Pour l'instant, on utilise une map vide. Plus tard, on pourra
+	// ajouter des comptes module (frais, distribution, PoSS, etc.)
+	maccPerms := map[string][]string{}
+
+	// 3) Créer un AccountKeeper minimal.
+	//
+	// NewAccountKeeper utilise :
+	// - codec binaire
+	// - store key pour les comptes
+	// - permissions des comptes module
+	// - une fonction de création de compte de base
+	// - le préfixe Bech32 principal
+	accountKeeper := authkeeper.NewAccountKeeper(
+		enc.Marshaler,
+		sk.AuthKey,
+		maccPerms,
+		Bech32MainPrefix,
+		authtypes.ProtoBaseAccount,
+	)
+
+	// 4) Construire la structure AppKeepers.
+	//
+	// Pour le moment :
+	// - AccountKeeper et ParamsKeeper sont instanciés
+	// - les autres keepers seront ajoutés plus tard.
 	return AppKeepers{
-		ParamsKeeper: paramsKeeper,
+		AccountKeeper: accountKeeper,
+		ParamsKeeper:  paramsKeeper,
 	}
 }
