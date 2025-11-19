@@ -69,11 +69,14 @@ func (b *AppBuilder) StoreKeys() StoreKeys {
 	return b.storeKeys
 }
 
-// BuildBaseApp crée une instance minimale de baseapp.BaseApp.
+// BuildBaseApp crée une instance minimale de baseapp.BaseApp
+// et monte les stores principaux (KV + transient).
 //
 // Maintenant que MakeEncodingConfig() est réel, on utilise toujours
 // un TxDecoder valide provenant de encCfg.TxConfig.
 func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
+	sk := b.storeKeys
+
 	// Récupérer le décodeur de transactions depuis la config d'encodage.
 	txDecoder := b.encCfg.TxConfig.TxDecoder()
 
@@ -85,6 +88,22 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 		txDecoder,
 		baseapp.SetChainID(ChainID),
 	)
+
+	// Monter les KVStores des modules principaux.
+	//
+	// Même si certains modules/keepers ne sont pas encore instanciés,
+	// on prépare déjà les stores nécessaires.
+	if base != nil {
+		base.MountKVStore(sk.AuthKey)
+		base.MountKVStore(sk.BankKey)
+		base.MountKVStore(sk.StakingKey)
+		base.MountKVStore(sk.GovKey)
+		base.MountKVStore(sk.ParamsKey)
+		base.MountKVStore(sk.NoorSignalKey)
+
+		// Store transient pour le module Params.
+		base.MountTransientStore(sk.ParamsTransientKey)
+	}
 
 	// Charger la dernière version stockée en DB si demandé.
 	if b.loadLatest && base != nil {
@@ -138,10 +157,6 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 	blockedAddrs := map[string]bool{}
 
 	// 5) Créer un BankKeeper minimal.
-	//
-	// NewBaseKeeper(cdc, storeKey, accountKeeper, blockedAddrs, authority)
-	// authority est une adresse "autorité" pour certaines opérations
-	// (gov, etc.). Ici, on met une chaîne vide et on l'ajustera plus tard.
 	bankKeeper := bankkeeper.NewBaseKeeper(
 		enc.Marshaler,
 		sk.BankKey,
