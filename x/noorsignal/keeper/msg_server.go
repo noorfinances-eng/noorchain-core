@@ -88,17 +88,6 @@ func (s MsgServer) SubmitSignal(
 
 // ValidateSignal gère la réception d'un MsgValidateSignal
 // (validation d'un signal existant par un curator).
-//
-// Étapes :
-// - convertir l'adresse du curator
-// - vérifier qu'il est bien un Curator actif
-// - récupérer le signal
-// - vérifier qu'il existe et n'est pas déjà validé
-// - calculer les récompenses PoSS (total / 70% / 30%)
-// - enregistrer les récompenses dans le signal
-// - associer le curator et sauvegarder.
-//
-// AUCUN transfert de NUR n'est encore réalisé ici.
 func (s MsgServer) ValidateSignal(
 	goCtx context.Context,
 	msg *noorsignaltypes.MsgValidateSignal,
@@ -144,8 +133,10 @@ func (s MsgServer) ValidateSignal(
 	// 7) Mettre à jour le signal dans le store.
 	s.Keeper.SetSignal(ctx, signal)
 
+	// 8) Incrémenter le compteur de signaux validés pour ce Curator.
+	s.Keeper.IncrementCuratorValidatedCount(ctx, curatorAddr)
+
 	// TODO (plus tard) :
-	// - incrémenter le compteur TotalSignalsValidated du curator
 	// - utiliser BankKeeper pour distribuer réellement les récompenses
 	// - générer des events pour les explorateurs.
 
