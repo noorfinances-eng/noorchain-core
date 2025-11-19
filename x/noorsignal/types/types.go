@@ -80,3 +80,26 @@ type PossConfig struct {
 	// Indicateur si le module PoSS est actif.
 	Enabled bool
 }
+
+// DefaultPossConfig retourne une configuration PoSS par défaut
+// cohérente avec le modèle NOORCHAIN :
+// - 70% pour le participant
+// - 30% pour le curator
+// - module activé
+// - baseReward et limite journalière placés à des valeurs symboliques
+//   (ajustables plus tard dans le genesis ou par gouvernance).
+func DefaultPossConfig() PossConfig {
+	return PossConfig{
+		// Exemple symbolique : 100 unités de base par signal 1x.
+		// L'unité réelle (NUR vs unur) sera clarifiée plus tard.
+		BaseReward: 100,
+
+		ParticipantShare: 70,
+		CuratorShare:     30,
+
+		// Exemple : 50 signaux max / jour / participant.
+		MaxSignalsPerDay: 50,
+
+		Enabled: true,
+	}
+}
