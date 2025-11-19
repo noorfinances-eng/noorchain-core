@@ -7,7 +7,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
 	noorsignalkeeper "github.com/noorfinances-eng/noorchain-core/x/noorsignal/keeper"
@@ -52,7 +52,11 @@ func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 }
 
 // ValidateGenesis vérifie que le genesis fourni est valide pour le module.
-func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ module.ClientGenesisValidation, bz json.RawMessage) error {
+func (AppModuleBasic) ValidateGenesis(
+	cdc codec.JSONCodec,
+	_ module.ClientGenesisValidation,
+	bz json.RawMessage,
+) error {
 	if bz == nil {
 		return nil
 	}
@@ -62,7 +66,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ module.ClientGenesi
 		return err
 	}
 
-	// TODO: validations supplémentaires si nécessaire.
+	// TODO: validations supplémentaires si nécessaire (ex: parts 70/30 cohérentes).
 	_ = state
 	return nil
 }
@@ -95,23 +99,46 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 }
 
 // InitGenesis initialise l'état du module à partir du genesis.
-func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, bz json.RawMessage) []abci.ValidatorUpdate {
+func (am AppModule) InitGenesis(
+	ctx sdk.Context,
+	cdc codec.JSONCodec,
+	bz json.RawMessage,
+) []abci.ValidatorUpdate {
 	if bz == nil {
+		// Pas de genesis spécifique : config PoSS par défaut.
 		am.keeper.InitDefaultConfig(ctx)
 		return []abci.ValidatorUpdate{}
 	}
 
 	var state noorsignaltypes.GenesisState
 	if err := cdc.UnmarshalJSON(bz, &state); err != nil {
+		// En cas d'erreur de decoding, on se replie sur la config par défaut.
 		am.keeper.InitDefaultConfig(ctx)
 		return []abci.ValidatorUpdate{}
 	}
 
+	// 1) Config PoSS (BaseReward, 70/30, MaxSignalsPerDay, EraIndex, etc.).
 	am.keeper.SetConfig(ctx, state.Config)
+
+	// 2) Enregistrer les Curators fournis dans le genesis (s'ils existent).
+	for _, curator := range state.Curators {
+		am.keeper.SetCurator(ctx, curator)
+	}
+
+	// 3) Les signaux éventuels fournis dans le genesis (state.Signals)
+	// sont pour l'instant ignorés. On pourrait plus tard :
+	// - les restaurer un par un
+	// - recalculer nextSignalID
+	// etc.
+	// Pour V1, on assume un genesis sans signaux pré-existants.
+
 	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis exporte l'état du module vers un genesis JSON.
+//
+// Pour l'instant, on exporte uniquement la configuration PoSS,
+// avec des listes vides pour signaux et curators.
 func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
 	cfg, found := am.keeper.GetConfig(ctx)
 	if !found {
@@ -133,6 +160,9 @@ func (am AppModule) BeginBlock(ctx sdk.Context, _ abci.RequestBeginBlock) {
 }
 
 // EndBlock est appelé à la fin de chaque bloc.
-func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
+func (am AppModule) EndBlock(
+	ctx sdk.Context,
+	_ abci.RequestEndBlock,
+) []abci.ValidatorUpdate {
 	return []abci.ValidatorUpdate{}
 }
