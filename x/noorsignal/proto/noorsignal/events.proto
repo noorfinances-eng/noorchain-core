@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package noorchain.noorsignal;
+
+option go_package = "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types";
+
+// -----------------------------------------------------------
+// Events Protobuf pour le module PoSS (noorsignal)
+// -----------------------------------------------------------
+
+// Événement émis lorsqu'un signal est soumis.
+message EventSignalSubmitted {
+  uint64 signal_id   = 1;
+  string participant = 2;
+  uint32 weight      = 3;
+  string metadata    = 4;
+}
+
+// Événement émis lorsqu'un signal est validé par un curator.
+message EventSignalValidated {
+  uint64 signal_id         = 1;
+  string participant       = 2;
+  string curator           = 3;
+  uint64 reward_total      = 4;
+  uint64 reward_participant = 5;
+  uint64 reward_curator     = 6;
+}
