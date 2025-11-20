@@ -5,6 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
@@ -17,7 +18,7 @@ import (
 // Il gère :
 // - le store principal (storeKey)
 // - le codec binaire (cdc)
-// - l'accès optionnel au BankKeeper (pour l'argent réel)
+// - l'accès au BankKeeper (pour l'argent réel)
 // - l'adresse de la réserve PoSS (débiteur des récompenses PoSS)
 type Keeper struct {
 	storeKey storetypes.StoreKey
@@ -25,17 +26,12 @@ type Keeper struct {
 
 	// BankKeeper permet, dans une étape future, de distribuer réellement
 	// les récompenses PoSS en NUR (unur) lors de la validation d'un signal.
-	//
-	// Tant qu'il n'est pas initialisé via WithBankKeeper, aucune
-	// distribution réelle n'est effectuée.
 	bankKeeper bankkeeper.Keeper
 
-	// possReserveAddr est l'adresse (module account ou compte dédié)
+	// possReserve est l'adresse (module account ou compte dédié)
 	// depuis laquelle les récompenses PoSS seront débitées.
-	//
-	// Tant qu'elle n'est pas définie via WithPoSSReserveAddress,
-	// il est impossible de faire des transferts réels de récompenses.
-	possReserveAddr sdk.AccAddress
+	// Tant qu'elle n'est pas définie, aucun envoi réel ne peut être fait.
+	possReserve sdk.AccAddress
 }
 
 // NewKeeper construit un nouveau Keeper PoSS pour NOORCHAIN.
@@ -48,10 +44,10 @@ func NewKeeper(
 	storeKey storetypes.StoreKey,
 ) Keeper {
 	return Keeper{
-		storeKey:       storeKey,
-		cdc:            cdc,
-		bankKeeper:     bankkeeper.Keeper{}, // zero-value (non initialisé)
-		possReserveAddr: nil,               // pas encore définie
+		storeKey:   storeKey,
+		cdc:        cdc,
+		bankKeeper: bankkeeper.Keeper{}, // valeur zéro, sera configuré via WithBankKeeper
+		possReserve: nil,                // définie plus tard via WithPoSSReserveAddress
 	}
 }
 
@@ -76,8 +72,36 @@ func (k Keeper) WithBankKeeper(bk bankkeeper.Keeper) Keeper {
 //   noorSignalKeeper = noorSignalKeeper.WithPoSSReserveAddress(reserveAddr)
 //
 func (k Keeper) WithPoSSReserveAddress(addr sdk.AccAddress) Keeper {
-	k.possReserveAddr = addr
+	k.possReserve = addr
 	return k
+}
+
+// GetPoSSReserveAddress retourne l'adresse utilisée pour financer les récompenses PoSS.
+func (k Keeper) GetPoSSReserveAddress() sdk.AccAddress {
+	return k.possReserve
+}
+
+// SendPossRewards envoie des récompenses PoSS depuis la réserve vers une adresse cible.
+// ATTENTION : ce helper sera utilisé plus tard dans MsgServer.ValidateSignal.
+// Ici, on prépare simplement l'infrastructure.
+func (k Keeper) SendPossRewards(
+	ctx sdk.Context,
+	to sdk.AccAddress,
+	amount uint64,
+	denom string,
+) error {
+	if k.possReserve == nil || len(k.possReserve) == 0 {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "PoSS reserve address not set")
+	}
+	if amount == 0 {
+		return nil
+	}
+
+	coins := sdk.NewCoins(
+		sdk.NewCoin(denom, sdk.NewIntFromUint64(amount)),
+	)
+
+	return k.bankKeeper.SendCoins(ctx, k.possReserve, to, coins)
 }
 
 // getStore retourne le KVStore brut du module à partir du contexte.
@@ -190,8 +214,7 @@ func (k Keeper) getNextSignalID(ctx sdk.Context) uint64 {
 func (k Keeper) setNextSignalID(ctx sdk.Context, nextID uint64) {
 	store := k.getStore(ctx)
 
-	bz := make([]byte(8)
-)
+	bz := make([]byte, 8)
 	binary.BigEndian.PutUint64(bz, nextID)
 	store.Set(noorsignaltypes.KeyNextSignalID, bz)
 }
