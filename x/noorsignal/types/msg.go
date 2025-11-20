@@ -1,71 +1,196 @@
 package types
 
 import (
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
-// MsgSubmitSignal représente une transaction par laquelle un participant
-// soumet un "signal social" PoSS.
 //
-// Exemples de signaux :
-// - participation vérifiée à un événement
-// - micro-don
-// - contenu certifié NOORCHAIN
-//
-// Remarque :
-// - La version finale sera générée à partir de fichiers .proto.
-// - Cette struct Go sert de point de départ conceptuel.
+// -----------------------------------------------------------------------------
+//  MsgSubmitSignal
+// -----------------------------------------------------------------------------
+
 type MsgSubmitSignal struct {
-	// Adresse du participant qui soumet le signal.
 	Participant string `json:"participant" yaml:"participant"`
-
-	// Poids du signal (barème PoSS converti en entier : 1, 2, 5, etc.).
-	Weight uint32 `json:"weight" yaml:"weight"`
-
-	// Informations supplémentaires (hash de contenu, ID externe, etc.).
-	Metadata string `json:"metadata" yaml:"metadata"`
+	Weight      uint32 `json:"weight" yaml:"weight"`
+	Metadata    string `json:"metadata" yaml:"metadata"`
 }
 
-// GetParticipantAddress retourne l'adresse du participant sous forme sdk.AccAddress.
-// Helper simple pour éviter de répéter la conversion partout.
+func (m MsgSubmitSignal) Route() string { return "noorsignal" }
+func (m MsgSubmitSignal) Type() string  { return "submit_signal" }
+
+func (m MsgSubmitSignal) ValidateBasic() error {
+	if m.Participant == "" {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "participant address cannot be empty")
+	}
+	if m.Weight == 0 {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "weight must be >= 1")
+	}
+	if m.Weight > 100 {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "weight must be <= 100")
+	}
+	return nil
+}
+
+func (m MsgSubmitSignal) GetSigners() []sdk.AccAddress {
+	addr, err := sdk.AccAddressFromBech32(m.Participant)
+	if err != nil {
+		panic(err)
+	}
+	return []sdk.AccAddress{addr}
+}
+
 func (m MsgSubmitSignal) GetParticipantAddress() (sdk.AccAddress, error) {
 	return sdk.AccAddressFromBech32(m.Participant)
 }
 
-// MsgValidateSignal représente une transaction par laquelle un curator
-// valide un signal existant.
 //
-// Le flux standard pourrait être :
-// 1) un participant soumet un signal (MsgSubmitSignal)
-// 2) un curator le valide (MsgValidateSignal) → ce qui débloque les récompenses PoSS.
-//
-// Remarque : comme pour MsgSubmitSignal, la version finale sera définie
-// en Protobuf, cette struct est une base conceptuelle.
-type MsgValidateSignal struct {
-	// Adresse du curator qui valide le signal.
-	Curator string `json:"curator" yaml:"curator"`
+// -----------------------------------------------------------------------------
+//  MsgValidateSignal
+// -----------------------------------------------------------------------------
 
-	// Identifiant du signal à valider.
+type MsgValidateSignal struct {
+	Curator  string `json:"curator" yaml:"curator"`
 	SignalId uint64 `json:"signal_id" yaml:"signal_id"`
 }
 
-// GetCuratorAddress retourne l'adresse du curator sous forme sdk.AccAddress.
+func (m MsgValidateSignal) Route() string { return "noorsignal" }
+func (m MsgValidateSignal) Type() string  { return "validate_signal" }
+
+func (m MsgValidateSignal) ValidateBasic() error {
+	if m.Curator == "" {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "curator address cannot be empty")
+	}
+	if m.SignalId == 0 {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "signal_id must be >= 1")
+	}
+	return nil
+}
+
+func (m MsgValidateSignal) GetSigners() []sdk.AccAddress {
+	addr, err := sdk.AccAddressFromBech32(m.Curator)
+	if err != nil {
+		panic(err)
+	}
+	return []sdk.AccAddress{addr}
+}
+
 func (m MsgValidateSignal) GetCuratorAddress() (sdk.AccAddress, error) {
 	return sdk.AccAddressFromBech32(m.Curator)
 }
 
-// MsgUpdatePossConfig représenterait, dans une version future, une
-// mise à jour de la configuration PoSS via gouvernance ou un rôle
-// administratif strictement contrôlé.
 //
-// Pour l'instant, cette struct est laissée en commentaire car la
-// gouvernance exacte (on-chain / off-chain) n'est pas finalisée.
-/*
-type MsgUpdatePossConfig struct {
-	// Adresse de l'initiateur de la modification (ex: adresse gov module).
-	Authority string `json:"authority" yaml:"authority"`
+// -----------------------------------------------------------------------------
+//  ADMIN MESSAGES
+// -----------------------------------------------------------------------------
+//  MsgAddCurator
+//  MsgRemoveCurator
+//  MsgSetConfig
+// -----------------------------------------------------------------------------
 
-	// Nouvelle configuration PoSS proposée.
-	NewConfig PossConfig `json:"new_config" yaml:"new_config"`
+// -----------------------------
+// MsgAddCurator
+// -----------------------------
+type MsgAddCurator struct {
+	Authority string `json:"authority" yaml:"authority"`
+	Curator   string `json:"curator" yaml:"curator"`
+	Level     string `json:"level" yaml:"level"`
 }
-*/
+
+func (m MsgAddCurator) Route() string { return "noorsignal" }
+func (m MsgAddCurator) Type() string  { return "add_curator" }
+
+func (m MsgAddCurator) ValidateBasic() error {
+	if m.Authority == "" {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "authority cannot be empty")
+	}
+	if m.Curator == "" {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "curator cannot be empty")
+	}
+	if m.Level == "" {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "level cannot be empty")
+	}
+	return nil
+}
+
+func (m MsgAddCurator) GetSigners() []sdk.AccAddress {
+	addr, err := sdk.AccAddressFromBech32(m.Authority)
+	if err != nil {
+		panic(err)
+	}
+	return []sdk.AccAddress{addr}
+}
+
+// -----------------------------
+// MsgRemoveCurator
+// -----------------------------
+type MsgRemoveCurator struct {
+	Authority string `json:"authority" yaml:"authority"`
+	Curator   string `json:"curator" yaml:"curator"`
+}
+
+func (m MsgRemoveCurator) Route() string { return "noorsignal" }
+func (m MsgRemoveCurator) Type() string  { return "remove_curator" }
+
+func (m MsgRemoveCurator) ValidateBasic() error {
+	if m.Authority == "" {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "authority cannot be empty")
+	}
+	if m.Curator == "" {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "curator cannot be empty")
+	}
+	return nil
+}
+
+func (m MsgRemoveCurator) GetSigners() []sdk.AccAddress {
+	addr, err := sdk.AccAddressFromBech32(m.Authority)
+	if err != nil {
+		panic(err)
+	}
+	return []sdk.AccAddress{addr}
+}
+
+// -----------------------------
+// MsgSetConfig
+// -----------------------------
+type MsgSetConfig struct {
+	Authority       string `json:"authority" yaml:"authority"`
+	BaseReward      string `json:"base_reward" yaml:"base_reward"`
+	MaxSignalsPerDay uint32 `json:"max_signals_per_day" yaml:"max_signals_per_day"`
+	EraIndex         uint64 `json:"era_index" yaml:"era_index"`
+	ParticipantRatio uint32 `json:"participant_ratio" yaml:"participant_ratio"`
+	CuratorRatio     uint32 `json:"curator_ratio" yaml:"curator_ratio"`
+}
+
+func (m MsgSetConfig) Route() string { return "noorsignal" }
+func (m MsgSetConfig) Type() string  { return "set_config" }
+
+func (m MsgSetConfig) ValidateBasic() error {
+	if m.Authority == "" {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "authority cannot be empty")
+	}
+
+	if m.BaseReward == "" {
+		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "base_reward cannot be empty")
+	}
+
+	if (m.ParticipantRatio + m.CuratorRatio) != 100 {
+		return sdkerrors.Wrap(
+			sdkerrors.ErrInvalidRequest,
+			fmt.Sprintf("participant_ratio + curator_ratio must equal 100 (got %d)",
+				m.ParticipantRatio+m.CuratorRatio),
+		)
+	}
+
+	return nil
+}
+
+func (m MsgSetConfig) GetSigners() []sdk.AccAddress {
+	addr, err := sdk.AccAddressFromBech32(m.Authority)
+	if err != nil {
+		panic(err)
+	}
+	return []sdk.AccAddress{addr}
+}
