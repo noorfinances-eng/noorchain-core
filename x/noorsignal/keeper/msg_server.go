@@ -155,9 +155,20 @@ func (s MsgServer) ValidateSignal(
 	// 8) Incrémenter le compteur de signaux validés pour ce Curator.
 	s.Keeper.IncrementCuratorValidatedCount(ctx, curatorAddr)
 
+	// 9) Émettre un event PoSS pour la validation du signal.
+	ctx.EventManager().EmitEvent(
+		noorsignaltypes.NewEventSignalValidated(
+			signal.Id,
+			signal.Participant.String(),
+			signal.Curator.String(),
+			signal.TotalReward,
+			signal.RewardParticipant,
+			signal.RewardCurator,
+		),
+	)
+
 	// TODO (plus tard) :
-	// - utiliser BankKeeper pour distribuer réellement les récompenses
-	// - émettre un event poss.signal_validated (étape 114).
+	// - utiliser BankKeeper pour distribuer réellement les récompenses.
 
 	return &sdk.Result{}, nil
 }
