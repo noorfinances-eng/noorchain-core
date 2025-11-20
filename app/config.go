@@ -1,34 +1,46 @@
 package app
 
-import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
+// Configuration globale de l'application NOORCHAIN.
+//
+// Ce fichier définit :
+// - le nom de la chaîne
+// - le chain-id
+// - le prefix Bech32
+// - la monnaie native (denom) utilisée pour les frais, le staking et PoSS.
+
+const (
+	// Nom interne de l'application.
+	AppName = "NOORCHAIN"
+
+	// ChainID utilisé pour le testnet actuel.
+	// Il sera ajusté plus tard pour mainnet (ex: "noorchain-1").
+	ChainID = "noorchain-testnet-1"
+
+	// Préfixe Bech32 pour les adresses NOORCHAIN.
+	// Exemple d'adresse : noor1xxxx...
+	Bech32MainPrefix = "noor"
 )
 
-// ConfigureSDK applies the global Cosmos SDK configuration for NOORCHAIN.
-//
-// This mainly sets the Bech32 prefixes for:
-// - accounts (noor1...)
-// - validators (noorvaloper1...)
-// - consensus nodes (noorvalcons1...)
-//
-// IMPORTANT:
-// - This function must be called once at application startup
-//   (for example in cmd/noord/main.go) *before* using Bech32 addresses.
-// - For now, we only define it and we will plug it into the startup flow
-//   in a later step.
-func ConfigureSDK() {
-	cfg := sdk.GetConfig()
+// -----------------------------------------------------------------------------
+//  Configuration de la monnaie native NUR
+// -----------------------------------------------------------------------------
 
-	cfg.SetBech32PrefixForAccount(Bech32PrefixAccAddr, Bech32PrefixAccPub)
-	cfg.SetBech32PrefixForValidator(Bech32PrefixValAddr, Bech32PrefixValPub)
-	cfg.SetBech32PrefixForConsensusNode(Bech32PrefixConsAddr, Bech32PrefixConsPub)
+const (
+	// CoinDenom est le denom interne de la monnaie native.
+	// Convention Cosmos : utiliser un "u" pour 10^-6 (micro).
+	// Ici : 1 NUR = 1_000_000 unur.
+	CoinDenom = "unur"
 
-	// Optionally, we could also configure coin type and full HD path here.
-	// For now we keep it simple.
-	//
-	// Example (if needed later):
-	// cfg.SetCoinType(118) // Cosmos default
-	// cfg.SetFullFundraiserPath("44'/118'/0'/0/0")
+	// CoinDisplayDenom est la façon "humaine" d'afficher la monnaie.
+	// Exemple : 12.345678 NUR
+	CoinDisplayDenom = "NUR"
 
-	cfg.Seal()
-}
+	// CoinDecimals définit le nombre de décimales pour la représentation
+	// humaine du token. Avec 6 décimales :
+	//   1 NUR = 1_000_000 unur
+	CoinDecimals = 6
+
+	// BondDenom est le denom utilisé pour le staking, les frais, etc.
+	// On le met égal à CoinDenom pour garder une seule monnaie native.
+	BondDenom = CoinDenom
+)
