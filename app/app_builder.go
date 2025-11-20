@@ -100,6 +100,10 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 		base.MountKVStore(sk.ParamsKey)
 		base.MountKVStore(sk.NoorSignalKey)
 
+		// EVM / FeeMarket (Ethermint)
+		base.MountKVStore(sk.EvmKey)
+		base.MountKVStore(sk.FeeMarketKey)
+
 		// Store transient pour le module Params.
 		base.MountTransientStore(sk.ParamsTransientKey)
 	}
@@ -122,17 +126,18 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 // - instanciation réelle d'un AccountKeeper
 // - instanciation réelle d'un BankKeeper minimal
 // - instanciation réelle du NoorSignalKeeper (PoSS)
-// Les autres keepers seront ajoutés dans des étapes futures.
+// Les autres keepers (staking, gov, evm, etc.) seront ajoutés
+// dans des étapes futures.
 func (b *AppBuilder) BuildKeepers() AppKeepers {
 	sk := b.storeKeys
 	enc := b.encCfg
 
 	// 1) Créer un ParamsKeeper réel.
 	paramsKeeper := paramskeeper.NewKeeper(
-		enc.Marshaler,          // codec binaire (Protobuf)
-		enc.Amino,              // codec legacy Amino pour JSON
-		sk.ParamsKey,           // KVStoreKey pour les params
-		sk.ParamsTransientKey,  // TransientStoreKey pour les params temporaires
+		enc.Marshaler,         // codec binaire (Protobuf)
+		enc.Amino,             // codec legacy Amino pour JSON
+		sk.ParamsKey,          // KVStoreKey pour les params
+		sk.ParamsTransientKey, // TransientStoreKey pour les params temporaires
 	)
 
 	// 2) Préparer les permissions des comptes module (maccPerms).
@@ -175,10 +180,16 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 	)
 
 	// 7) Construire la structure AppKeepers.
+	//
+	// À ce stade, EvmKeeper et FeeMarketKeeper ne sont pas encore
+	// initialisés. Ils seront branchés dans une étape future lorsque
+	// l'intégration Ethermint sera complète (wiring des deps, params, etc.).
 	return AppKeepers{
 		AccountKeeper:    accountKeeper,
 		BankKeeper:       bankKeeper,
 		ParamsKeeper:     paramsKeeper,
 		NoorSignalKeeper: noorSignalKeeper,
+
+		// EvmKeeper et FeeMarketKeeper seront initialisés plus tard.
 	}
 }
