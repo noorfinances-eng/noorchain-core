@@ -7,25 +7,77 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 
 	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
 )
 
 // Keeper est le gestionnaire principal du module PoSS (noorsignal) pour NOORCHAIN.
+//
+// Il gère :
+// - le store principal (storeKey)
+// - le codec binaire (cdc)
+// - l'accès optionnel au BankKeeper (pour l'argent réel)
+// - l'adresse de la réserve PoSS (débiteur des récompenses PoSS)
 type Keeper struct {
 	storeKey storetypes.StoreKey
 	cdc      codec.Codec
+
+	// BankKeeper permet, dans une étape future, de distribuer réellement
+	// les récompenses PoSS en NUR (unur) lors de la validation d'un signal.
+	//
+	// Tant qu'il n'est pas initialisé via WithBankKeeper, aucune
+	// distribution réelle n'est effectuée.
+	bankKeeper bankkeeper.Keeper
+
+	// possReserveAddr est l'adresse (module account ou compte dédié)
+	// depuis laquelle les récompenses PoSS seront débitées.
+	//
+	// Tant qu'elle n'est pas définie via WithPoSSReserveAddress,
+	// il est impossible de faire des transferts réels de récompenses.
+	possReserveAddr sdk.AccAddress
 }
 
 // NewKeeper construit un nouveau Keeper PoSS pour NOORCHAIN.
+//
+// Remarque :
+// - Le BankKeeper et l'adresse de réserve PoSS peuvent être branchés
+//   plus tard via les méthodes WithBankKeeper et WithPoSSReserveAddress.
 func NewKeeper(
 	cdc codec.Codec,
 	storeKey storetypes.StoreKey,
 ) Keeper {
 	return Keeper{
-		storeKey: storeKey,
-		cdc:      cdc,
+		storeKey:       storeKey,
+		cdc:            cdc,
+		bankKeeper:     bankkeeper.Keeper{}, // zero-value (non initialisé)
+		possReserveAddr: nil,               // pas encore définie
 	}
+}
+
+// WithBankKeeper retourne une copie du Keeper avec un BankKeeper initialisé.
+//
+// Usage typique (dans l'application) :
+//
+//   noorSignalKeeper := noorsignalkeeper.NewKeeper(enc.Marshaler, sk.NoorSignalKey)
+//   noorSignalKeeper = noorSignalKeeper.WithBankKeeper(bankKeeper)
+//
+func (k Keeper) WithBankKeeper(bk bankkeeper.Keeper) Keeper {
+	k.bankKeeper = bk
+	return k
+}
+
+// WithPoSSReserveAddress retourne une copie du Keeper avec l'adresse
+// de la réserve PoSS initialisée.
+//
+// Usage typique (dans l'application) :
+//
+//   reserveAddr := sdk.MustAccAddressFromBech32("noor1xxxx...")
+//   noorSignalKeeper = noorSignalKeeper.WithPoSSReserveAddress(reserveAddr)
+//
+func (k Keeper) WithPoSSReserveAddress(addr sdk.AccAddress) Keeper {
+	k.possReserveAddr = addr
+	return k
 }
 
 // getStore retourne le KVStore brut du module à partir du contexte.
@@ -138,7 +190,8 @@ func (k Keeper) getNextSignalID(ctx sdk.Context) uint64 {
 func (k Keeper) setNextSignalID(ctx sdk.Context, nextID uint64) {
 	store := k.getStore(ctx)
 
-	bz := make([]byte, 8)
+	bz := make([]byte(8)
+)
 	binary.BigEndian.PutUint64(bz, nextID)
 	store.Set(noorsignaltypes.KeyNextSignalID, bz)
 }
