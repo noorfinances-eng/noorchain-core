@@ -180,11 +180,14 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 	)
 
 	// 7) Construire la structure AppKeepers.
-	// (Les keepers EVM / FeeMarket seront ajoutés plus tard.)
+	// (Les keepers EVM / FeeMarket seront instanciés dans une étape dédiée.)
 	return AppKeepers{
 		AccountKeeper:    accountKeeper,
 		BankKeeper:       bankKeeper,
 		ParamsKeeper:     paramsKeeper,
 		NoorSignalKeeper: noorSignalKeeper,
+
+		EvmKeeper:       nil,
+		FeeMarketKeeper: nil,
 	}
 }
