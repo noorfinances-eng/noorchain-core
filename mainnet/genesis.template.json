@@ -1,14 +1,97 @@
 {
-  "//note": "This is a template for NOORCHAIN mainnet genesis. It is NOT final.",
-  "chain_id": "noorchain-1",
+  "chain_id": "noorchain-testnet-1",
+  "genesis_time": "2025-01-01T00:00:00Z",
+
   "app_state": {
-    "//distribution": "Genesis distribution 5% Foundation / 5% Dev / 5% PoSS Stimulus / 5% Pre-sale / 80% PoSS will be added here.",
-    "auth": {},
-    "bank": {},
-    "staking": {},
-    "gov": {},
-    "evm": {},
-    "noorsignal": {}
-  },
-  "genesis_time": "2025-12-01T00:00:00Z"
+    "auth": {
+      "accounts": [
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "address": "noor1foundationxxxxxxxxxxxxxxxxxxxxxx",
+          "pub_key": null,
+          "account_number": "0",
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "address": "noor1devxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "pub_key": null,
+          "account_number": "0",
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "address": "noor1stimulusxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "pub_key": null,
+          "account_number": "0",
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "address": "noor1presalxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "pub_key": null,
+          "account_number": "0",
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "address": "noor1possreservxxxxxxxxxxxxxxxxxxxxxxx",
+          "pub_key": null,
+          "account_number": "0",
+          "sequence": "0"
+        }
+      ]
+    },
+
+    "bank": {
+      "balances": [
+        {
+          "address": "noor1foundationxxxxxxxxxxxxxxxxxxxxxx",
+          "coins": [{ "denom": "unur", "amount": "14989622" }]
+        },
+        {
+          "address": "noor1devxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "coins": [{ "denom": "unur", "amount": "14989622" }]
+        },
+        {
+          "address": "noor1stimulusxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "coins": [{ "denom": "unur", "amount": "14989622" }]
+        },
+        {
+          "address": "noor1presalxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "coins": [{ "denom": "unur", "amount": "14989622" }]
+        },
+        {
+          "address": "noor1possreservxxxxxxxxxxxxxxxxxxxxxxx",
+          "coins": [{ "denom": "unur", "amount": "239833966" }]
+        }
+      ],
+
+      "supply": [
+        {
+          "denom": "unur",
+          "amount": "299792458"
+        }
+      ]
+    },
+
+    "staking": {
+      "params": {
+        "bond_denom": "unur"
+      }
+    },
+
+    "noorsignal": {
+      "config": {
+        "base_reward": 100,
+        "participant_share": 70,
+        "curator_share": 30,
+        "max_signals_per_day": 50,
+        "enabled": true,
+        "era_index": 0
+      },
+      "signals": [],
+      "curators": []
+    }
+  }
 }
