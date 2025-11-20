@@ -149,7 +149,7 @@ func (s MsgServer) ValidateSignal(
 			coinPart := sdk.NewCoin(denom, sdk.NewIntFromUint64(part))
 			coinsPart := sdk.NewCoins(coinPart)
 
-			if err := s.bank.SendCoins(ctx, reserveAddr, signal.Participant, coinsPart); err != nil {
+			if err := s.BankKeeper.SendCoins(ctx, reserveAddr, signal.Participant, coinsPart); err != nil {
 				return nil, sdkerrors.Wrap(err, "failed to send reward to participant")
 			}
 		}
@@ -159,7 +159,7 @@ func (s MsgServer) ValidateSignal(
 			coinCur := sdk.NewCoin(denom, sdk.NewIntFromUint64(cur))
 			coinsCur := sdk.NewCoins(coinCur)
 
-			if err := s.bank.SendCoins(ctx, reserveAddr, curatorAddr, coinsCur); err != nil {
+			if err := s.BankKeeper.SendCoins(ctx, reserveAddr, curatorAddr, coinsCur); err != nil {
 				return nil, sdkerrors.Wrap(err, "failed to send reward to curator")
 			}
 		}
@@ -196,8 +196,6 @@ func (s MsgServer) AddCurator(
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	// 1) Vérifier que l'authority est présente.
-	// TODO (plus tard) : vérifier que cette adresse correspond bien
-	// à une fondation / multisig autorisée ou à un module gov.
 	if msg.Authority == "" {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "missing authority")
 	}
@@ -239,8 +237,6 @@ func (s MsgServer) RemoveCurator(
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	// 1) Vérifier que l'authority est présente.
-	// TODO (plus tard) : vérifier que cette adresse correspond bien
-	// à une fondation / multisig autorisée ou à un module gov.
 	if msg.Authority == "" {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "missing authority")
 	}
@@ -277,8 +273,6 @@ func (s MsgServer) SetConfig(
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	// 1) Vérifier que l'authority est présente.
-	// TODO (plus tard) : vérifier que cette adresse correspond bien
-	// à une fondation / multisig autorisée ou à un module gov.
 	if msg.Authority == "" {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "missing authority")
 	}
@@ -299,7 +293,6 @@ func (s MsgServer) SetConfig(
 	}
 
 	// 4) Construire une nouvelle configuration PoSS.
-	// EraIndex dans PossConfig est un uint32, on caste depuis le uint64 du message.
 	if msg.EraIndex > uint64(^uint32(0)) {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "era_index out of range")
 	}
