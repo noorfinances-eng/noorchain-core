@@ -24,7 +24,7 @@ import (
 // - flag loadLatest
 // - options d'application
 // - configuration d'encodage
-// - clés de store (StoreKeys) pour les modules Cosmos / PoSS.
+// - clés de store (StoreKeys) pour les modules Cosmos / PoSS / EVM.
 type AppBuilder struct {
 	logger     sdk.Logger
 	db         dbm.DB
@@ -100,7 +100,7 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 		base.MountKVStore(sk.ParamsKey)
 		base.MountKVStore(sk.NoorSignalKey)
 
-		// EVM / FeeMarket (Ethermint)
+		// Stores pour EVM / FeeMarket (Ethermint).
 		base.MountKVStore(sk.EvmKey)
 		base.MountKVStore(sk.FeeMarketKey)
 
@@ -126,8 +126,7 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 // - instanciation réelle d'un AccountKeeper
 // - instanciation réelle d'un BankKeeper minimal
 // - instanciation réelle du NoorSignalKeeper (PoSS)
-//   + branchement du BankKeeper dans le Keeper PoSS
-// Les autres keepers (staking, gov, evm, etc.) seront ajoutés
+// Les autres keepers (staking, gov, evm, feemarket, etc.) seront ajoutés
 // dans des étapes futures.
 func (b *AppBuilder) BuildKeepers() AppKeepers {
 	sk := b.storeKeys
@@ -178,21 +177,14 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 	noorSignalKeeper := noorsignalkeeper.NewKeeper(
 		enc.Marshaler,
 		sk.NoorSignalKey,
-	).WithBankKeeper(
-		bankKeeper,
 	)
 
 	// 7) Construire la structure AppKeepers.
-	//
-	// À ce stade, EvmKeeper et FeeMarketKeeper ne sont pas encore
-	// initialisés. Ils seront branchés dans une étape future lorsque
-	// l'intégration Ethermint sera complète (wiring des deps, params, etc.).
+	// (Les keepers EVM / FeeMarket seront ajoutés plus tard.)
 	return AppKeepers{
 		AccountKeeper:    accountKeeper,
 		BankKeeper:       bankKeeper,
 		ParamsKeeper:     paramsKeeper,
 		NoorSignalKeeper: noorSignalKeeper,
-
-		// EvmKeeper et FeeMarketKeeper seront initialisés plus tard.
 	}
 }
