@@ -21,6 +21,10 @@ func NewMsgServer(k Keeper) MsgServer {
 	return MsgServer{Keeper: k}
 }
 
+// ------------------------------------------------------------
+// SubmitSignal
+// ------------------------------------------------------------
+
 // SubmitSignal gère la réception d'un MsgSubmitSignal
 // (émission d'un nouveau signal social PoSS).
 func (s MsgServer) SubmitSignal(
@@ -76,7 +80,7 @@ func (s MsgServer) SubmitSignal(
 		RewardCurator:     0,
 	}
 
-	// 6) Créer et stocker le signal via le Keeper (on récupère l'ID créé).
+	// 6) Créer et stocker le signal via le Keeper (on récupère l'ID).
 	created := s.Keeper.CreateSignal(ctx, signal)
 
 	// 7) Incrémenter le compteur quotidien si une limite est active.
@@ -84,20 +88,22 @@ func (s MsgServer) SubmitSignal(
 		s.incrementDailySignalCount(ctx, participantAddr, dayBucket)
 	}
 
-	// 8) Émettre l'event poss.signal_submitted pour les explorateurs / indexers.
+	// 8) Émettre un event PoSS pour le signal soumis.
 	ctx.EventManager().EmitEvent(
-		sdk.NewEvent(
-			noorsignaltypes.EventTypeSignalSubmitted,
-			sdk.NewAttribute(noorsignaltypes.AttrKeySignalID, strconv.FormatUint(created.Id, 10)),
-			sdk.NewAttribute(noorsignaltypes.AttrKeyParticipant, participantAddr.String()),
-			sdk.NewAttribute(noorsignaltypes.AttrKeyWeight, strconv.FormatUint(uint64(msg.Weight), 10)),
-			sdk.NewAttribute(noorsignaltypes.AttrKeyTimestamp, strconv.FormatInt(ctx.BlockTime().Unix(), 10)),
-			sdk.NewAttribute(noorsignaltypes.AttrKeyMetadata, msg.Metadata),
+		noorsignaltypes.NewEventSignalSubmitted(
+			created.Id,
+			created.Participant.String(),
+			created.Weight,
+			created.Metadata,
 		),
 	)
 
 	return &sdk.Result{}, nil
 }
+
+// ------------------------------------------------------------
+// ValidateSignal
+// ------------------------------------------------------------
 
 // ValidateSignal gère la réception d'un MsgValidateSignal
 // (validation d'un signal existant par un curator).
@@ -149,23 +155,150 @@ func (s MsgServer) ValidateSignal(
 	// 8) Incrémenter le compteur de signaux validés pour ce Curator.
 	s.Keeper.IncrementCuratorValidatedCount(ctx, curatorAddr)
 
-	// 9) Émettre l'event poss.signal_validated.
-	ctx.EventManager().EmitEvent(
-		sdk.NewEvent(
-			noorsignaltypes.EventTypeSignalValidated,
-			sdk.NewAttribute(noorsignaltypes.AttrKeySignalID, strconv.FormatUint(signal.Id, 10)),
-			sdk.NewAttribute(noorsignaltypes.AttrKeyCurator, curatorAddr.String()),
-			sdk.NewAttribute(noorsignaltypes.AttrKeyParticipant, signal.Participant.String()),
-			sdk.NewAttribute(noorsignaltypes.AttrKeyTotalReward, strconv.FormatUint(total, 10)),
-			sdk.NewAttribute(noorsignaltypes.AttrKeyRewardParticipant, strconv.FormatUint(part, 10)),
-			sdk.NewAttribute(noorsignaltypes.AttrKeyRewardCurator, strconv.FormatUint(cur, 10)),
-			sdk.NewAttribute(noorsignaltypes.AttrKeyWeight, strconv.FormatUint(uint64(signal.Weight), 10)),
-			sdk.NewAttribute(noorsignaltypes.AttrKeyTimestamp, strconv.FormatInt(ctx.BlockTime().Unix(), 10)),
-		),
-	)
-
 	// TODO (plus tard) :
-	// - utiliser BankKeeper pour distribuer réellement les récompenses.
+	// - utiliser BankKeeper pour distribuer réellement les récompenses
+	// - émettre un event poss.signal_validated (étape 114).
+
+	return &sdk.Result{}, nil
+}
+
+// ------------------------------------------------------------
+// AddCurator
+// ------------------------------------------------------------
+
+// AddCurator gère la réception d'un MsgAddCurator.
+// Il permet à une "authority" d'ajouter ou de réactiver un Curator
+// avec un certain niveau (BRONZE / SILVER / GOLD).
+func (s MsgServer) AddCurator(
+	goCtx context.Context,
+	msg *noorsignaltypes.MsgAddCurator,
+) (*sdk.Result, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	// 1) Vérifier que l'authority est présente.
+	// TODO (plus tard) : vérifier que cette adresse correspond bien
+	// à une fondation / multisig autorisée ou à un module gov.
+	if msg.Authority == "" {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "missing authority")
+	}
+
+	// 2) Convertir l'adresse du curator.
+	curatorAddr, err := sdk.AccAddressFromBech32(msg.Curator)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "invalid curator address")
+	}
+
+	// 3) Récupérer un éventuel Curator existant.
+	curator, found := s.Keeper.GetCurator(ctx, curatorAddr)
+	if !found {
+		// Nouveau Curator.
+		curator = noorsignaltypes.Curator{
+			Address:               curatorAddr,
+			Level:                 msg.Level,
+			TotalSignalsValidated: 0,
+			Active:                true,
+		}
+	} else {
+		// Mise à jour d'un Curator existant.
+		curator.Level = msg.Level
+		curator.Active = true
+	}
+
+	// 4) Enregistrer le Curator dans le store.
+	s.Keeper.SetCurator(ctx, curator)
+
+	return &sdk.Result{}, nil
+}
+
+// ------------------------------------------------------------
+// RemoveCurator
+// ------------------------------------------------------------
+
+// RemoveCurator gère la réception d'un MsgRemoveCurator.
+// Il permet à une "authority" de désactiver un Curator existant.
+func (s MsgServer) RemoveCurator(
+	goCtx context.Context,
+	msg *noorsignaltypes.MsgRemoveCurator,
+) (*sdk.Result, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	// 1) Vérifier que l'authority est présente.
+	if msg.Authority == "" {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "missing authority")
+	}
+
+	// 2) Convertir l'adresse du curator.
+	curatorAddr, err := sdk.AccAddressFromBech32(msg.Curator)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "invalid curator address")
+	}
+
+	// 3) Récupérer le Curator.
+	curator, found := s.Keeper.GetCurator(ctx, curatorAddr)
+	if !found {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrNotFound, "curator not found")
+	}
+
+	// 4) Le désactiver (on garde l'historique).
+	curator.Active = false
+
+	// 5) Enregistrer la mise à jour.
+	s.Keeper.SetCurator(ctx, curator)
+
+	return &sdk.Result{}, nil
+}
+
+// ------------------------------------------------------------
+// SetConfig
+// ------------------------------------------------------------
+
+// SetConfig gère la réception d'un MsgSetConfig.
+// Il permet à une "authority" de mettre à jour la configuration PoSS
+// (base_reward, max_signals_per_day, era_index, ratios 70/30, etc.)
+// sans toucher au genesis.
+func (s MsgServer) SetConfig(
+	goCtx context.Context,
+	msg *noorsignaltypes.MsgSetConfig,
+) (*sdk.Result, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	// 1) Vérifier que l'authority est présente.
+	if msg.Authority == "" {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "missing authority")
+	}
+
+	// 2) Parser la base de récompense depuis la string.
+	baseReward, err := strconv.ParseUint(msg.BaseReward, 10, 64)
+	if err != nil {
+		return nil, sdkerrors.Wrap(err, "invalid base_reward")
+	}
+
+	// 3) Vérifier les ratios participant / curator.
+	totalRatio := msg.ParticipantRatio + msg.CuratorRatio
+	if totalRatio == 0 || totalRatio != 100 {
+		return nil, sdkerrors.Wrap(
+			sdkerrors.ErrInvalidRequest,
+			"participant_ratio + curator_ratio must be exactly 100",
+		)
+	}
+
+	// 4) Construire une nouvelle configuration PoSS.
+	// EraIndex dans PossConfig est un uint32, on caste depuis le uint64 du message.
+	if msg.EraIndex > uint64(^uint32(0)) {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "era_index out of range")
+	}
+
+	newCfg := noorsignaltypes.PossConfig{
+		BaseReward:       baseReward,
+		ParticipantShare: msg.ParticipantRatio,
+		CuratorShare:     msg.CuratorRatio,
+		MaxSignalsPerDay: msg.MaxSignalsPerDay,
+		Enabled:          true,
+		EraIndex:         uint32(msg.EraIndex),
+	}
+
+	// 5) Enregistrer cette nouvelle config dans le store PoSS.
+	s.Keeper.SetConfig(ctx, newCfg)
 
 	return &sdk.Result{}, nil
 }
