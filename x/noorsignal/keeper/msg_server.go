@@ -21,9 +21,9 @@ func NewMsgServer(k Keeper) MsgServer {
 	return MsgServer{Keeper: k}
 }
 
-// ------------------------------------------------------------
-// SubmitSignal
-// ------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// MsgSubmitSignal : émission d'un nouveau signal social PoSS
+// -----------------------------------------------------------------------------
 
 // SubmitSignal gère la réception d'un MsgSubmitSignal
 // (émission d'un nouveau signal social PoSS).
@@ -80,30 +80,22 @@ func (s MsgServer) SubmitSignal(
 		RewardCurator:     0,
 	}
 
-	// 6) Créer et stocker le signal via le Keeper (on récupère l'ID).
-	created := s.Keeper.CreateSignal(ctx, signal)
+	// 6) Créer et stocker le signal via le Keeper (récupère l'ID).
+	signal = s.Keeper.CreateSignal(ctx, signal)
 
 	// 7) Incrémenter le compteur quotidien si une limite est active.
 	if cfg.MaxSignalsPerDay > 0 {
 		s.incrementDailySignalCount(ctx, participantAddr, dayBucket)
 	}
 
-	// 8) Émettre un event PoSS pour le signal soumis.
-	ctx.EventManager().EmitEvent(
-		noorsignaltypes.NewEventSignalSubmitted(
-			created.Id,
-			created.Participant.String(),
-			created.Weight,
-			created.Metadata,
-		),
-	)
+	// TODO (plus tard) : émettre un event poss.signal_submitted
 
 	return &sdk.Result{}, nil
 }
 
-// ------------------------------------------------------------
-// ValidateSignal
-// ------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// MsgValidateSignal : validation + récompenses réelles PoSS
+// -----------------------------------------------------------------------------
 
 // ValidateSignal gère la réception d'un MsgValidateSignal
 // (validation d'un signal existant par un curator).
@@ -143,39 +135,56 @@ func (s MsgServer) ValidateSignal(
 		cur = 0
 	}
 
-	// 6) Associer le curator et enregistrer les récompenses.
+	// -----------------------------------------------------------------
+	// 6) Distribuer les récompenses réelles NUR (unur) si total > 0.
+	// -----------------------------------------------------------------
+	if total > 0 {
+		// Source : réserve PoSS (80 %) définie dans types/addresses.go
+		reserveAddr := noorsignaltypes.TestPoSSReserveAddr
+
+		denom := "unur" // doit être aligné avec app.CoinDenom
+
+		// 6.a) Récompense pour le participant (70 %)
+		if part > 0 {
+			coinPart := sdk.NewCoin(denom, sdk.NewIntFromUint64(part))
+			coinsPart := sdk.NewCoins(coinPart)
+
+			if err := s.bank.SendCoins(ctx, reserveAddr, signal.Participant, coinsPart); err != nil {
+				return nil, sdkerrors.Wrap(err, "failed to send reward to participant")
+			}
+		}
+
+		// 6.b) Récompense pour le curator (30 %)
+		if cur > 0 {
+			coinCur := sdk.NewCoin(denom, sdk.NewIntFromUint64(cur))
+			coinsCur := sdk.NewCoins(coinCur)
+
+			if err := s.bank.SendCoins(ctx, reserveAddr, curatorAddr, coinsCur); err != nil {
+				return nil, sdkerrors.Wrap(err, "failed to send reward to curator")
+			}
+		}
+	}
+
+	// 7) Associer le curator et enregistrer les récompenses dans le signal.
 	signal.Curator = curatorAddr
 	signal.TotalReward = total
 	signal.RewardParticipant = part
 	signal.RewardCurator = cur
 
-	// 7) Mettre à jour le signal dans le store.
+	// 8) Mettre à jour le signal dans le store.
 	s.Keeper.SetSignal(ctx, signal)
 
-	// 8) Incrémenter le compteur de signaux validés pour ce Curator.
+	// 9) Incrémenter le compteur de signaux validés pour ce Curator.
 	s.Keeper.IncrementCuratorValidatedCount(ctx, curatorAddr)
 
-	// 9) Émettre un event PoSS pour la validation du signal.
-	ctx.EventManager().EmitEvent(
-		noorsignaltypes.NewEventSignalValidated(
-			signal.Id,
-			signal.Participant.String(),
-			signal.Curator.String(),
-			signal.TotalReward,
-			signal.RewardParticipant,
-			signal.RewardCurator,
-		),
-	)
-
-	// TODO (plus tard) :
-	// - utiliser BankKeeper pour distribuer réellement les récompenses.
+	// TODO (plus tard) : émettre un event poss.signal_validated
 
 	return &sdk.Result{}, nil
 }
 
-// ------------------------------------------------------------
-// AddCurator
-// ------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// MsgAddCurator / MsgRemoveCurator / MsgSetConfig (Admin)
+// -----------------------------------------------------------------------------
 
 // AddCurator gère la réception d'un MsgAddCurator.
 // Il permet à une "authority" d'ajouter ou de réactiver un Curator
@@ -221,10 +230,6 @@ func (s MsgServer) AddCurator(
 	return &sdk.Result{}, nil
 }
 
-// ------------------------------------------------------------
-// RemoveCurator
-// ------------------------------------------------------------
-
 // RemoveCurator gère la réception d'un MsgRemoveCurator.
 // Il permet à une "authority" de désactiver un Curator existant.
 func (s MsgServer) RemoveCurator(
@@ -234,6 +239,8 @@ func (s MsgServer) RemoveCurator(
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	// 1) Vérifier que l'authority est présente.
+	// TODO (plus tard) : vérifier que cette adresse correspond bien
+	// à une fondation / multisig autorisée ou à un module gov.
 	if msg.Authority == "" {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "missing authority")
 	}
@@ -259,10 +266,6 @@ func (s MsgServer) RemoveCurator(
 	return &sdk.Result{}, nil
 }
 
-// ------------------------------------------------------------
-// SetConfig
-// ------------------------------------------------------------
-
 // SetConfig gère la réception d'un MsgSetConfig.
 // Il permet à une "authority" de mettre à jour la configuration PoSS
 // (base_reward, max_signals_per_day, era_index, ratios 70/30, etc.)
@@ -274,6 +277,8 @@ func (s MsgServer) SetConfig(
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	// 1) Vérifier que l'authority est présente.
+	// TODO (plus tard) : vérifier que cette adresse correspond bien
+	// à une fondation / multisig autorisée ou à un module gov.
 	if msg.Authority == "" {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "missing authority")
 	}
