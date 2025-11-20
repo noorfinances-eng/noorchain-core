@@ -7,10 +7,9 @@ import (
 // StoreKeys regroupe les clés de store (KV + transient) pour les
 // modules principaux de NOORCHAIN.
 //
-// À ce stade, ces clés NE SONT PAS encore toutes montées dans le
-// multi-store de BaseApp. Elles servent de base pour l'instanciation
-// des keepers Cosmos SDK, du module PoSS et, progressivement,
-// de l'intégration EVM (Ethermint).
+// À ce stade, ces clés NE SONT PAS encore montées dans le multi-store
+// de BaseApp. Elles servent de base pour l'instanciation future
+// des keepers Cosmos SDK, du module PoSS et des modules EVM / FeeMarket.
 type StoreKeys struct {
 	// Stores KV principaux
 	AuthKey       *storetypes.KVStoreKey
@@ -20,7 +19,7 @@ type StoreKeys struct {
 	ParamsKey     *storetypes.KVStoreKey
 	NoorSignalKey *storetypes.KVStoreKey
 
-	// EVM / FeeMarket (Ethermint)
+	// Stores pour EVM / FeeMarket (Ethermint)
 	EvmKey       *storetypes.KVStoreKey
 	FeeMarketKey *storetypes.KVStoreKey
 
@@ -33,8 +32,8 @@ type StoreKeys struct {
 // Remarque :
 // - Les noms utilisés pour les KVStoreKey sont alignés avec les constantes
 //   de modules.go (ModuleAuth, ModuleBank, etc.).
-// - Pour noorsignal, on réutilise types.ModuleName via ModuleNoorSignal.
-// - Pour EVM / FeeMarket, on utilisera ModuleEvm et ModuleFeeMarket.
+// - Pour Noorsignal, on réutilise ModuleNoorSignal.
+// - Pour EVM et FeeMarket, on utilise ModuleEvm et ModuleFeeMarket.
 func NewStoreKeys() StoreKeys {
 	return StoreKeys{
 		AuthKey:       storetypes.NewKVStoreKey(ModuleAuth),
@@ -44,11 +43,9 @@ func NewStoreKeys() StoreKeys {
 		ParamsKey:     storetypes.NewKVStoreKey(ModuleParams),
 		NoorSignalKey: storetypes.NewKVStoreKey(ModuleNoorSignal),
 
-		// EVM / FeeMarket
 		EvmKey:       storetypes.NewKVStoreKey(ModuleEvm),
 		FeeMarketKey: storetypes.NewKVStoreKey(ModuleFeeMarket),
 
-		// Transient store pour Params
 		ParamsTransientKey: storetypes.NewTransientStoreKey("transient_params"),
 	}
 }
