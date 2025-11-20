@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package noorchain.noorsignal;
+
+option go_package = "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types";
+
+import "google/api/annotations.proto";
+
+// -----------------------------------------------------------
+// SERVICE QUERY PoSS (noorsignal)
+// -----------------------------------------------------------
+service Query {
+  // Récupère un signal par son ID.
+  rpc Signal(QuerySignalRequest) returns (QuerySignalResponse) {
+    option (google.api.http).get = "/noorchain/noorsignal/signal/{id}";
+  }
+
+  // Liste tous les signaux existants.
+  rpc Signals(QuerySignalsRequest) returns (QuerySignalsResponse) {
+    option (google.api.http).get = "/noorchain/noorsignal/signals";
+  }
+
+  // Récupère les informations d'un curator.
+  rpc Curator(QueryCuratorRequest) returns (QueryCuratorResponse) {
+    option (google.api.http).get = "/noorchain/noorsignal/curator/{address}";
+  }
+
+  // Liste tous les curators.
+  rpc Curators(QueryCuratorsRequest) returns (QueryCuratorsResponse) {
+    option (google.api.http).get = "/noorchain/noorsignal/curators";
+  }
+
+  // Récupère la configuration PoSS.
+  rpc Config(QueryConfigRequest) returns (QueryConfigResponse) {
+    option (google.api.http).get = "/noorchain/noorsignal/config";
+  }
+
+  // Nombre de signaux d'un participant pour un jour donné.
+  rpc DailyCount(QueryDailyCountRequest) returns (QueryDailyCountResponse) {
+    option (google.api.http).get = "/noorchain/noorsignal/daily/{address}/{day}";
+  }
+}
+
+// -----------------------------------------------------------
+// Messages pour les requêtes / réponses
+// -----------------------------------------------------------
+
+// --- Signal ---
+message QuerySignalRequest {
+  uint64 id = 1;
+}
+
+message QuerySignalResponse {
+  Signal signal = 1;
+}
+
+// --- Signals list ---
+message QuerySignalsRequest {}
+
+message QuerySignalsResponse {
+  repeated Signal signals = 1;
+}
+
+// --- Curator ---
+message QueryCuratorRequest {
+  string address = 1;
+}
+
+message QueryCuratorResponse {
+  Curator curator = 1;
+}
+
+// --- Curators list ---
+message QueryCuratorsRequest {}
+
+message QueryCuratorsResponse {
+  repeated Curator curators = 1;
+}
+
+// --- Config ---
+message QueryConfigRequest {}
+
+message QueryConfigResponse {
+  PossConfig config = 1;
+}
+
+// --- Daily counter ---
+message QueryDailyCountRequest {
+  string address = 1;
+  uint64 day      = 2;
+}
+
+message QueryDailyCountResponse {
+  uint32 count = 1;
+}
