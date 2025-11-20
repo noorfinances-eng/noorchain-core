@@ -66,7 +66,15 @@ func DefaultPossConfig() PossConfig {
 
 // GenesisState représente l'état initial du module noorsignal.
 type GenesisState struct {
-	Config   PossConfig `json:"config" protobuf:"bytes,1,opt,name=config,proto3"`
-	Signals  []Signal   `json:"signals" protobuf:"bytes,2,rep,name=signals,proto3"`
-	Curators []Curator  `json:"curators" protobuf:"bytes,3,rep,name=curators,proto3"`
+	Config       PossConfig `json:"config" protobuf:"bytes,1,opt,name=config,proto3"`
+	Signals      []Signal   `json:"signals" protobuf:"bytes,2,rep,name=signals,proto3"`
+	Curators     []Curator  `json:"curators" protobuf:"bytes,3,rep,name=curators,proto3"`
+
+	// Comptes économiques PoSS (initialisés au genesis)
+	PoSSReserveAddr  string `json:"poss_reserve_addr" protobuf:"bytes,4,opt,name=poss_reserve_addr,json=possReserveAddr,proto3"`
+	FoundationAddr   string `json:"foundation_addr" protobuf:"bytes,5,opt,name=foundation_addr,json=foundationAddr,proto3"`
+	DevWalletAddr    string `json:"dev_wallet_addr" protobuf:"bytes,6,opt,name=dev_wallet_addr,json=devWalletAddr,proto3"`
+	StimulusAddr     string `json:"stimulus_addr" protobuf:"bytes,7,opt,name=stimulus_addr,json=stimulusAddr,proto3"`
+	PreSaleAddr      string `json:"presale_addr" protobuf:"bytes,8,opt,name=presale_addr,json=presaleAddr,proto3"`
 }
+
