@@ -169,14 +169,16 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 		"", // authority (sera défini plus clairement plus tard)
 	)
 
-	// 6) Créer le NoorSignalKeeper (PoSS).
+	// 6) Créer le NoorSignalKeeper (PoSS) avec accès au BankKeeper.
 	//
 	// Il utilise :
 	// - le codec binaire principal (enc.Marshaler)
 	// - la store key dédiée au module PoSS (sk.NoorSignalKey)
+	// - le BankKeeper pour la gestion future des transferts de NUR (unur)
 	noorSignalKeeper := noorsignalkeeper.NewKeeper(
 		enc.Marshaler,
 		sk.NoorSignalKey,
+		bankKeeper,
 	)
 
 	// 7) Construire la structure AppKeepers.
