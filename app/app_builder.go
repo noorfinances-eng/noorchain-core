@@ -74,8 +74,7 @@ func (b *AppBuilder) StoreKeys() StoreKeys {
 // BuildBaseApp crée une instance minimale de baseapp.BaseApp
 // et monte les stores principaux (KV + transient).
 //
-// Maintenant que MakeEncodingConfig() est réel, on utilise toujours
-// un TxDecoder valide provenant de encCfg.TxConfig.
+// On utilise le TxDecoder provenant de encCfg.TxConfig.
 func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 	sk := b.storeKeys
 
@@ -93,14 +92,17 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 
 	// Monter les KVStores des modules principaux.
 	if base != nil {
+		// Modules Cosmos de base
 		base.MountKVStore(sk.AuthKey)
 		base.MountKVStore(sk.BankKey)
 		base.MountKVStore(sk.StakingKey)
 		base.MountKVStore(sk.GovKey)
 		base.MountKVStore(sk.ParamsKey)
+
+		// Module PoSS NOORCHAIN
 		base.MountKVStore(sk.NoorSignalKey)
 
-		// Stores pour EVM / FeeMarket (Ethermint).
+		// Stores pour EVM / FeeMarket (Ethermint) — déjà réservés
 		base.MountKVStore(sk.EvmKey)
 		base.MountKVStore(sk.FeeMarketKey)
 
@@ -111,7 +113,7 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 	// Charger la dernière version stockée en DB si demandé.
 	if b.loadLatest && base != nil {
 		if err := base.LoadLatestVersion(); err != nil {
-			// Plus tard, on remplacera ce panic par une gestion propre de l'erreur.
+			// Plus tard, on remplacera ce panic par une gestion plus propre.
 			panic(err)
 		}
 	}
@@ -125,7 +127,7 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 // - instanciation réelle du ParamsKeeper
 // - instanciation réelle d'un AccountKeeper
 // - instanciation réelle d'un BankKeeper minimal
-// - instanciation réelle du NoorSignalKeeper (PoSS)
+// - instanciation réelle du NoorSignalKeeper (PoSS) avec BankKeeper
 // Les autres keepers (staking, gov, evm, feemarket, etc.) seront ajoutés
 // dans des étapes futures.
 func (b *AppBuilder) BuildKeepers() AppKeepers {
@@ -142,8 +144,8 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 
 	// 2) Préparer les permissions des comptes module (maccPerms).
 	//
-	// Pour l'instant, on utilise une map vide. Plus tard, on pourra
-	// ajouter des comptes module (frais, distribution, PoSS, etc.)
+	// Pour l'instant, on utilise une map vide.
+	// Plus tard, on pourra ajouter des comptes module (frais, distribution, PoSS, etc.)
 	maccPerms := map[string][]string{}
 
 	// 3) Créer un AccountKeeper minimal.
@@ -174,7 +176,7 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 	// Il utilise :
 	// - le codec binaire principal (enc.Marshaler)
 	// - la store key dédiée au module PoSS (sk.NoorSignalKey)
-	// - le BankKeeper pour la gestion future des transferts de NUR (unur)
+	// - le BankKeeper pour la gestion des transferts de NUR (unur)
 	noorSignalKeeper := noorsignalkeeper.NewKeeper(
 		enc.Marshaler,
 		sk.NoorSignalKey,
