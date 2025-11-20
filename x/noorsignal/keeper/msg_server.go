@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -75,13 +76,25 @@ func (s MsgServer) SubmitSignal(
 		RewardCurator:     0,
 	}
 
-	// 6) Créer et stocker le signal via le Keeper.
-	_ = s.Keeper.CreateSignal(ctx, signal)
+	// 6) Créer et stocker le signal via le Keeper (on récupère l'ID créé).
+	created := s.Keeper.CreateSignal(ctx, signal)
 
 	// 7) Incrémenter le compteur quotidien si une limite est active.
 	if cfg.MaxSignalsPerDay > 0 {
 		s.incrementDailySignalCount(ctx, participantAddr, dayBucket)
 	}
+
+	// 8) Émettre l'event poss.signal_submitted pour les explorateurs / indexers.
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			noorsignaltypes.EventTypeSignalSubmitted,
+			sdk.NewAttribute(noorsignaltypes.AttrKeySignalID, strconv.FormatUint(created.Id, 10)),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyParticipant, participantAddr.String()),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyWeight, strconv.FormatUint(uint64(msg.Weight), 10)),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyTimestamp, strconv.FormatInt(ctx.BlockTime().Unix(), 10)),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyMetadata, msg.Metadata),
+		),
+	)
 
 	return &sdk.Result{}, nil
 }
@@ -136,9 +149,23 @@ func (s MsgServer) ValidateSignal(
 	// 8) Incrémenter le compteur de signaux validés pour ce Curator.
 	s.Keeper.IncrementCuratorValidatedCount(ctx, curatorAddr)
 
+	// 9) Émettre l'event poss.signal_validated.
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			noorsignaltypes.EventTypeSignalValidated,
+			sdk.NewAttribute(noorsignaltypes.AttrKeySignalID, strconv.FormatUint(signal.Id, 10)),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyCurator, curatorAddr.String()),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyParticipant, signal.Participant.String()),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyTotalReward, strconv.FormatUint(total, 10)),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyRewardParticipant, strconv.FormatUint(part, 10)),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyRewardCurator, strconv.FormatUint(cur, 10)),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyWeight, strconv.FormatUint(uint64(signal.Weight), 10)),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyTimestamp, strconv.FormatInt(ctx.BlockTime().Unix(), 10)),
+		),
+	)
+
 	// TODO (plus tard) :
-	// - utiliser BankKeeper pour distribuer réellement les récompenses
-	// - générer des events pour les explorateurs.
+	// - utiliser BankKeeper pour distribuer réellement les récompenses.
 
 	return &sdk.Result{}, nil
 }
