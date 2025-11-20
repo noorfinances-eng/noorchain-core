@@ -51,6 +51,16 @@ func (s MsgServer) AddCurator(
 	// 4) Enregistrer le Curator dans le store.
 	s.Keeper.SetCurator(ctx, curator)
 
+	// 5) Émettre l'event poss.curator_added.
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			noorsignaltypes.EventTypeCuratorAdded,
+			sdk.NewAttribute(noorsignaltypes.AttrKeyCurator, curatorAddr.String()),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyLevel, curator.Level),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyAuthority, msg.Authority),
+		),
+	)
+
 	return &sdk.Result{}, nil
 }
 
@@ -86,6 +96,15 @@ func (s MsgServer) RemoveCurator(
 
 	// 5) Enregistrer la mise à jour.
 	s.Keeper.SetCurator(ctx, curator)
+
+	// 6) Émettre l'event poss.curator_removed.
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			noorsignaltypes.EventTypeCuratorRemoved,
+			sdk.NewAttribute(noorsignaltypes.AttrKeyCurator, curatorAddr.String()),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyAuthority, msg.Authority),
+		),
+	)
 
 	return &sdk.Result{}, nil
 }
@@ -139,6 +158,19 @@ func (s MsgServer) SetConfig(
 
 	// 5) Enregistrer cette nouvelle config dans le store PoSS.
 	s.Keeper.SetConfig(ctx, newCfg)
+
+	// 6) Émettre l'event poss.config_updated.
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			noorsignaltypes.EventTypeConfigUpdated,
+			sdk.NewAttribute(noorsignaltypes.AttrKeyAuthority, msg.Authority),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyBaseReward, msg.BaseReward),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyMaxSignalsPerDay, strconv.FormatUint(uint64(msg.MaxSignalsPerDay), 10)),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyEraIndex, strconv.FormatUint(msg.EraIndex, 10)),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyParticipantRatio, strconv.FormatUint(uint64(msg.ParticipantRatio), 10)),
+			sdk.NewAttribute(noorsignaltypes.AttrKeyCuratorRatio, strconv.FormatUint(uint64(msg.CuratorRatio), 10)),
+		),
+	)
 
 	return &sdk.Result{}, nil
 }
