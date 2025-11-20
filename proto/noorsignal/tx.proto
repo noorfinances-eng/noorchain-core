@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package noorsignal;
+
+option go_package = "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types";
+
+import "cosmos/msg/v1/msg.proto";
+
+// -----------------------------
+// Admin messages for PoSS module
+// -----------------------------
+
+// MsgAddCurator allows the authority to create or activate a curator
+// with a given level (e.g. BRONZE / SILVER / GOLD).
+message MsgAddCurator {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  // Address that has the right to administer PoSS (foundation, multisig, etc.).
+  string authority = 1;
+
+  // Address of the curator to be added or reactivated.
+  string curator = 2;
+
+  // Curator level, e.g. "BRONZE", "SILVER", "GOLD".
+  string level = 3;
+}
+
+message MsgAddCuratorResponse {}
+
+// MsgRemoveCurator allows the authority to deactivate an existing curator.
+message MsgRemoveCurator {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  // Address that has the right to administer PoSS.
+  string authority = 1;
+
+  // Address of the curator to be deactivated.
+  string curator = 2;
+}
+
+message MsgRemoveCuratorResponse {}
+
+// MsgSetConfig allows the authority to update the PoSS configuration
+// (base reward, limits, ratios, era index) without touching genesis.
+message MsgSetConfig {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  // Address that has the right to administer PoSS.
+  string authority = 1;
+
+  // Base reward in "unur" (as string), e.g. "1000000" for 1 NUR if 1 NUR = 10^6 unur.
+  string base_reward = 2;
+
+  // Maximum number of signals per day per participant.
+  uint32 max_signals_per_day = 3;
+
+  // Era index used for halving / eras.
+  uint64 era_index = 4;
+
+  // Percentage of the reward going to the participant (e.g. 70 for 70%).
+  uint32 participant_ratio = 5;
+
+  // Percentage of the reward going to the curator (e.g. 30 for 30%).
+  uint32 curator_ratio = 6;
+}
+
+message MsgSetConfigResponse {}
+
+// -----------------------------
+// Msg service for PoSS module
+// -----------------------------
+
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  rpc AddCurator (MsgAddCurator) returns (MsgAddCuratorResponse);
+  rpc RemoveCurator (MsgRemoveCurator) returns (MsgRemoveCuratorResponse);
+  rpc SetConfig (MsgSetConfig) returns (MsgSetConfigResponse);
+}
