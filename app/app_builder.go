@@ -126,6 +126,7 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 // - instanciation réelle d'un AccountKeeper
 // - instanciation réelle d'un BankKeeper minimal
 // - instanciation réelle du NoorSignalKeeper (PoSS)
+//   + branchement du BankKeeper dans le Keeper PoSS
 // Les autres keepers (staking, gov, evm, etc.) seront ajoutés
 // dans des étapes futures.
 func (b *AppBuilder) BuildKeepers() AppKeepers {
@@ -177,6 +178,8 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 	noorSignalKeeper := noorsignalkeeper.NewKeeper(
 		enc.Marshaler,
 		sk.NoorSignalKey,
+	).WithBankKeeper(
+		bankKeeper,
 	)
 
 	// 7) Construire la structure AppKeepers.
