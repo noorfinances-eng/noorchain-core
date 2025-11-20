@@ -1,9 +1,7 @@
 package noorsignal
 
 import (
-	"encoding/json"
-
-	abci "github.com/cometbft/cometbft/abci/types"
+	"context"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -14,147 +12,111 @@ import (
 	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
 )
 
-// -------------------------------------
-// AppModuleBasic : partie "statique"
-// -------------------------------------
+// ------------------------------------------------------------
+//  AppModuleBasic : version minimale (codec, nom, genesis default)
+// ------------------------------------------------------------
 
-// AppModuleBasic gère les éléments de base du module (nom, codec, genesis).
 type AppModuleBasic struct{}
 
-// NewAppModuleBasic retourne une instance d'AppModuleBasic.
-func NewAppModuleBasic() AppModuleBasic {
-	return AppModuleBasic{}
-}
-
-// Name retourne le nom du module.
 func (AppModuleBasic) Name() string {
 	return noorsignaltypes.ModuleName
 }
 
-// RegisterLegacyAminoCodec enregistre les types legacy Amino (si besoin).
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
-	// Pour l'instant, aucun type spécifique Amino.
+	noorsignaltypes.RegisterLegacyAminoCodec(cdc)
 }
 
-// RegisterInterfaces enregistre les interfaces Protobuf (Msg, Query, etc.).
 func (AppModuleBasic) RegisterInterfaces(reg cdctypes.InterfaceRegistry) {
 	noorsignaltypes.RegisterInterfaces(reg)
 }
 
-// DefaultGenesis retourne un état genesis par défaut pour le module PoSS.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
-	state := noorsignaltypes.GenesisState{
-		Config:   noorsignaltypes.DefaultPossConfig(),
-		Signals:  []noorsignaltypes.Signal{},
-		Curators: []noorsignaltypes.Curator{},
-	}
-	return cdc.MustMarshalJSON(&state)
+	return cdc.MustMarshalJSON(noorsignaltypes.DefaultGenesis())
 }
 
-// ValidateGenesis vérifie que le genesis fourni est valide pour le module.
-func (AppModuleBasic) ValidateGenesis(
-	cdc codec.JSONCodec,
-	_ module.ClientGenesisValidation,
-	bz json.RawMessage,
-) error {
-	if bz == nil {
-		return nil
-	}
-
-	var state noorsignaltypes.GenesisState
-	if err := cdc.UnmarshalJSON(bz, &state); err != nil {
+func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingConfig, bz json.RawMessage) error {
+	var data noorsignaltypes.GenesisState
+	if err := cdc.UnmarshalJSON(bz, &data); err != nil {
 		return err
 	}
-
-	// TODO: validations supplémentaires si nécessaire (ex: parts 70/30 cohérentes).
-	_ = state
-	return nil
+	return noorsignaltypes.ValidateGenesis(data)
 }
 
-// -------------------------------------
-// AppModule : partie "avec Keeper"
-// -------------------------------------
+// ------------------------------------------------------------
+//  AppModule : logique du module (keeper, services)
+// ------------------------------------------------------------
 
-// AppModule est la structure principale du module PoSS intégrée
-// dans l'application NOORCHAIN. Elle possède un Keeper.
 type AppModule struct {
 	AppModuleBasic
-
 	keeper noorsignalkeeper.Keeper
 }
 
-// NewAppModule construit un AppModule à partir d'un Keeper PoSS.
 func NewAppModule(k noorsignalkeeper.Keeper) AppModule {
 	return AppModule{
-		AppModuleBasic: NewAppModuleBasic(),
+		AppModuleBasic: AppModuleBasic{},
 		keeper:         k,
 	}
 }
 
-// RegisterServices enregistre les services gRPC (Msg, Query).
+// RegisterServices : l’étape IMPORTANTISSIME
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	// Plus tard :
-	// noorsignaltypes.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgServer(am.keeper))
-	// noorsignaltypes.RegisterQueryServer(cfg.QueryServer(), keeper.NewQueryServer(am.keeper))
+	// 1) Msg Server (submit + validate + admin)
+	noorsignaltypes.RegisterMsgServer(
+		cfg.MsgServer(),
+		noorsignalkeeper.NewMsgServer(am.keeper),
+	)
+
+	// 2) Query Server (GetSignal, ListSignals, etc.)
+	noorsignaltypes.RegisterQueryServer(
+		cfg.QueryServer(),
+		noorsignalkeeper.NewQueryServer(am.keeper),
+	)
 }
 
-// InitGenesis initialise l'état du module à partir du genesis.
-func (am AppModule) InitGenesis(
-	ctx sdk.Context,
-	cdc codec.JSONCodec,
-	bz json.RawMessage,
-) []abci.ValidatorUpdate {
-	if bz == nil {
-		// Pas de genesis spécifique : config PoSS par défaut.
-		am.keeper.InitDefaultConfig(ctx)
-		return []abci.ValidatorUpdate{}
+func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
+
+func (AppModule) Route() sdk.Route { return sdk.Route{} }
+func (AppModule) QuerierRoute() string { return noorsignaltypes.ModuleName }
+
+func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier { return nil }
+
+// ------------------------------------------------------------
+//  Lifecycles : InitGenesis / ExportGenesis
+// ------------------------------------------------------------
+
+func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) []abci.ValidatorUpdate {
+	var gs noorsignaltypes.GenesisState
+	cdc.MustUnmarshalJSON(data, &gs)
+
+	am.keeper.SetConfig(ctx, gs.Config)
+
+	// Charger Curators
+	for _, c := range gs.Curators {
+		addr, err := sdk.AccAddressFromBech32(c.Address)
+		if err == nil {
+			am.keeper.SetCurator(ctx, noorsignaltypes.Curator{
+				Address:               addr,
+				Level:                 c.Level,
+				TotalSignalsValidated: c.TotalSignalsValidated,
+				Active:                c.Active,
+			})
+		}
 	}
-
-	var state noorsignaltypes.GenesisState
-	if err := cdc.UnmarshalJSON(bz, &state); err != nil {
-		// En cas d'erreur de decoding, on se replie sur la config par défaut.
-		am.keeper.InitDefaultConfig(ctx)
-		return []abci.ValidatorUpdate{}
-	}
-
-	// 1) Config PoSS.
-	am.keeper.SetConfig(ctx, state.Config)
-
-	// 2) Enregistrer les Curators fournis dans le genesis (s'ils existent).
-	for _, curator := range state.Curators {
-		am.keeper.SetCurator(ctx, curator)
-	}
-
-	// 3) Les signaux éventuels fournis dans le genesis sont ignorés pour V1.
 
 	return []abci.ValidatorUpdate{}
 }
 
-// ExportGenesis exporte l'état du module vers un genesis JSON.
 func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
-	cfg, found := am.keeper.GetConfig(ctx)
-	if !found {
-		cfg = noorsignaltypes.DefaultPossConfig()
-	}
+	cfg, _ := am.keeper.GetConfig(ctx)
 
-	state := noorsignaltypes.GenesisState{
+	curators := []noorsignaltypes.Curator{}
+	// TODO: Exporter curators si besoin (pas nécessaire pour testnet V1)
+
+	gs := noorsignaltypes.GenesisState{
 		Config:   cfg,
-		Signals:  []noorsignaltypes.Signal{},
-		Curators: []noorsignaltypes.Curator{},
+		Signals:  []noorsignaltypes.Signal{}, // ignoré en V1
+		Curators: curators,
 	}
 
-	return cdc.MustMarshalJSON(&state)
-}
-
-// BeginBlock est appelé au début de chaque bloc.
-func (am AppModule) BeginBlock(ctx sdk.Context, _ abci.RequestBeginBlock) {
-	// Plus tard : logique PoSS liée au temps (reset quotidiens, etc.).
-}
-
-// EndBlock est appelé à la fin de chaque bloc.
-func (am AppModule) EndBlock(
-	ctx sdk.Context,
-	_ abci.RequestEndBlock,
-) []abci.ValidatorUpdate {
-	return []abci.ValidatorUpdate{}
+	return cdc.MustMarshalJSON(&gs)
 }
