@@ -1,0 +1,26 @@
+{
+  "foundation": {
+    "description": "NOOR Foundation (association light)",
+    "address": "TO_FILL_FOUNDATION_BECH32_NOOR1..."
+  },
+
+  "founder": {
+    "description": "Founder Wallet (Walid perso)",
+    "address": "TO_FILL_FOUNDER_BECH32_NOOR1..."
+  },
+
+  "stimulus": {
+    "description": "PoSS Stimulus Pool",
+    "address": "TO_FILL_STIMULUS_BECH32_NOOR1..."
+  },
+
+  "presale": {
+    "description": "Optional Pre-Sale Pool",
+    "address": "TO_FILL_PRESALE_BECH32_NOOR1..."
+  },
+
+  "poss_reserve": {
+    "description": "PoSS Reserve 80% (source of PoSS minting)",
+    "address": "TO_FILL_POSS_RESERVE_BECH32_NOOR1..."
+  }
+}
