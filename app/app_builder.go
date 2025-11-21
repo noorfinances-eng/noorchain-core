@@ -11,6 +11,9 @@ import (
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 
+	evmkeeper "github.com/evmos/ethermint/x/evm/keeper"
+	feemarketkeeper "github.com/evmos/ethermint/x/feemarket/keeper"
+
 	noorsignalkeeper "github.com/noorfinances-eng/noorchain-core/x/noorsignal/keeper"
 )
 
@@ -74,7 +77,8 @@ func (b *AppBuilder) StoreKeys() StoreKeys {
 // BuildBaseApp crée une instance minimale de baseapp.BaseApp
 // et monte les stores principaux (KV + transient).
 //
-// On utilise le TxDecoder provenant de encCfg.TxConfig.
+// Maintenant que MakeEncodingConfig() est réel, on utilise toujours
+// un TxDecoder valide provenant de encCfg.TxConfig.
 func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 	sk := b.storeKeys
 
@@ -92,19 +96,12 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 
 	// Monter les KVStores des modules principaux.
 	if base != nil {
-		// Modules Cosmos de base
 		base.MountKVStore(sk.AuthKey)
 		base.MountKVStore(sk.BankKey)
 		base.MountKVStore(sk.StakingKey)
 		base.MountKVStore(sk.GovKey)
 		base.MountKVStore(sk.ParamsKey)
-
-		// Module PoSS NOORCHAIN
 		base.MountKVStore(sk.NoorSignalKey)
-
-		// Stores pour EVM / FeeMarket (Ethermint) — déjà réservés
-		base.MountKVStore(sk.EvmKey)
-		base.MountKVStore(sk.FeeMarketKey)
 
 		// Store transient pour le module Params.
 		base.MountTransientStore(sk.ParamsTransientKey)
@@ -113,7 +110,7 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 	// Charger la dernière version stockée en DB si demandé.
 	if b.loadLatest && base != nil {
 		if err := base.LoadLatestVersion(); err != nil {
-			// Plus tard, on remplacera ce panic par une gestion plus propre.
+			// Plus tard, on remplacera ce panic par une gestion propre de l'erreur.
 			panic(err)
 		}
 	}
@@ -127,9 +124,11 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 // - instanciation réelle du ParamsKeeper
 // - instanciation réelle d'un AccountKeeper
 // - instanciation réelle d'un BankKeeper minimal
-// - instanciation réelle du NoorSignalKeeper (PoSS) avec BankKeeper
-// Les autres keepers (staking, gov, evm, feemarket, etc.) seront ajoutés
-// dans des étapes futures.
+// - instanciation réelle du NoorSignalKeeper (PoSS)
+// - préparation des champs EvmKeeper et FeeMarketKeeper (valeur zéro pour l'instant)
+//
+// Les autres keepers (staking, gov, ibc, wiring EVM complet, etc.) seront
+// ajoutés dans des étapes futures.
 func (b *AppBuilder) BuildKeepers() AppKeepers {
 	sk := b.storeKeys
 	enc := b.encCfg
@@ -144,8 +143,8 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 
 	// 2) Préparer les permissions des comptes module (maccPerms).
 	//
-	// Pour l'instant, on utilise une map vide.
-	// Plus tard, on pourra ajouter des comptes module (frais, distribution, PoSS, etc.)
+	// Pour l'instant, on utilise une map vide. Plus tard, on pourra
+	// ajouter des comptes module (frais, distribution, PoSS, etc.)
 	maccPerms := map[string][]string{}
 
 	// 3) Créer un AccountKeeper minimal.
@@ -171,27 +170,30 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 		"", // authority (sera défini plus clairement plus tard)
 	)
 
-	// 6) Créer le NoorSignalKeeper (PoSS) avec accès au BankKeeper.
+	// 6) Créer le NoorSignalKeeper (PoSS).
 	//
 	// Il utilise :
 	// - le codec binaire principal (enc.Marshaler)
 	// - la store key dédiée au module PoSS (sk.NoorSignalKey)
-	// - le BankKeeper pour la gestion des transferts de NUR (unur)
 	noorSignalKeeper := noorsignalkeeper.NewKeeper(
 		enc.Marshaler,
 		sk.NoorSignalKey,
-		bankKeeper,
 	)
 
-	// 7) Construire la structure AppKeepers.
-	// (Les keepers EVM / FeeMarket seront instanciés dans une étape dédiée.)
+	// 7) Préparer (pour l’instant) des keepers EVM / FeeMarket "vides".
+	//
+	// On ne les initialise pas encore avec de vraies store keys ou dépendances.
+	// Cela sera fait dans une étape dédiée (EVM Phase 2).
+	var evmKeeper evmkeeper.Keeper
+	var feeMarketKeeper feemarketkeeper.Keeper
+
+	// 8) Construire la structure AppKeepers.
 	return AppKeepers{
 		AccountKeeper:    accountKeeper,
 		BankKeeper:       bankKeeper,
 		ParamsKeeper:     paramsKeeper,
+		EvmKeeper:        evmKeeper,
+		FeeMarketKeeper:  feeMarketKeeper,
 		NoorSignalKeeper: noorSignalKeeper,
-
-		EvmKeeper:       nil,
-		FeeMarketKeeper: nil,
 	}
 }
