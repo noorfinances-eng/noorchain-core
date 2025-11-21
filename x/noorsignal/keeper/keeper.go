@@ -8,34 +8,27 @@ import (
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 
-	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
-
 	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
 )
 
-// Keeper est le gestionnaire principal du module PoSS (noorsignal).
+// Keeper est le gestionnaire principal du module PoSS (noorsignal) pour NOORCHAIN.
 type Keeper struct {
 	storeKey storetypes.StoreKey
 	cdc      codec.Codec
-
-	// 🔥 BankKeeper ajouté ici → transferts réels NUR
-	BankKeeper bankkeeper.Keeper
 }
 
 // NewKeeper construit un nouveau Keeper PoSS pour NOORCHAIN.
 func NewKeeper(
 	cdc codec.Codec,
 	storeKey storetypes.StoreKey,
-	bk bankkeeper.Keeper,
 ) Keeper {
 	return Keeper{
-		storeKey:    storeKey,
-		cdc:         cdc,
-		BankKeeper:  bk,
+		storeKey: storeKey,
+		cdc:      cdc,
 	}
 }
 
-// getStore retourne le KVStore du module.
+// getStore retourne le KVStore brut du module à partir du contexte.
 func (k Keeper) getStore(ctx sdk.Context) sdk.KVStore {
 	return ctx.KVStore(k.storeKey)
 }
@@ -43,19 +36,23 @@ func (k Keeper) getStore(ctx sdk.Context) sdk.KVStore {
 // ---------- Stores préfixés ----------
 
 func (k Keeper) signalStore(ctx sdk.Context) prefix.Store {
-	return noorsignaltypes.GetSignalStore(k.getStore(ctx))
+	parent := k.getStore(ctx)
+	return noorsignaltypes.GetSignalStore(parent)
 }
 
 func (k Keeper) curatorStore(ctx sdk.Context) prefix.Store {
-	return noorsignaltypes.GetCuratorStore(k.getStore(ctx))
+	parent := k.getStore(ctx)
+	return noorsignaltypes.GetCuratorStore(parent)
 }
 
 func (k Keeper) configStore(ctx sdk.Context) prefix.Store {
-	return noorsignaltypes.GetConfigStore(k.getStore(ctx))
+	parent := k.getStore(ctx)
+	return noorsignaltypes.GetConfigStore(parent)
 }
 
 func (k Keeper) dailyCounterStore(ctx sdk.Context) prefix.Store {
-	return noorsignaltypes.GetDailyCounterStore(k.getStore(ctx))
+	parent := k.getStore(ctx)
+	return noorsignaltypes.GetDailyCounterStore(parent)
 }
 
 // ---------------------------
@@ -86,12 +83,28 @@ func (k Keeper) InitDefaultConfig(ctx sdk.Context) {
 	if found {
 		return
 	}
-	k.SetConfig(ctx, noorsignaltypes.DefaultPossConfig())
+
+	defaultCfg := noorsignaltypes.DefaultPossConfig()
+	k.SetConfig(ctx, defaultCfg)
 }
 
-// -------------------------------------
-// Récompenses PoSS (calcul)
-// -------------------------------------
+// ---------------------------------
+// Calcul des récompenses PoSS (aide)
+// ---------------------------------
+
+func (k Keeper) ComputeSignalRewardsFromConfig(
+	ctx sdk.Context,
+	weight uint32,
+	era uint32,
+) (total uint64, participant uint64, curator uint64, found bool) {
+	cfg, ok := k.GetConfig(ctx)
+	if !ok {
+		return 0, 0, 0, false
+	}
+
+	total, participant, curator = noorsignaltypes.ComputeSignalRewards(cfg, weight, era)
+	return total, participant, curator, true
+}
 
 func (k Keeper) ComputeSignalRewardsCurrentEra(
 	ctx sdk.Context,
@@ -108,42 +121,55 @@ func (k Keeper) ComputeSignalRewardsCurrentEra(
 }
 
 // -------------------------------------
-// Gestion des identifiants de signaux
+// Gestion des identifiants et des signaux
 // -------------------------------------
 
 func (k Keeper) getNextSignalID(ctx sdk.Context) uint64 {
-	bz := k.getStore(ctx).Get(noorsignaltypes.KeyNextSignalID)
+	store := k.getStore(ctx)
+
+	bz := store.Get(noorsignaltypes.KeyNextSignalID)
 	if bz == nil {
 		return 1
 	}
+
 	return binary.BigEndian.Uint64(bz)
 }
 
 func (k Keeper) setNextSignalID(ctx sdk.Context, nextID uint64) {
+	store := k.getStore(ctx)
+
 	bz := make([]byte, 8)
 	binary.BigEndian.PutUint64(bz, nextID)
-	k.getStore(ctx).Set(noorsignaltypes.KeyNextSignalID, bz)
+	store.Set(noorsignaltypes.KeyNextSignalID, bz)
 }
 
 func (k Keeper) CreateSignal(ctx sdk.Context, sig noorsignaltypes.Signal) noorsignaltypes.Signal {
 	nextID := k.getNextSignalID(ctx)
 	sig.Id = nextID
 
-	store := k.signalStore(ctx)
+	sstore := k.signalStore(ctx)
+	key := noorsignaltypes.SignalKey(sig.Id)
+
 	bz := k.cdc.MustMarshal(&sig)
-	store.Set(noorsignaltypes.SignalKey(sig.Id), bz)
+	sstore.Set(key, bz)
 
 	k.setNextSignalID(ctx, nextID+1)
 	return sig
 }
 
 func (k Keeper) SetSignal(ctx sdk.Context, sig noorsignaltypes.Signal) {
+	sstore := k.signalStore(ctx)
+	key := noorsignaltypes.SignalKey(sig.Id)
+
 	bz := k.cdc.MustMarshal(&sig)
-	k.signalStore(ctx).Set(noorsignaltypes.SignalKey(sig.Id), bz)
+	sstore.Set(key, bz)
 }
 
 func (k Keeper) GetSignal(ctx sdk.Context, id uint64) (noorsignaltypes.Signal, bool) {
-	bz := k.signalStore(ctx).Get(noorsignaltypes.SignalKey(id))
+	sstore := k.signalStore(ctx)
+	key := noorsignaltypes.SignalKey(id)
+
+	bz := sstore.Get(key)
 	if bz == nil {
 		return noorsignaltypes.Signal{}, false
 	}
@@ -154,37 +180,88 @@ func (k Keeper) GetSignal(ctx sdk.Context, id uint64) (noorsignaltypes.Signal, b
 }
 
 // -------------------------------------
-// Limite quotidienne PoSS
+// Compteurs quotidiens PoSS (limites)
 // -------------------------------------
 
-func (k Keeper) getDailySignalCount(ctx sdk.Context, addr sdk.AccAddress, dayBucket uint64) uint32 {
-	bz := k.dailyCounterStore(ctx).Get(noorsignaltypes.DailyCounterKey(addr, dayBucket))
+func (k Keeper) getDailySignalCount(
+	ctx sdk.Context,
+	addr sdk.AccAddress,
+	dayBucket uint64,
+) uint32 {
+	store := k.dailyCounterStore(ctx)
+	key := noorsignaltypes.DailyCounterKey(addr, dayBucket)
+
+	bz := store.Get(key)
 	if bz == nil {
 		return 0
 	}
+
 	return binary.BigEndian.Uint32(bz)
 }
 
-func (k Keeper) incrementDailySignalCount(ctx sdk.Context, addr sdk.AccAddress, dayBucket uint64) uint32 {
+func (k Keeper) setDailySignalCount(
+	ctx sdk.Context,
+	addr sdk.AccAddress,
+	dayBucket uint64,
+	count uint32,
+) {
+	store := k.dailyCounterStore(ctx)
+	key := noorsignaltypes.DailyCounterKey(addr, dayBucket)
+
+	bz := make([]byte, 4)
+	binary.BigEndian.PutUint32(bz, count)
+	store.Set(key, bz)
+}
+
+func (k Keeper) incrementDailySignalCount(
+	ctx sdk.Context,
+	addr sdk.AccAddress,
+	dayBucket uint64,
+) uint32 {
 	current := k.getDailySignalCount(ctx, addr, dayBucket)
 	next := current + 1
-	bz := make([]byte, 4)
-	binary.BigEndian.PutUint32(bz, next)
-	k.dailyCounterStore(ctx).Set(noorsignaltypes.DailyCounterKey(addr, dayBucket), bz)
+	k.setDailySignalCount(ctx, addr, dayBucket, next)
 	return next
 }
 
+// Helpers exportés pour le MsgServer (BankKeeper à venir).
+func (k Keeper) GetDailySignalCount(
+	ctx sdk.Context,
+	addr sdk.AccAddress,
+	dayBucket uint64,
+) uint32 {
+	return k.getDailySignalCount(ctx, addr, dayBucket)
+}
+
+func (k Keeper) IncrementDailySignalCount(
+	ctx sdk.Context,
+	addr sdk.AccAddress,
+	dayBucket uint64,
+) uint32 {
+	return k.incrementDailySignalCount(ctx, addr, dayBucket)
+}
+
 // -------------------------------------
-// Gestion des Curators
+// Gestion des Curators PoSS
 // -------------------------------------
 
+func (k Keeper) curatorKey(addr sdk.AccAddress) []byte {
+	return addr.Bytes()
+}
+
 func (k Keeper) SetCurator(ctx sdk.Context, curator noorsignaltypes.Curator) {
+	store := k.curatorStore(ctx)
+	key := k.curatorKey(curator.Address)
+
 	bz := k.cdc.MustMarshal(&curator)
-	k.curatorStore(ctx).Set(curator.Address.Bytes(), bz)
+	store.Set(key, bz)
 }
 
 func (k Keeper) GetCurator(ctx sdk.Context, addr sdk.AccAddress) (noorsignaltypes.Curator, bool) {
-	bz := k.curatorStore(ctx).Get(addr.Bytes())
+	store := k.curatorStore(ctx)
+	key := k.curatorKey(addr)
+
+	bz := store.Get(key)
 	if bz == nil {
 		return noorsignaltypes.Curator{}, false
 	}
@@ -195,15 +272,24 @@ func (k Keeper) GetCurator(ctx sdk.Context, addr sdk.AccAddress) (noorsignaltype
 }
 
 func (k Keeper) IsActiveCurator(ctx sdk.Context, addr sdk.AccAddress) bool {
-	c, ok := k.GetCurator(ctx, addr)
-	return ok && c.Active
+	curator, found := k.GetCurator(ctx, addr)
+	if !found {
+		return false
+	}
+	return curator.Active
 }
 
-func (k Keeper) IncrementCuratorValidatedCount(ctx sdk.Context, addr sdk.AccAddress) {
-	c, ok := k.GetCurator(ctx, addr)
-	if !ok {
+// IncrementCuratorValidatedCount augmente de 1 le nombre total de signaux
+// validés par ce Curator, si le Curator existe.
+func (k Keeper) IncrementCuratorValidatedCount(
+	ctx sdk.Context,
+	addr sdk.AccAddress,
+) {
+	curator, found := k.GetCurator(ctx, addr)
+	if !found {
 		return
 	}
-	c.TotalSignalsValidated++
-	k.SetCurator(ctx, c)
+
+	curator.TotalSignalsValidated++
+	k.SetCurator(ctx, curator)
 }
