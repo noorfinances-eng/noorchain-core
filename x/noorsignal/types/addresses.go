@@ -1,45 +1,48 @@
 package types
 
-import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
-)
+// Ce fichier centralise les adresses "officielles" de NOORCHAIN.
+// Il permet :
+// - d'éviter de dupliquer les adresses dans plusieurs fichiers
+// - de pouvoir remplacer facilement les adresses placeholders par les vraies
+// - de garder une cohérence entre genesis, PoSS et BankKeeper
 
 // -----------------------------------------------------------------------------
-// Adresses économiques PoSS (version TEST)
-// -----------------------------------------------------------------------------
-//
-// Ces adresses sont des placeholders pour le développement.
-// Avant mainnet, elles seront remplacées par :
-// - Fondation NOOR (association)
-// - Wallet fondateur (5 %)
-// - Wallet Stimulus
-// - Wallet Pre-sale
-// - Réserve PoSS (multi-sig)
+// PLACEHOLDERS (Testnet) — seront remplacées plus tard
 // -----------------------------------------------------------------------------
 
-var (
-	// 80 % — Réserve PoSS
-	TestPoSSReserveAddr      = mustAcc("noor1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqjx0pcf")
+const PlaceholderFoundation   = "noor1foundationxxxxxxxxxxxxxxxxxxxxx"
+const PlaceholderDevWallet    = "noor1devxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+const PlaceholderStimulus     = "noor1stimulusxxxxxxxxxxxxxxxxxxxxxxx"
+const PlaceholderPresale      = "noor1presalexxxxxxxxxxxxxxxxxxxxxxxx"
+const PlaceholderPossReserve  = "noor1possreservexxxxxxxxxxxxxxxxxxxx"
 
-	// 5 % — Fondation NOOR (association light)
-	TestFoundationAddr       = mustAcc("noor1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqf5x4s4")
+// -----------------------------------------------------------------------------
+// FUTURES ADRESSES RÉELLES (vont être renseignées par le fondateur)
+// Pour l'instant : elles sont vides, on ne les active pas.
+// -----------------------------------------------------------------------------
 
-	// 5 % — Dev Wallet (ton wallet perso en mainnet)
-	TestDevWalletAddr        = mustAcc("noor1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqp7hj7q")
+var AddressFoundation   = ""
+var AddressDevWallet    = ""
+var AddressStimulus     = ""
+var AddressPresale      = ""
+var AddressPossReserve  = ""
 
-	// 5 % — PoSS Stimulus
-	TestPoSSStimulusAddr     = mustAcc("noor1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq8lf9za")
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
 
-	// 5 % — Optional Pre-sale
-	TestPreSaleAddr          = mustAcc("noor1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq2vmvke")
-)
-
-// Helper simple pour convertir une adresse Bech32 en sdk.AccAddress.
-// Si l’adresse est invalide → panic (genesis doit être propre).
-func mustAcc(bech string) sdk.AccAddress {
-	addr, err := sdk.AccAddressFromBech32(bech)
-	if err != nil {
-		panic(err)
+// GetOfficialAddress retourne l'adresse réelle si elle existe,
+// sinon retourne le placeholder (testnet).
+func GetOfficialAddress(real string, placeholder string) string {
+	if real != "" {
+		return real
 	}
-	return addr
+	return placeholder
 }
+
+// Accès simplifié pour tous les modules (BankKeeper, PoSS, Genesis, etc.).
+func GetFoundationAddress() string  { return GetOfficialAddress(AddressFoundation, PlaceholderFoundation) }
+func GetDevWalletAddress() string   { return GetOfficialAddress(AddressDevWallet, PlaceholderDevWallet) }
+func GetStimulusAddress() string    { return GetOfficialAddress(AddressStimulus, PlaceholderStimulus) }
+func GetPresaleAddress() string     { return GetOfficialAddress(AddressPresale, PlaceholderPresale) }
+func GetPossReserveAddress() string { return GetOfficialAddress(AddressPossReserve, PlaceholderPossReserve) }
