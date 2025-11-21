@@ -88,7 +88,10 @@ func (s MsgServer) SubmitSignal(
 		s.incrementDailySignalCount(ctx, participantAddr, dayBucket)
 	}
 
-	// TODO (plus tard) : émettre un event poss.signal_submitted
+	// 8) Émettre un event poss.signal_submitted.
+	ctx.EventManager().EmitEvent(
+		noorsignaltypes.NewSignalSubmittedEvent(signal, ctx.BlockHeight()),
+	)
 
 	return &sdk.Result{}, nil
 }
@@ -177,7 +180,10 @@ func (s MsgServer) ValidateSignal(
 	// 9) Incrémenter le compteur de signaux validés pour ce Curator.
 	s.Keeper.IncrementCuratorValidatedCount(ctx, curatorAddr)
 
-	// TODO (plus tard) : émettre un event poss.signal_validated
+	// 10) Émettre un event poss.signal_validated.
+	ctx.EventManager().EmitEvent(
+		noorsignaltypes.NewSignalValidatedEvent(signal, ctx.BlockHeight()),
+	)
 
 	return &sdk.Result{}, nil
 }
