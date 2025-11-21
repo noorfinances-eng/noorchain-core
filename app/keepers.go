@@ -5,32 +5,27 @@ import (
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 
+	noorsignalkeeper "github.com/noorfinances-eng/noorchain-core/x/noorsignal/keeper"
+
 	evmkeeper "github.com/evmos/ethermint/x/evm/keeper"
 	feemarketkeeper "github.com/evmos/ethermint/x/feemarket/keeper"
-
-	noorsignalkeeper "github.com/noorfinances-eng/noorchain-core/x/noorsignal/keeper"
 )
 
-// AppKeepers regroupe tous les keepers principaux utilisés par
-// l'application NOORCHAIN.
+// AppKeepers regroupe tous les keepers principaux utilisés
+// par l'application NOORCHAIN.
 //
-// On y trouve :
-// - AccountKeeper : gestion des comptes (x/auth)
-// - BankKeeper    : gestion des soldes et transferts (x/bank)
-// - ParamsKeeper  : paramètres globaux (x/params)
-// - EvmKeeper     : exécution EVM (smart-contracts Solidity, Ethermint)
-// - FeeMarketKeeper : gestion du marché des frais EVM (gas, base fee, etc.)
-// - NoorSignalKeeper : logique PoSS (module x/noorsignal)
-//
-// D'autres keepers (staking, gov, ibc, etc.) pourront être ajoutés
-// progressivement, dans des étapes futures.
+// À ce stade, ils ne sont pas encore initialisés.
+// Les initialisations réelles arrivent dans les étapes suivantes.
 type AppKeepers struct {
+	// Cosmos SDK core
 	AccountKeeper authkeeper.AccountKeeper
 	BankKeeper    bankkeeper.Keeper
 	ParamsKeeper  paramskeeper.Keeper
 
-	EvmKeeper       evmkeeper.Keeper
-	FeeMarketKeeper feemarketkeeper.Keeper
-
+	// NOOR PoSS module
 	NoorSignalKeeper noorsignalkeeper.Keeper
+
+	// Ethermint / EVM modules
+	EvmKeeper       *evmkeeper.Keeper
+	FeeMarketKeeper *feemarketkeeper.Keeper
 }
