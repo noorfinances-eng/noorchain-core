@@ -17,19 +17,22 @@ import (
 // - ParamsKeeper  : paramètres globaux (x/params)
 // - NoorSignalKeeper : logique PoSS (module x/noorsignal)
 //
-// Squelette EVM / FeeMarket :
-// - EvmKeeper        : sera branché plus tard sur le module Ethermint x/evm
-// - FeeMarketKeeper  : sera branché plus tard sur le module x/feemarket
+// Et on prépare déjà le terrain pour :
+// - EvmKeeper       : futur keeper du module EVM (Ethermint)
+// - FeeMarketKeeper : futur keeper du module feemarket (Ethermint)
+//
+// Pour l’instant, EvmKeeper et FeeMarketKeeper sont des placeholders (interface{}).
+// Ils seront typés correctement quand on intégrera réellement Ethermint.
 type AppKeepers struct {
+	// Cosmos SDK core
 	AccountKeeper authkeeper.AccountKeeper
 	BankKeeper    bankkeeper.Keeper
 	ParamsKeeper  paramskeeper.Keeper
 
+	// NOORCHAIN custom module (PoSS)
 	NoorSignalKeeper noorsignalkeeper.Keeper
 
-	// Squelettes pour l'intégration Ethermint (EVM / FeeMarket).
-	// On ne les typpe pas encore avec les keepers réels pour éviter
-	// d'ajouter les dépendances Ethermint avant l'étape dédiée.
+	// Ethermint / EVM (squelette, à remplir plus tard)
 	EvmKeeper       interface{}
 	FeeMarketKeeper interface{}
 }
