@@ -1,130 +1,96 @@
 syntax = "proto3";
 
-package noorfinances.noorchain.noorsignal;
+package noorchain.noorsignal.v1;
 
-import "google/protobuf/timestamp.proto";
-import "cosmos/base/query/v1beta1/pagination.proto";
-
-// Option go_package pour générer correctement le code Go.
 option go_package = "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types";
 
-// ------------------------------------------------------------
-//  Messages de base (Signal, Curator, PossConfig)
-//
-//  Remarque :
-//  - Pour l'instant, on redéfinit ici des versions simples des
-//    structures déjà présentes en Go (types.Signal, types.Curator,
-//    types.PossConfig).
-//  - Dans une version plus avancée, on pourra factoriser cela dans
-//    un fichier "noorsignal.proto" commun pour les Msg + Query.
-// ------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Messages de base (réutilisés par les réponses)
+// -----------------------------------------------------------------------------
 
-message Signal {
-  uint64 id = 1;
-  string participant = 2; // bech32
-  string curator = 3;     // bech32 (peut être vide si non validé)
-  uint32 weight = 4;
-  google.protobuf.Timestamp time = 5;
-  string metadata = 6;
+// SignalPoSS est une version proto simplifiée de x/noorsignal/types.Signal.
+// (Elle pourra être alignée plus tard si on génère tout à partir des .proto.)
+message SignalPoSS {
+  uint64 id            = 1;
+  string participant   = 2; // bech32
+  string curator       = 3; // bech32 (peut être vide si non validé)
+  uint32 weight        = 4;
+  string time          = 5; // RFC3339
+  string metadata      = 6;
 
-  uint64 total_reward = 7;
-  uint64 reward_participant = 8;
-  uint64 reward_curator = 9;
+  uint64 total_reward        = 7;
+  uint64 reward_participant  = 8;
+  uint64 reward_curator      = 9;
 }
 
-message Curator {
-  string address = 1; // bech32
-  string level = 2;   // BRONZE / SILVER / GOLD
+// CuratorPoSS est une version proto simplifiée de x/noorsignal/types.Curator.
+message CuratorPoSS {
+  string address                = 1; // bech32
+  string level                  = 2;
   uint64 total_signals_validated = 3;
-  bool active = 4;
+  bool   active                 = 4;
 }
 
-message PossConfig {
-  uint64 base_reward = 1;
-  uint32 participant_share = 2;
-  uint32 curator_share = 3;
+// PossConfigPoSS est une version proto de x/noorsignal/types.PossConfig.
+message PossConfigPoSS {
+  uint64 base_reward        = 1;
+  uint32 participant_share  = 2;
+  uint32 curator_share      = 3;
   uint32 max_signals_per_day = 4;
-  bool enabled = 5;
-  uint32 era_index = 6;
+  bool   enabled            = 5;
+  uint32 era_index          = 6;
 }
 
-// ------------------------------------------------------------
-//  Query service
-// ------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Requêtes / Réponses pour gRPC Query
+// -----------------------------------------------------------------------------
+
+message QuerySignalRequest {
+  uint64 id = 1;
+}
+
+message QuerySignalResponse {
+  SignalPoSS signal = 1;
+}
+
+message QuerySignalsRequest {
+  // V1 simple : pas de pagination avancée, on peut ajouter
+  // des filtres plus tard si besoin (adresse, jour, etc.).
+}
+
+message QuerySignalsResponse {
+  repeated SignalPoSS signals = 1;
+}
+
+message QueryCuratorRequest {
+  string address = 1; // bech32
+}
+
+message QueryCuratorResponse {
+  CuratorPoSS curator = 1;
+}
+
+message QueryConfigRequest {
+}
+
+message QueryConfigResponse {
+  PossConfigPoSS config = 1;
+}
+
+// -----------------------------------------------------------------------------
+// Service gRPC Query pour le module PoSS (noorsignal)
+// -----------------------------------------------------------------------------
 
 service Query {
-  // Récupère un signal par son identifiant.
-  rpc GetSignal (QueryGetSignalRequest) returns (QueryGetSignalResponse);
+  // Récupérer un signal PoSS par ID.
+  rpc Signal(QuerySignalRequest) returns (QuerySignalResponse);
 
-  // Liste paginée de signaux PoSS.
-  rpc ListSignals (QueryListSignalsRequest) returns (QueryListSignalsResponse);
+  // Lister les signaux (V1 simple).
+  rpc Signals(QuerySignalsRequest) returns (QuerySignalsResponse);
 
-  // Récupère un curator par son adresse.
-  rpc GetCurator (QueryGetCuratorRequest) returns (QueryGetCuratorResponse);
+  // Récupérer un curator par adresse.
+  rpc Curator(QueryCuratorRequest) returns (QueryCuratorResponse);
 
-  // Liste paginée de curators PoSS.
-  rpc ListCurators (QueryListCuratorsRequest) returns (QueryListCuratorsResponse);
-
-  // Récupère la configuration globale PoSS.
-  rpc GetConfig (QueryGetConfigRequest) returns (QueryGetConfigResponse);
-}
-
-// ------------------------------------------------------------
-//  GetSignal
-// ------------------------------------------------------------
-
-message QueryGetSignalRequest {
-  uint64 signal_id = 1;
-}
-
-message QueryGetSignalResponse {
-  Signal signal = 1;
-}
-
-// ------------------------------------------------------------
-//  ListSignals
-// ------------------------------------------------------------
-
-message QueryListSignalsRequest {
-  cosmos.base.query.v1beta1.PageRequest pagination = 1;
-}
-
-message QueryListSignalsResponse {
-  repeated Signal signals = 1;
-  cosmos.base.query.v1beta1.PageResponse pagination = 2;
-}
-
-// ------------------------------------------------------------
-//  GetCurator
-// ------------------------------------------------------------
-
-message QueryGetCuratorRequest {
-  string address = 1; // bech32
-}
-
-message QueryGetCuratorResponse {
-  Curator curator = 1;
-}
-
-// ------------------------------------------------------------
-//  ListCurators
-// ------------------------------------------------------------
-
-message QueryListCuratorsRequest {
-  cosmos.base.query.v1beta1.PageRequest pagination = 1;
-}
-
-message QueryListCuratorsResponse {
-  repeated Curator curators = 1;
-  cosmos.base.query.v1beta1.PageResponse pagination = 2;
-}
-
-// ------------------------------------------------------------
-//  GetConfig
-// ------------------------------------------------------------
-
-message QueryGetConfigRequest {}
-
-message QueryGetConfigResponse {
-  PossConfig config = 1;
+  // Récupérer la configuration PoSS courante.
+  rpc Config(QueryConfigRequest) returns (QueryConfigResponse);
 }
