@@ -1,86 +1,7 @@
 {
-  "chain_id": "noorchain-testnet-1",
-  "genesis_time": "2025-01-01T00:00:00Z",
-
+  "chain_id": "noorchain-mainnet-1",
+  "genesis_time": "2026-01-01T00:00:00Z",
   "app_state": {
-    "auth": {
-      "accounts": [
-        {
-          "@type": "/cosmos.auth.v1beta1.BaseAccount",
-          "address": "noor1foundationxxxxxxxxxxxxxxxxxxxxxx",
-          "pub_key": null,
-          "account_number": "0",
-          "sequence": "0"
-        },
-        {
-          "@type": "/cosmos.auth.v1beta1.BaseAccount",
-          "address": "noor1devxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-          "pub_key": null,
-          "account_number": "0",
-          "sequence": "0"
-        },
-        {
-          "@type": "/cosmos.auth.v1beta1.BaseAccount",
-          "address": "noor1stimulusxxxxxxxxxxxxxxxxxxxxxxxxx",
-          "pub_key": null,
-          "account_number": "0",
-          "sequence": "0"
-        },
-        {
-          "@type": "/cosmos.auth.v1beta1.BaseAccount",
-          "address": "noor1presalxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-          "pub_key": null,
-          "account_number": "0",
-          "sequence": "0"
-        },
-        {
-          "@type": "/cosmos.auth.v1beta1.BaseAccount",
-          "address": "noor1possreservxxxxxxxxxxxxxxxxxxxxxxx",
-          "pub_key": null,
-          "account_number": "0",
-          "sequence": "0"
-        }
-      ]
-    },
-
-    "bank": {
-      "balances": [
-        {
-          "address": "noor1foundationxxxxxxxxxxxxxxxxxxxxxx",
-          "coins": [{ "denom": "unur", "amount": "14989622" }]
-        },
-        {
-          "address": "noor1devxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-          "coins": [{ "denom": "unur", "amount": "14989622" }]
-        },
-        {
-          "address": "noor1stimulusxxxxxxxxxxxxxxxxxxxxxxxxx",
-          "coins": [{ "denom": "unur", "amount": "14989622" }]
-        },
-        {
-          "address": "noor1presalxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-          "coins": [{ "denom": "unur", "amount": "14989622" }]
-        },
-        {
-          "address": "noor1possreservxxxxxxxxxxxxxxxxxxxxxxx",
-          "coins": [{ "denom": "unur", "amount": "239833966" }]
-        }
-      ],
-
-      "supply": [
-        {
-          "denom": "unur",
-          "amount": "299792458"
-        }
-      ]
-    },
-
-    "staking": {
-      "params": {
-        "bond_denom": "unur"
-      }
-    },
-
     "noorsignal": {
       "config": {
         "base_reward": 100,
@@ -92,6 +13,19 @@
       },
       "signals": [],
       "curators": []
+    },
+
+    "bank": {
+      "balances": [
+        { "address": "<FOUNDATION_ADDR>", "coins": [ { "denom": "unur", "amount": "14989622000000" } ] },
+        { "address": "<DEV_ADDR>",        "coins": [ { "denom": "unur", "amount": "14989622000000" } ] },
+        { "address": "<STIMULUS_ADDR>",   "coins": [ { "denom": "unur", "amount": "14989622000000" } ] },
+        { "address": "<PRESALE_ADDR>",    "coins": [ { "denom": "unur", "amount": "14989622000000" } ] },
+        { "address": "<RESERVE_ADDR>",    "coins": [ { "denom": "unur", "amount": "239833966000000" } ] }
+      ],
+      "supply": [
+        { "denom": "unur", "amount": "299792458000000" }
+      ]
     }
   }
 }
