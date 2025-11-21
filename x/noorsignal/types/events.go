@@ -1,82 +1,61 @@
 package types
 
 import (
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-// ------------------------------------------------------------
-//  Event Types
-// ------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Noms des événements PoSS
+// -----------------------------------------------------------------------------
 
-// Event type for submitting a signal.
-const EventTypeSignalSubmitted = "poss.signal_submitted"
-
-// Event type for validating a signal.
-const EventTypeSignalValidated = "poss.signal_validated"
-
-// ------------------------------------------------------------
-//  Attributes Keys
-// ------------------------------------------------------------
-
-// Common attributes
 const (
-	AttrKeySignalID   = "signal_id"
-	AttrKeyParticipant = "participant"
-	AttrKeyCurator     = "curator"
-	AttrKeyWeight      = "weight"
-	AttrKeyMetadata    = "metadata"
+	// Event émis lorsqu'un participant soumet un nouveau signal PoSS.
+	EventTypeSignalSubmitted = "poss.signal_submitted"
 
-	AttrKeyRewardTotal       = "reward_total"
-	AttrKeyRewardParticipant = "reward_participant"
-	AttrKeyRewardCurator     = "reward_curator"
+	// Event émis lorsqu'un curator valide un signal.
+	EventTypeSignalValidated = "poss.signal_validated"
+
+	// Clés d'attributs communes.
+	AttributeKeySignalID          = "signal_id"
+	AttributeKeyParticipant       = "participant"
+	AttributeKeyCurator           = "curator"
+	AttributeKeyWeight            = "weight"
+	AttributeKeyTotalReward       = "total_reward"
+	AttributeKeyRewardParticipant = "reward_participant"
+	AttributeKeyRewardCurator     = "reward_curator"
+	AttributeKeyBlockHeight       = "block_height"
 )
 
-// ------------------------------------------------------------
-//  Helpers for building events (optional but clean)
-// ------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Helpers pour construire les événements
+// -----------------------------------------------------------------------------
 
-func NewEventSignalSubmitted(
-	signalID uint64,
-	participant string,
-	weight uint32,
-	metadata string,
-) sdk.Event {
+// NewSignalSubmittedEvent construit un événement poss.signal_submitted
+// à partir d'un Signal fraîchement créé.
+func NewSignalSubmittedEvent(sig Signal, blockHeight int64) sdk.Event {
 	return sdk.NewEvent(
 		EventTypeSignalSubmitted,
-		sdk.NewAttribute(AttrKeySignalID, uintToStr(signalID)),
-		sdk.NewAttribute(AttrKeyParticipant, participant),
-		sdk.NewAttribute(AttrKeyWeight, uintToStr32(weight)),
-		sdk.NewAttribute(AttrKeyMetadata, metadata),
+		sdk.NewAttribute(AttributeKeySignalID, fmt.Sprintf("%d", sig.Id)),
+		sdk.NewAttribute(AttributeKeyParticipant, sig.Participant.String()),
+		sdk.NewAttribute(AttributeKeyWeight, fmt.Sprintf("%d", sig.Weight)),
+		sdk.NewAttribute(AttributeKeyBlockHeight, fmt.Sprintf("%d", blockHeight)),
 	)
 }
 
-func NewEventSignalValidated(
-	signalID uint64,
-	participant string,
-	curator string,
-	total uint64,
-	part uint64,
-	cur uint64,
-) sdk.Event {
+// NewSignalValidatedEvent construit un événement poss.signal_validated
+// à partir d'un Signal qui vient d'être validé (avec rewards).
+func NewSignalValidatedEvent(sig Signal, blockHeight int64) sdk.Event {
 	return sdk.NewEvent(
 		EventTypeSignalValidated,
-		sdk.NewAttribute(AttrKeySignalID, uintToStr(signalID)),
-		sdk.NewAttribute(AttrKeyParticipant, participant),
-		sdk.NewAttribute(AttrKeyCurator, curator),
-		sdk.NewAttribute(AttrKeyRewardTotal, uintToStr(total)),
-		sdk.NewAttribute(AttrKeyRewardParticipant, uintToStr(part)),
-		sdk.NewAttribute(AttrKeyRewardCurator, uintToStr(cur)),
+		sdk.NewAttribute(AttributeKeySignalID, fmt.Sprintf("%d", sig.Id)),
+		sdk.NewAttribute(AttributeKeyParticipant, sig.Participant.String()),
+		sdk.NewAttribute(AttributeKeyCurator, sig.Curator.String()),
+		sdk.NewAttribute(AttributeKeyWeight, fmt.Sprintf("%d", sig.Weight)),
+		sdk.NewAttribute(AttributeKeyTotalReward, fmt.Sprintf("%d", sig.TotalReward)),
+		sdk.NewAttribute(AttributeKeyRewardParticipant, fmt.Sprintf("%d", sig.RewardParticipant)),
+		sdk.NewAttribute(AttributeKeyRewardCurator, fmt.Sprintf("%d", sig.RewardCurator)),
+		sdk.NewAttribute(AttributeKeyBlockHeight, fmt.Sprintf("%d", blockHeight)),
 	)
-}
-
-// ------------------------------------------------------------
-//  Internal small helpers
-// ------------------------------------------------------------
-
-func uintToStr(v uint64) string {
-	return sdk.Uint64ToString(v)
-}
-
-func uintToStr32(v uint32) string {
-	return sdk.Uint64ToString(uint64(v))
 }
