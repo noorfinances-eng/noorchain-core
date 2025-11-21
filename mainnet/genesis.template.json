@@ -17,15 +17,51 @@
 
     "bank": {
       "balances": [
-        { "address": "<FOUNDATION_ADDR>", "coins": [ { "denom": "unur", "amount": "14989622000000" } ] },
-        { "address": "<DEV_ADDR>",        "coins": [ { "denom": "unur", "amount": "14989622000000" } ] },
-        { "address": "<STIMULUS_ADDR>",   "coins": [ { "denom": "unur", "amount": "14989622000000" } ] },
-        { "address": "<PRESALE_ADDR>",    "coins": [ { "denom": "unur", "amount": "14989622000000" } ] },
-        { "address": "<RESERVE_ADDR>",    "coins": [ { "denom": "unur", "amount": "239833966000000" } ] }
+        {
+          "address": "<FOUNDATION_ADDR>",
+          "coins": [
+            { "denom": "unur", "amount": "14989622000000" }
+          ]
+        },
+        {
+          "address": "<DEV_ADDR>",
+          "coins": [
+            { "denom": "unur", "amount": "14989622000000" }
+          ]
+        },
+        {
+          "address": "<STIMULUS_ADDR>",
+          "coins": [
+            { "denom": "unur", "amount": "14989622000000" }
+          ]
+        },
+        {
+          "address": "<PRESALE_ADDR>",
+          "coins": [
+            { "denom": "unur", "amount": "14989622000000" }
+          ]
+        },
+        {
+          "address": "<RESERVE_ADDR>",
+          "coins": [
+            { "denom": "unur", "amount": "239833966000000" }
+          ]
+        }
       ],
       "supply": [
-        { "denom": "unur", "amount": "299792458000000" }
+        {
+          "denom": "unur",
+          "amount": "299792458000000"
+        }
       ]
+    },
+
+    "evm": {
+      "_comment": "EVM module genesis stub for NOORCHAIN. Full parameters (chain_id, gas, extra EIPs) will be defined later before mainnet 1.0."
+    },
+
+    "feemarket": {
+      "_comment": "Feemarket (EIP-1559 style) genesis stub for NOORCHAIN. Parameters (base_fee, min_gas_price) will be set later."
     }
   }
 }
