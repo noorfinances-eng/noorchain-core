@@ -1,43 +1,75 @@
 package app
 
 import (
+	"encoding/json"
+
 	abci "github.com/cometbft/cometbft/abci/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
 )
 
-// BeginBlocker est appelé au début de chaque bloc par BaseApp.
+// InitChainer est appelé une seule fois au lancement de la chaîne (genesis).
 //
-// Il délègue l'appel au ModuleManager, qui lui-même appellera
-// BeginBlock sur chaque module enregistré (dont le module PoSS
-// noorsignal).
-func (app *App) BeginBlocker(
+// Rôle :
+// - décoder l'état genesis complet
+// - appliquer la configuration économique (NUR)
+// - initialiser la configuration PoSS si présente
+// - déléguer aux modules via ModuleManager.InitGenesis
+func (app *App) InitChainer(
 	ctx sdk.Context,
-	req abci.RequestBeginBlock,
-) abci.ResponseBeginBlock {
-	if app.Modules.Manager != nil {
-		app.Modules.Manager.BeginBlock(ctx, req)
+	req abci.RequestInitChain,
+) abci.ResponseInitChain {
+
+	if app.Modules.Manager == nil || app.Encoding.Marshaler == nil {
+		return abci.ResponseInitChain{}
 	}
 
-	// Pour l'instant, aucun ValidatorUpdate n'est renvoyé par les modules.
-	return abci.ResponseBeginBlock{}
-}
-
-// EndBlocker est appelé à la fin de chaque bloc par BaseApp.
-//
-// Il délègue l'appel au ModuleManager, puis renvoie les éventuels
-// ValidatorUpdates produits par les modules (si un jour NOORCHAIN
-// gère un système de validateurs).
-func (app *App) EndBlocker(
-	ctx sdk.Context,
-	req abci.RequestEndBlock,
-) abci.ResponseEndBlock {
-	var updates []abci.ValidatorUpdate
-
-	if app.Modules.Manager != nil {
-		updates = app.Modules.Manager.EndBlock(ctx, req)
+	// --------------------------------------------------
+	// 1) Décoder le genesis JSON -> map[string]json.RawMessage
+	// --------------------------------------------------
+	var genesisState map[string]json.RawMessage
+	if len(req.AppStateBytes) > 0 {
+		if err := app.Encoding.Marshaler.UnmarshalJSON(req.AppStateBytes, &genesisState); err != nil {
+			panic(err)
+		}
+	} else {
+		genesisState = make(map[string]json.RawMessage)
 	}
 
-	return abci.ResponseEndBlock{
-		ValidatorUpdates: updates,
+	// --------------------------------------------------
+	// 2) Ajouter les 5 comptes économiques (placeholders)
+	// --------------------------------------------------
+	ApplyEconomicGenesis(genesisState, app.Encoding.Marshaler)
+
+	// --------------------------------------------------
+	// 3) Initialiser PoSS si config présente
+	// --------------------------------------------------
+	if gs, ok := genesisState[noorsignaltypes.ModuleName]; ok {
+		var possGenesis noorsignaltypes.GenesisState
+		if err := app.Encoding.Marshaler.UnmarshalJSON(gs, &possGenesis); err != nil {
+			panic(err)
+		}
+		// PoSS : configuration + curators génesis
+		app.Keepers.NoorSignalKeeper.InitDefaultConfig(ctx)
+		for _, c := range possGenesis.Curators {
+			app.Keepers.NoorSignalKeeper.SetCurator(ctx, c)
+		}
+	}
+
+	// --------------------------------------------------
+	// 4) Déléguer au ModuleManager
+	// --------------------------------------------------
+	validatorUpdates := app.Modules.Manager.InitGenesis(
+		ctx,
+		app.Encoding.Marshaler,
+		genesisState,
+	)
+
+	// --------------------------------------------------
+	// 5) Finalisation InitChain
+	// --------------------------------------------------
+	return abci.ResponseInitChain{
+		Validators: validatorUpdates,
 	}
 }
