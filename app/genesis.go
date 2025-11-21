@@ -1,48 +1,82 @@
 package app
 
 import (
-	"encoding/json"
-
-	abci "github.com/cometbft/cometbft/abci/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+
+	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
 )
 
-// InitChainer est appelé une seule fois au lancement de la chaîne (genesis).
+// ApplyEconomicGenesis injecte les comptes économiques NOORCHAIN
+// dans le genesis state (section bank).
 //
-// Rôle :
-// - décoder l'état genesis global (AppStateBytes)
-// - déléguer l'initialisation des modules au ModuleManager
-// - renvoyer les éventuelles mises à jour de validateurs.
-func (app *App) InitChainer(
-	ctx sdk.Context,
-	req abci.RequestInitChain,
-) abci.ResponseInitChain {
-	// Sécurité : si on n'a pas de ModuleManager ou de codec, on ne fait rien.
-	if app.Modules.Manager == nil || app.Encoding.Marshaler == nil {
-		return abci.ResponseInitChain{}
-	}
+// Les adresses sont centralisées dans x/noorsignal/types/addresses.go
+// et peuvent être remplacées plus tard sans toucher au code.
+//
+// Cette fonction est appelée dans InitChainer,
+// avant le ModuleManager.InitGenesis().
+func ApplyEconomicGenesis(genesisState map[string]json.RawMessage, cdc codec.JSONCodec) {
 
-	// 1) Décoder l'état genesis (map "nomModule" -> JSON brut).
-	var genesisState map[string]json.RawMessage
-	if len(req.AppStateBytes) > 0 {
-		if err := app.Encoding.Marshaler.UnmarshalJSON(req.AppStateBytes, &genesisState); err != nil {
-			// Pour l'instant, on panic en cas de genesis invalide.
-			// Plus tard, on pourra gérer l'erreur plus proprement.
+	// 1) Récupérer la partie bank du genesis
+	var bankState banktypes.GenesisState
+	if genesisState[banktypes.ModuleName] != nil {
+		if err := cdc.UnmarshalJSON(genesisState[banktypes.ModuleName], &bankState); err != nil {
 			panic(err)
 		}
 	} else {
-		genesisState = make(map[string]json.RawMessage)
+		bankState = banktypes.GenesisState{}
 	}
 
-	// 2) Déléguer l'initialisation au ModuleManager.
-	validatorUpdates := app.Modules.Manager.InitGenesis(
-		ctx,
-		app.Encoding.Marshaler,
-		genesisState,
+	// 2) Récupérer les adresses officielles (réelles ou placeholders)
+	foundationAddr := noorsignaltypes.GetFoundationAddress()
+	devAddr        := noorsignaltypes.GetDevWalletAddress()
+	stimulusAddr   := noorsignaltypes.GetStimulusAddress()
+	presaleAddr    := noorsignaltypes.GetPresaleAddress()
+	possReserveAddr := noorsignaltypes.GetPossReserveAddress()
+
+	// 3) Définir les montants des comptes (en unur)
+	//    Basé sur la répartition 5 / 5 / 5 / 5 / 80 %
+	//    1 NUR = 1'000'000 unur
+
+	const (
+		totalSupply       uint64 = 299_792_458
+		allocation5Pct    uint64 = totalSupply * 5 / 100     // 14 989 622
+		allocation80Pct   uint64 = totalSupply * 80 / 100    // 239 833 966
+		micro             uint64 = 1_000_000                 // unur per NUR
 	)
 
-	// 3) Retourner la réponse InitChain avec les ValidatorUpdates.
-	return abci.ResponseInitChain{
-		Validators: validatorUpdates,
+	amount5pct  := sdk.NewInt(int64(allocation5Pct * micro))
+	amount80pct := sdk.NewInt(int64(allocation80Pct * micro))
+
+	// 4) Ajouter les balances au genesis
+	addBalance := func(addr string, amount sdk.Int) {
+		bankState.Balances = append(bankState.Balances, banktypes.Balance{
+			Address: addr,
+			Coins:   sdk.NewCoins(sdk.NewCoin("unur", amount)),
+		})
 	}
+
+	addBalance(foundationAddr, amount5pct)
+	addBalance(devAddr, amount5pct)
+	addBalance(stimulusAddr, amount5pct)
+	addBalance(presaleAddr, amount5pct)
+	addBalance(possReserveAddr, amount80pct)
+
+	// 5) Mettre à jour supply totale
+	totalCoins := bankState.Supply.Add(
+		sdk.NewCoin("unur", amount5pct),
+		sdk.NewCoin("unur", amount5pct),
+		sdk.NewCoin("unur", amount5pct),
+		sdk.NewCoin("unur", amount5pct),
+		sdk.NewCoin("unur", amount80pct),
+	)
+
+	bankState.Supply = totalCoins
+
+	// 6) Ré-encoder la section bank du genesis
+	bz, err := cdc.MarshalJSON(&bankState)
+	if err != nil {
+		panic(err)
+	}
+	genesisState[banktypes.ModuleName] = bz
 }
