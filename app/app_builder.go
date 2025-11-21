@@ -17,17 +17,7 @@ import (
 	noorsignalkeeper "github.com/noorfinances-eng/noorchain-core/x/noorsignal/keeper"
 )
 
-// AppBuilder est un helper qui va progressivement construire
-// l'application Cosmos SDK complète de NOORCHAIN.
-//
-// Il centralise :
-// - logger
-// - base de données
-// - trace store
-// - flag loadLatest
-// - options d'application
-// - configuration d'encodage
-// - clés de store (StoreKeys) pour les modules Cosmos / PoSS / EVM.
+// AppBuilder construit progressivement l'application Cosmos SDK complète.
 type AppBuilder struct {
 	logger     sdk.Logger
 	db         dbm.DB
@@ -39,8 +29,7 @@ type AppBuilder struct {
 	storeKeys StoreKeys
 }
 
-// NewAppBuilder crée un nouveau AppBuilder en utilisant les paramètres
-// de constructeur classiques Cosmos (logger, DB, trace, etc.).
+// NewAppBuilder crée un nouveau builder.
 func NewAppBuilder(
 	logger sdk.Logger,
 	db dbm.DB,
@@ -62,30 +51,15 @@ func NewAppBuilder(
 	}
 }
 
-// EncodingConfig retourne la configuration d'encodage utilisée
-// par ce builder (codec, TxConfig, etc.).
-func (b *AppBuilder) EncodingConfig() EncodingConfig {
-	return b.encCfg
-}
+func (b *AppBuilder) EncodingConfig() EncodingConfig { return b.encCfg }
+func (b *AppBuilder) StoreKeys() StoreKeys           { return b.storeKeys }
 
-// StoreKeys retourne les clés de store (KV + transient) associées
-// aux modules principaux de NOORCHAIN.
-func (b *AppBuilder) StoreKeys() StoreKeys {
-	return b.storeKeys
-}
-
-// BuildBaseApp crée une instance minimale de baseapp.BaseApp
-// et monte les stores principaux (KV + transient).
-//
-// Maintenant que MakeEncodingConfig() est réel, on utilise toujours
-// un TxDecoder valide provenant de encCfg.TxConfig.
+// BuildBaseApp crée une instance BaseApp complète (stores montés).
 func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 	sk := b.storeKeys
-
-	// Récupérer le décodeur de transactions depuis la config d'encodage.
 	txDecoder := b.encCfg.TxConfig.TxDecoder()
 
-	// Créer une BaseApp minimale.
+	// 1) BaseApp minimale
 	base := baseapp.NewBaseApp(
 		AppName,
 		b.logger,
@@ -94,23 +68,29 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 		baseapp.SetChainID(ChainID),
 	)
 
-	// Monter les KVStores des modules principaux.
+	// 2) Monter les KVStores
 	if base != nil {
+		// --- Stores Cosmos classiques ---
 		base.MountKVStore(sk.AuthKey)
 		base.MountKVStore(sk.BankKey)
 		base.MountKVStore(sk.StakingKey)
 		base.MountKVStore(sk.GovKey)
 		base.MountKVStore(sk.ParamsKey)
+
+		// --- Store PoSS ---
 		base.MountKVStore(sk.NoorSignalKey)
 
-		// Store transient pour le module Params.
+		// --- EVM Stores (Ethermint) ---
+		base.MountKVStore(sk.EvmKey)
+		base.MountKVStore(sk.FeeMarketKey)
+
+		// --- Transient store ---
 		base.MountTransientStore(sk.ParamsTransientKey)
 	}
 
-	// Charger la dernière version stockée en DB si demandé.
+	// 3) Charger la version si demandé
 	if b.loadLatest && base != nil {
 		if err := base.LoadLatestVersion(); err != nil {
-			// Plus tard, on remplacera ce panic par une gestion propre de l'erreur.
 			panic(err)
 		}
 	}
@@ -118,36 +98,19 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 	return base
 }
 
-// BuildKeepers crée et retourne la structure AppKeepers.
-//
-// Étape actuelle :
-// - instanciation réelle du ParamsKeeper
-// - instanciation réelle d'un AccountKeeper
-// - instanciation réelle d'un BankKeeper minimal
-// - instanciation réelle du NoorSignalKeeper (PoSS)
-// - préparation des champs EvmKeeper et FeeMarketKeeper (valeur zéro pour l'instant)
-//
-// Les autres keepers (staking, gov, ibc, wiring EVM complet, etc.) seront
-// ajoutés dans des étapes futures.
+// BuildKeepers crée les keepers (version minimaliste pour l’instant).
 func (b *AppBuilder) BuildKeepers() AppKeepers {
 	sk := b.storeKeys
 	enc := b.encCfg
 
-	// 1) Créer un ParamsKeeper réel.
 	paramsKeeper := paramskeeper.NewKeeper(
-		enc.Marshaler,         // codec binaire (Protobuf)
-		enc.Amino,             // codec legacy Amino pour JSON
-		sk.ParamsKey,          // KVStoreKey pour les params
-		sk.ParamsTransientKey, // TransientStoreKey pour les params temporaires
+		enc.Marshaler,
+		enc.Amino,
+		sk.ParamsKey,
+		sk.ParamsTransientKey,
 	)
 
-	// 2) Préparer les permissions des comptes module (maccPerms).
-	//
-	// Pour l'instant, on utilise une map vide. Plus tard, on pourra
-	// ajouter des comptes module (frais, distribution, PoSS, etc.)
 	maccPerms := map[string][]string{}
-
-	// 3) Créer un AccountKeeper minimal.
 	accountKeeper := authkeeper.NewAccountKeeper(
 		enc.Marshaler,
 		sk.AuthKey,
@@ -156,38 +119,24 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 		authtypes.ProtoBaseAccount,
 	)
 
-	// 4) Préparer la liste des adresses "bloquées" pour le BankKeeper.
-	//
-	// Pour l'instant, on laisse la map vide; elle sera complétée plus tard.
 	blockedAddrs := map[string]bool{}
-
-	// 5) Créer un BankKeeper minimal.
 	bankKeeper := bankkeeper.NewBaseKeeper(
 		enc.Marshaler,
 		sk.BankKey,
 		accountKeeper,
 		blockedAddrs,
-		"", // authority (sera défini plus clairement plus tard)
+		"",
 	)
 
-	// 6) Créer le NoorSignalKeeper (PoSS).
-	//
-	// Il utilise :
-	// - le codec binaire principal (enc.Marshaler)
-	// - la store key dédiée au module PoSS (sk.NoorSignalKey)
 	noorSignalKeeper := noorsignalkeeper.NewKeeper(
 		enc.Marshaler,
 		sk.NoorSignalKey,
 	)
 
-	// 7) Préparer (pour l’instant) des keepers EVM / FeeMarket "vides".
-	//
-	// On ne les initialise pas encore avec de vraies store keys ou dépendances.
-	// Cela sera fait dans une étape dédiée (EVM Phase 2).
+	// Keepers EVM non encore initialisés
 	var evmKeeper evmkeeper.Keeper
 	var feeMarketKeeper feemarketkeeper.Keeper
 
-	// 8) Construire la structure AppKeepers.
 	return AppKeepers{
 		AccountKeeper:    accountKeeper,
 		BankKeeper:       bankKeeper,
