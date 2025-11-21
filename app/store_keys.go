@@ -4,49 +4,49 @@ import (
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 )
 
-// StoreKeys regroupe les clés de store (KV + transient) pour les
-// modules principaux de NOORCHAIN.
+// StoreKeys regroupe toutes les clés de KVStore et TransientStore
+// utilisées par les modules NOORCHAIN.
 //
-// À ce stade, ces clés NE SONT PAS encore montées dans le multi-store
-// de BaseApp. Elles servent de base pour l'instanciation future
-// des keepers Cosmos SDK, du module PoSS et des modules EVM Ethermint.
+// Ces clés sont montées dans BaseApp, puis injectées
+// dans les keepers et les modules.
 type StoreKeys struct {
-	// Stores KV principaux
-	AuthKey       *storetypes.KVStoreKey
-	BankKey       *storetypes.KVStoreKey
-	StakingKey    *storetypes.KVStoreKey
-	GovKey        *storetypes.KVStoreKey
-	ParamsKey     *storetypes.KVStoreKey
+	// Cosmos SDK core stores
+	AuthKey    *storetypes.KVStoreKey
+	BankKey    *storetypes.KVStoreKey
+	StakingKey *storetypes.KVStoreKey
+	GovKey     *storetypes.KVStoreKey
+	ParamsKey  *storetypes.KVStoreKey
+
+	// NOORCHAIN custom module: PoSS (x/noorsignal)
 	NoorSignalKey *storetypes.KVStoreKey
 
-	// --- Ethermint Stores ---
+	// Ethermint / EVM stores
 	EvmKey       *storetypes.KVStoreKey
 	FeeMarketKey *storetypes.KVStoreKey
 
-	// Stores transients (temporaire, typiquement pour Params)
+	// Transient stores (params, fee market, etc.)
 	ParamsTransientKey *storetypes.TransientStoreKey
 }
 
-// NewStoreKeys crée les clés de store pour les modules principaux.
-//
-// Remarque :
-// - Les noms utilisés pour les KVStoreKey sont alignés avec les constantes
-//   de modules.go (ModuleAuth, ModuleBank, etc.).
-// - Pour Noorsignal et EVM/Ethermint, on réutilise types.ModuleName
-//   ou les noms des modules Ethermint.
+// NewStoreKeys crée l’ensemble des clés de stores nécessaires
+// pour l’application NOORCHAIN.
 func NewStoreKeys() StoreKeys {
 	return StoreKeys{
-		AuthKey:       storetypes.NewKVStoreKey(ModuleAuth),
-		BankKey:       storetypes.NewKVStoreKey(ModuleBank),
-		StakingKey:    storetypes.NewKVStoreKey(ModuleStaking),
-		GovKey:        storetypes.NewKVStoreKey(ModuleGov),
-		ParamsKey:     storetypes.NewKVStoreKey(ModuleParams),
+		// Cosmos SDK stores
+		AuthKey:    storetypes.NewKVStoreKey(ModuleAuth),
+		BankKey:    storetypes.NewKVStoreKey(ModuleBank),
+		StakingKey: storetypes.NewKVStoreKey(ModuleStaking),
+		GovKey:     storetypes.NewKVStoreKey(ModuleGov),
+		ParamsKey:  storetypes.NewKVStoreKey(ModuleParams),
+
+		// PoSS module store
 		NoorSignalKey: storetypes.NewKVStoreKey(ModuleNoorSignal),
 
-		// EVM Store Keys (Ethermint)
+		// EVM & FeeMarket (Ethermint)
 		EvmKey:       storetypes.NewKVStoreKey(ModuleEvm),
 		FeeMarketKey: storetypes.NewKVStoreKey(ModuleFeeMarket),
 
+		// Transient stores
 		ParamsTransientKey: storetypes.NewTransientStoreKey("transient_params"),
 	}
 }
