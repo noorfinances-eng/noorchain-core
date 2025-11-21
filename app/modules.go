@@ -1,19 +1,17 @@
 package app
 
 // This file defines the list of modules that NOORCHAIN will use.
-// For now it only provides simple string-based placeholders.
+// For now it contains core Cosmos modules + Ethermint EVM modules + PoSS.
 //
-// Later, when wiring the full Cosmos SDK application, these names
-// will be used to configure:
+// These names are used in:
 // - the ModuleManager
 // - BeginBlockers / EndBlockers
-// - InitGenesis / ExportGenesis
-// - Ordering of routes and queries
-//
-// Keeping this centralised makes it easier to reason about the app layout.
+// - InitGenesis ordering
+// - StoreKey creation
+// - future routing & gRPC services
 
 const (
-	// Cosmos SDK core modules
+	// --- Cosmos SDK core modules ---
 	ModuleAuth     = "auth"
 	ModuleBank     = "bank"
 	ModuleStaking  = "staking"
@@ -24,23 +22,20 @@ const (
 	ModuleCrisis   = "crisis"
 	ModuleUpgrade  = "upgrade"
 
-	// IBC related modules (future)
+	// --- IBC ---
 	ModuleIBC      = "ibc"
 	ModuleTransfer = "transfer"
 
-	// Ethermint / EVM related modules (future)
+	// --- Ethermint ---
 	ModuleEvm       = "evm"
 	ModuleFeeMarket = "feemarket"
 
-	// NOORCHAIN custom module (PoSS)
+	// --- NOORCHAIN custom PoSS module ---
 	ModuleNoorSignal = "noorsignal"
 )
 
-// ModuleList groups modules for easier reasoning.
-// At this stage, this is only used as documentation in code.
-// Later it can be used to build the ModuleManager.
+// Full list for documentation / future tooling.
 var (
-	// AllModules lists all modules that NOORCHAIN is expected to use in the long run.
 	AllModules = []string{
 		ModuleAuth,
 		ModuleBank,
@@ -58,8 +53,6 @@ var (
 		ModuleNoorSignal,
 	}
 
-	// BasicModules contains the minimal set of modules required for a basic chain
-	// before enabling IBC, EVM and PoSS.
 	BasicModules = []string{
 		ModuleAuth,
 		ModuleBank,
