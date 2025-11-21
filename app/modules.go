@@ -1,67 +1,75 @@
 package app
 
-// This file defines the list of modules that NOORCHAIN will use.
-// For now it contains core Cosmos modules + Ethermint EVM modules + PoSS.
+import (
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/types/module"
+
+	noorsignalmodule "github.com/noorfinances-eng/noorchain-core/x/noorsignal"
+	noorsignalkeeper "github.com/noorfinances-eng/noorchain-core/x/noorsignal/keeper"
+)
+
+// AppModules regroupe les éléments liés aux modules Cosmos de NOORCHAIN.
 //
-// These names are used in:
-// - the ModuleManager
-// - BeginBlockers / EndBlockers
-// - InitGenesis ordering
-// - StoreKey creation
-// - future routing & gRPC services
+// On y conserve un module.Manager (pour Begin/EndBlockers, InitGenesis)
+// et on ajoute un Configurator (nouvelle API pour enregistrer MsgServer,
+// QueryServer, services gRPC, etc.)
+type AppModules struct {
+	Manager      *module.Manager
+	Configurator module.Configurator
+}
 
-const (
-	// --- Cosmos SDK core modules ---
-	ModuleAuth     = "auth"
-	ModuleBank     = "bank"
-	ModuleStaking  = "staking"
-	ModuleMint     = "mint"
-	ModuleSlashing = "slashing"
-	ModuleGov      = "gov"
-	ModuleParams   = "params"
-	ModuleCrisis   = "crisis"
-	ModuleUpgrade  = "upgrade"
+// NewAppModuleManager construit le moduleManager + le configurator.
+//
+func NewAppModuleManager(keepers AppKeepers, encCfg EncodingConfig) AppModules {
 
-	// --- IBC ---
-	ModuleIBC      = "ibc"
-	ModuleTransfer = "transfer"
+	// --- 1) Construire le module PoSS ---
+	noorSignalModule := noorsignalmodule.NewAppModule(keepers.NoorSignalKeeper)
 
-	// --- Ethermint ---
-	ModuleEvm       = "evm"
-	ModuleFeeMarket = "feemarket"
+	// --- 2) Construire le Manager avec uniquement PoSS pour l'instant ---
+	mm := module.NewManager(
+		noorSignalModule,
+	)
 
-	// --- NOORCHAIN custom PoSS module ---
-	ModuleNoorSignal = "noorsignal"
-)
+	// --- 3) Construire un Configurator ---
+	configurator := module.NewConfigurator(
+		encCfg.Marshaler, // codec
+		mm,               // manager
+	)
 
-// Full list for documentation / future tooling.
-var (
-	AllModules = []string{
-		ModuleAuth,
-		ModuleBank,
-		ModuleStaking,
-		ModuleMint,
-		ModuleSlashing,
-		ModuleGov,
-		ModuleParams,
-		ModuleCrisis,
-		ModuleUpgrade,
-		ModuleIBC,
-		ModuleTransfer,
-		ModuleEvm,
-		ModuleFeeMarket,
-		ModuleNoorSignal,
+	// --- 4) Enregistrer les services du module PoSS ---
+	// Le module noorsignal a besoin :
+	// - d'un MsgServer (transactions)
+	// - d'un QueryServer (queries gRPC)
+	//
+	// On crée ici le MsgServer avec le BankKeeper pré-câblé.
+	noorsignalkeeper.RegisterMsgServer(
+		configurator.MsgServer(),                     // service server
+		noorsignalkeeper.NewMsgServer(                // instance
+			keepers.NoorSignalKeeper,
+			keepers.BankKeeper,                      // pré-câblé
+		),
+	)
+
+	// Query Server (fournit gRPC / CLI "noord query noorsignal ...")
+	noorsignalkeeper.RegisterQueryServer(
+		configurator.QueryServer(),
+		noorsignalkeeper.NewQueryServer(keepers.NoorSignalKeeper),
+	)
+
+	return AppModules{
+		Manager:      mm,
+		Configurator: configurator,
+	}
+}
+
+// ConfigureModuleManagerOrder applique l'ordre BeginBlock / EndBlock / InitGenesis
+// défini dans modules_layout.go
+func ConfigureModuleManagerOrder(mm *module.Manager) {
+	if mm == nil {
+		return
 	}
 
-	BasicModules = []string{
-		ModuleAuth,
-		ModuleBank,
-		ModuleStaking,
-		ModuleMint,
-		ModuleSlashing,
-		ModuleGov,
-		ModuleParams,
-		ModuleCrisis,
-		ModuleUpgrade,
-	}
-)
+	mm.SetOrderBeginBlockers(BeginBlockerOrder...)
+	mm.SetOrderEndBlockers(EndBlockerOrder...)
+	mm.SetOrderInitGenesis(InitGenesisOrder...)
+}
