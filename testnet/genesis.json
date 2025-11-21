@@ -1,5 +1,145 @@
 {
   "chain_id": "noorchain-testnet-1",
-  "app_state": {},
-  "genesis_time": "2025-01-01T00:00:00Z"
+  "genesis_time": "2025-01-01T00:00:00Z",
+  "initial_height": "1",
+
+  "app_hash": "",
+  "app_state": {
+    "auth": {
+      "params": {
+        "max_memo_characters": "256",
+        "tx_sig_limit": "7",
+        "tx_size_cost_per_byte": "10",
+        "sig_verify_cost_ed25519": "590",
+        "sig_verify_cost_secp256k1": "1000"
+      },
+      "accounts": []
+    },
+
+    "bank": {
+      "params": {
+        "send_enabled": [],
+        "default_send_enabled": true
+      },
+      "balances": [],
+      "supply": []
+    },
+
+    "staking": {
+      "params": {
+        "unbonding_time": "1814400s",
+        "max_validators": 50,
+        "max_entries": 7,
+        "historical_entries": 10000,
+        "bond_denom": "unur"
+      },
+      "last_total_power": "0",
+      "last_validator_powers": [],
+      "validators": [],
+      "delegations": [],
+      "unbonding_delegations": [],
+      "redelegations": [],
+      "exported": false
+    },
+
+    "slashing": {
+      "params": {
+        "signed_blocks_window": "10000",
+        "min_signed_per_window": "0.500000000000000000",
+        "downtime_jail_duration": "600s",
+        "slash_fraction_double_sign": "0.050000000000000000",
+        "slash_fraction_downtime": "0.010000000000000000"
+      },
+      "signing_infos": [],
+      "missed_blocks": []
+    },
+
+    "mint": {
+      "params": {
+        "mint_denom": "unur",
+        "inflation_rate_change": "0.0",
+        "inflation_max": "0.0",
+        "inflation_min": "0.0",
+        "goal_bonded": "0.67",
+        "blocks_per_year": "6311520"
+      },
+      "minter": {
+        "inflation": "0.0",
+        "annual_provisions": "0.0"
+      }
+    },
+
+    "gov": {
+      "params": {
+        "min_deposit": [],
+        "max_deposit_period": "172800s",
+        "quorum": "0.334000000000000000",
+        "threshold": "0.500000000000000000",
+        "veto_threshold": "0.334000000000000000",
+        "voting_period": "172800s"
+      },
+      "proposals": []
+    },
+
+    "params": {
+      "params": {}
+    },
+
+    "crisis": {
+      "constant_fee": {
+        "denom": "unur",
+        "amount": "1000"
+      }
+    },
+
+    "upgrade": {},
+    "ibc": {},
+    "transfer": {},
+
+    "feemarket": {
+      "params": {
+        "no_base_fee": true,
+        "base_fee_change_denominator": 8,
+        "elasticity_multiplier": 2,
+        "enable_height": "0",
+        "base_fee": "0"
+      }
+    },
+
+    "evm": {
+      "params": {
+        "evm_denom": "unur",
+        "enable_create": true,
+        "enable_call": true,
+        "chain_config": {
+          "homestead_block": "0",
+          "dao_fork_block": "0",
+          "dao_fork_support": true,
+          "eip150_block": "0",
+          "eip150_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "eip155_block": "0",
+          "eip158_block": "0",
+          "byzantium_block": "0",
+          "constantinople_block": "0",
+          "petersburg_block": "0",
+          "istanbul_block": "0",
+          "muir_glacier_block": "0",
+          "berlin_block": "0",
+          "london_block": "0",
+          "arrow_glacier_block": "0",
+          "gray_glacier_block": "0",
+          "merge_fork_block": "0",
+          "shanghai_block": "0",
+          "cancun_block": "0"
+        }
+      },
+      "accounts": []
+    },
+
+    "noorsignal": {
+      "config": {},
+      "curators": [],
+      "signals": []
+    }
+  }
 }
