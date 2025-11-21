@@ -31,6 +31,8 @@ func NewAppModuleManager(keepers AppKeepers, encCfg EncodingConfig) AppModules {
 	// 2) Créer le module.Manager avec le module PoSS.
 	mm := module.NewManager(
 		noorSignalModule,
+		// ⚠️ Modules EVM / FeeMarket / autres seront ajoutés ici plus tard,
+		// une fois les keepers complètement câblés.
 	)
 
 	return AppModules{
