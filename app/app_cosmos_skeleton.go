@@ -6,6 +6,7 @@ import (
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/module"
 )
 
 // NewNoorchainAppWithCosmos définit le constructeur "Cosmos" futur
@@ -17,6 +18,7 @@ import (
 // - récupérer la configuration d'encodage
 // - construire le ModuleManager (AppModules) et appliquer l'ordre des modules.
 // - enregistrer les hooks (BeginBlock, EndBlock, InitGenesis).
+// - enregistrer les services gRPC (Msg + Query) des modules.
 func NewNoorchainAppWithCosmos(
 	logger sdk.Logger,
 	db dbm.DB,
@@ -60,13 +62,21 @@ func NewNoorchainAppWithCosmos(
 		Modules:  modules,
 	}
 
-	// 8) Enregistrer les hooks de cycle de vie (BeginBlock / EndBlock)
-	// auprès de BaseApp, pour que le ModuleManager soit appelé à chaque bloc.
-	if app.BaseApp != nil {
+	// 8) Enregistrer les services gRPC (Msg + Query) des modules
+	// via le ModuleManager, en utilisant la config d'encodage réelle.
+	if app.BaseApp != nil && app.Modules.Manager != nil {
+		configurator := module.NewConfigurator(
+			encCfg.Marshaler,
+			app.MsgServiceRouter(),
+			app.GRPCQueryRouter(),
+		)
+
+		app.Modules.Manager.RegisterServices(configurator)
+
+		// 9) Enregistrer les hooks de cycle de vie (BeginBlock / EndBlock / InitGenesis)
+		// auprès de BaseApp, pour que le ModuleManager soit appelé à chaque bloc.
 		app.SetBeginBlocker(app.BeginBlocker)
 		app.SetEndBlocker(app.EndBlocker)
-
-		// 9) Enregistrer l'InitChainer pour le genesis.
 		app.SetInitChainer(app.InitChainer)
 	}
 
