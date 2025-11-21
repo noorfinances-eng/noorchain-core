@@ -1,22 +1,81 @@
 package main
 
 import (
-	"log"
+    "os"
 
-	"github.com/noorfinances-eng/noorchain-core/app"
+    "github.com/spf13/cobra"
+
+    "github.com/cosmos/cosmos-sdk/client"
+    "github.com/cosmos/cosmos-sdk/client/flags"
+    "github.com/cosmos/cosmos-sdk/client/keys"
+    "github.com/cosmos/cosmos-sdk/version"
+    "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+
+    // NOORCHAIN modules
+    noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
 )
 
 func main() {
-	// 1) Configure global Cosmos SDK settings for NOORCHAIN
-	//    (Bech32 prefixes: noor1..., noorvaloper1..., etc.)
-	app.ConfigureSDK()
+    rootCmd := NewRootCmd()
 
-	// 2) For now we still create the simple placeholder application.
-	//    In the next technical phases, this will be replaced by the full
-	//    Cosmos SDK + Ethermint powered NOORCHAIN app.
-	noa := app.NewNoorchainApp()
+    if err := Execute(rootCmd); err != nil {
+        os.Exit(1)
+    }
+}
 
-	if err := noa.Start(); err != nil {
-		log.Fatalf("failed to start NOORCHAIN node: %v", err)
-	}
+// NewRootCmd assemble toutes les commandes CLI de NOORCHAIN.
+// - keys
+// - tx
+// - query
+// - PoSS (noorsignal)
+// - versions
+//
+// C’est une version minimaliste mais fonctionnelle.
+func NewRootCmd() *cobra.Command {
+    cmd := &cobra.Command{
+        Use:   "noord",
+        Short: "NOORCHAIN Daemon CLI",
+    }
+
+    // -----------------------------
+    // Initialisation du client SDK
+    // -----------------------------
+    initClientCtx := client.Context{}.
+        WithCodec(noorsignaltypes.ModuleCdc).
+        WithInput(os.Stdin).
+        WithHomeDir(os.ExpandEnv("$HOME/.noord")).
+        WithViper("NOORCHAIN")
+
+    cmd.PersistentFlags().String(flags.FlagHome, initClientCtx.HomeDir, "node home directory")
+
+    // -----------------------------
+    // Sous-commandes Cosmos SDK
+    // -----------------------------
+    cmd.AddCommand(
+        keys.Commands(initClientCtx.HomeDir),          // noord keys ...
+        cli.NewTxCmd(),                               // noord tx ...
+        cli.NewQueryCmd(),                            // noord query ...
+        version.NewVersionCommand(),                  // noord version
+    )
+
+    // -----------------------------
+    // Ajout PoSS (QUERY)
+    // -----------------------------
+    cmd.AddCommand(
+        NewNoorSignalQueryCmd(),                      // noord query noorsignal ...
+    )
+
+    // -----------------------------
+    // Ajout PoSS (TX)
+    // -----------------------------
+    cmd.AddCommand(
+        NewNoorSignalTxCmd(),                         // noord tx noorsignal ...
+    )
+
+    return cmd
+}
+
+// Execute lance la commande racine.
+func Execute(rootCmd *cobra.Command) error {
+    return rootCmd.Execute()
 }
