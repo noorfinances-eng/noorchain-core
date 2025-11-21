@@ -1,0 +1,51 @@
+{
+  "chain_id": "noorchain-testnet-1",
+  "denom": "unur",
+  "display_denom": "NUR",
+  "decimals": 6,
+
+  "total_supply_unur": "299792458000000",
+
+  "accounts": [
+    {
+      "role": "foundation",
+      "label": "NOOR Foundation (association light)",
+      "percent": 5,
+      "amount_unur": "14989622900000",
+      "amount_nur": "14989622.9",
+      "address": "TO_FILL_FOUNDATION_BECH32_NOOR1..."
+    },
+    {
+      "role": "founder",
+      "label": "Founder Wallet (Walid perso)",
+      "percent": 5,
+      "amount_unur": "14989622900000",
+      "amount_nur": "14989622.9",
+      "address": "TO_FILL_FOUNDER_BECH32_NOOR1..."
+    },
+    {
+      "role": "stimulus",
+      "label": "PoSS Stimulus Pool",
+      "percent": 5,
+      "amount_unur": "14989622900000",
+      "amount_nur": "14989622.9",
+      "address": "TO_FILL_STIMULUS_BECH32_NOOR1..."
+    },
+    {
+      "role": "presale",
+      "label": "Optional Pre-Sale Pool",
+      "percent": 5,
+      "amount_unur": "14989622900000",
+      "amount_nur": "14989622.9",
+      "address": "TO_FILL_PRESALE_BECH32_NOOR1..."
+    },
+    {
+      "role": "poss_reserve",
+      "label": "PoSS Reserve (80%)",
+      "percent": 80,
+      "amount_unur": "239833966400000",
+      "amount_nur": "239833966.4",
+      "address": "TO_FILL_POSS_RESERVE_BECH32_NOOR1..."
+    }
+  ]
+}
