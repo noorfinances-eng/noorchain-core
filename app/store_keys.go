@@ -9,7 +9,7 @@ import (
 //
 // À ce stade, ces clés NE SONT PAS encore montées dans le multi-store
 // de BaseApp. Elles servent de base pour l'instanciation future
-// des keepers Cosmos SDK, du module PoSS et des modules EVM / FeeMarket.
+// des keepers Cosmos SDK, du module PoSS et des modules EVM Ethermint.
 type StoreKeys struct {
 	// Stores KV principaux
 	AuthKey       *storetypes.KVStoreKey
@@ -19,7 +19,7 @@ type StoreKeys struct {
 	ParamsKey     *storetypes.KVStoreKey
 	NoorSignalKey *storetypes.KVStoreKey
 
-	// Stores pour EVM / FeeMarket (Ethermint)
+	// --- Ethermint Stores ---
 	EvmKey       *storetypes.KVStoreKey
 	FeeMarketKey *storetypes.KVStoreKey
 
@@ -32,8 +32,8 @@ type StoreKeys struct {
 // Remarque :
 // - Les noms utilisés pour les KVStoreKey sont alignés avec les constantes
 //   de modules.go (ModuleAuth, ModuleBank, etc.).
-// - Pour Noorsignal, on réutilise ModuleNoorSignal.
-// - Pour EVM et FeeMarket, on utilise ModuleEvm et ModuleFeeMarket.
+// - Pour Noorsignal et EVM/Ethermint, on réutilise types.ModuleName
+//   ou les noms des modules Ethermint.
 func NewStoreKeys() StoreKeys {
 	return StoreKeys{
 		AuthKey:       storetypes.NewKVStoreKey(ModuleAuth),
@@ -43,6 +43,7 @@ func NewStoreKeys() StoreKeys {
 		ParamsKey:     storetypes.NewKVStoreKey(ModuleParams),
 		NoorSignalKey: storetypes.NewKVStoreKey(ModuleNoorSignal),
 
+		// EVM Store Keys (Ethermint)
 		EvmKey:       storetypes.NewKVStoreKey(ModuleEvm),
 		FeeMarketKey: storetypes.NewKVStoreKey(ModuleFeeMarket),
 
