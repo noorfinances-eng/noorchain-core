@@ -2,7 +2,6 @@
   "chain_id": "noorchain-testnet-1",
   "genesis_time": "2025-01-01T00:00:00Z",
   "initial_height": "1",
-
   "app_hash": "",
   "app_state": {
     "auth": {
@@ -13,7 +12,43 @@
         "sig_verify_cost_ed25519": "590",
         "sig_verify_cost_secp256k1": "1000"
       },
-      "accounts": []
+      "accounts": [
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "address": "TO_FILL_FOUNDATION_BECH32_NOOR1...",
+          "pub_key": null,
+          "account_number": "0",
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "address": "TO_FILL_FOUNDER_BECH32_NOOR1...",
+          "pub_key": null,
+          "account_number": "0",
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "address": "TO_FILL_STIMULUS_BECH32_NOOR1...",
+          "pub_key": null,
+          "account_number": "0",
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "address": "TO_FILL_PRESALE_BECH32_NOOR1...",
+          "pub_key": null,
+          "account_number": "0",
+          "sequence": "0"
+        },
+        {
+          "@type": "/cosmos.auth.v1beta1.BaseAccount",
+          "address": "TO_FILL_POSS_RESERVE_BECH32_NOOR1...",
+          "pub_key": null,
+          "account_number": "0",
+          "sequence": "0"
+        }
+      ]
     },
 
     "bank": {
@@ -21,8 +56,59 @@
         "send_enabled": [],
         "default_send_enabled": true
       },
-      "balances": [],
-      "supply": []
+      "balances": [
+        {
+          "address": "TO_FILL_FOUNDATION_BECH32_NOOR1...",
+          "coins": [
+            {
+              "denom": "unur",
+              "amount": "14989622900000"
+            }
+          ]
+        },
+        {
+          "address": "TO_FILL_FOUNDER_BECH32_NOOR1...",
+          "coins": [
+            {
+              "denom": "unur",
+              "amount": "14989622900000"
+            }
+          ]
+        },
+        {
+          "address": "TO_FILL_STIMULUS_BECH32_NOOR1...",
+          "coins": [
+            {
+              "denom": "unur",
+              "amount": "14989622900000"
+            }
+          ]
+        },
+        {
+          "address": "TO_FILL_PRESALE_BECH32_NOOR1...",
+          "coins": [
+            {
+              "denom": "unur",
+              "amount": "14989622900000"
+            }
+          ]
+        },
+        {
+          "address": "TO_FILL_POSS_RESERVE_BECH32_NOOR1...",
+          "coins": [
+            {
+              "denom": "unur",
+              "amount": "239833966400000"
+            }
+          ]
+        }
+      ],
+      "supply": [
+        {
+          "denom": "unur",
+          "amount": "299792458000000"
+        }
+      ]
     },
 
     "staking": {
@@ -137,7 +223,14 @@
     },
 
     "noorsignal": {
-      "config": {},
+      "config": {
+        "base_reward": "100",
+        "participant_share": 70,
+        "curator_share": 30,
+        "max_signals_per_day": 50,
+        "enabled": true,
+        "era_index": 0
+      },
       "curators": [],
       "signals": []
     }
