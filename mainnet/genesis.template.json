@@ -18,33 +18,33 @@
     "bank": {
       "balances": [
         {
-          "address": "<FOUNDATION_ADDR>",
+          "address": "noor1dwzpnw9g9p2cucj2w2dnxk2at4amaqsrvmyka0",
           "coins": [
-            { "denom": "unur", "amount": "14989622000000" }
+            { "denom": "unur", "amount": "14989622900000" }
           ]
         },
         {
-          "address": "<DEV_ADDR>",
+          "address": "noor1s2gzjrec9elucycpj66d2eyyw09tjuqfcasy7k",
           "coins": [
-            { "denom": "unur", "amount": "14989622000000" }
+            { "denom": "unur", "amount": "14989622900000" }
           ]
         },
         {
-          "address": "<STIMULUS_ADDR>",
+          "address": "noor1qt2h4crdtngyw4yn3yy8sqraqpzh4ghx0c4l46",
           "coins": [
-            { "denom": "unur", "amount": "14989622000000" }
+            { "denom": "unur", "amount": "14989622900000" }
           ]
         },
         {
-          "address": "<PRESALE_ADDR>",
+          "address": "noor1pxt0wlq8xswj0l6jm2spzcspjwjnnvaggatalz",
           "coins": [
-            { "denom": "unur", "amount": "14989622000000" }
+            { "denom": "unur", "amount": "14989622900000" }
           ]
         },
         {
-          "address": "<RESERVE_ADDR>",
+          "address": "noor1c4gg5n37ycnfvaalsaa4nl22pfzp9ujqwr0mne",
           "coins": [
-            { "denom": "unur", "amount": "239833966000000" }
+            { "denom": "unur", "amount": "239833966400000" }
           ]
         }
       ],
