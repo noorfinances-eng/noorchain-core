@@ -1,48 +1,45 @@
 package types
 
-// Ce fichier centralise les adresses "officielles" de NOORCHAIN.
-// Il permet :
-// - d'éviter de dupliquer les adresses dans plusieurs fichiers
-// - de pouvoir remplacer facilement les adresses placeholders par les vraies
-// - de garder une cohérence entre genesis, PoSS et BankKeeper
+import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+)
 
-// -----------------------------------------------------------------------------
-// PLACEHOLDERS (Testnet) — seront remplacées plus tard
-// -----------------------------------------------------------------------------
+// Adresses Bech32 officielles NOORCHAIN pour le genesis 5/5/5/5/80.
+//
+// Chaque adresse correspond à un wallet distinct, avec une seed
+// différente, comme défini dans le plan NOORCHAIN 1.0.
+//
+// IMPORTANT :
+// - Ne pas modifier ces valeurs après le lancement du mainnet.
+// - Ces adresses seront utilisées pour :
+//   * le genesis mainnet
+//   * la documentation publique
+//   * la configuration PoSS / BankKeeper.
+const (
+	FoundationAddressBech32  = "noor1dwzpnw9g9p2cucj2w2dnxk2at4amaqsrvmyka0"
+	DevAddressBech32         = "noor1s2gzjrec9elucycpj66d2eyyw09tjuqfcasy7k"
+	StimulusAddressBech32    = "noor1qt2h4crdtngyw4yn3yy8sqraqpzh4ghx0c4l46"
+	PresaleAddressBech32     = "noor1pxt0wlq8xswj0l6jm2spzcspjwjnnvaggatalz"
+	PossReserveAddressBech32 = "noor1c4gg5n37ycnfvaalsaa4nl22pfzp9ujqwr0mne"
+)
 
-const PlaceholderFoundation   = "noor1foundationxxxxxxxxxxxxxxxxxxxxx"
-const PlaceholderDevWallet    = "noor1devxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-const PlaceholderStimulus     = "noor1stimulusxxxxxxxxxxxxxxxxxxxxxxx"
-const PlaceholderPresale      = "noor1presalexxxxxxxxxxxxxxxxxxxxxxxx"
-const PlaceholderPossReserve  = "noor1possreservexxxxxxxxxxxxxxxxxxxx"
-
-// -----------------------------------------------------------------------------
-// FUTURES ADRESSES RÉELLES (vont être renseignées par le fondateur)
-// Pour l'instant : elles sont vides, on ne les active pas.
-// -----------------------------------------------------------------------------
-
-var AddressFoundation   = ""
-var AddressDevWallet    = ""
-var AddressStimulus     = ""
-var AddressPresale      = ""
-var AddressPossReserve  = ""
-
-// -----------------------------------------------------------------------------
-// Helpers
-// -----------------------------------------------------------------------------
-
-// GetOfficialAddress retourne l'adresse réelle si elle existe,
-// sinon retourne le placeholder (testnet).
-func GetOfficialAddress(real string, placeholder string) string {
-	if real != "" {
-		return real
+// mustAccAddressFromBech32 convertit une string Bech32 en sdk.AccAddress
+// et panic si l'adresse est invalide. Cela doit uniquement échouer si
+// le code contient une erreur, pas en production.
+func mustAccAddressFromBech32(addr string) sdk.AccAddress {
+	acc, err := sdk.AccAddressFromBech32(addr)
+	if err != nil {
+		panic(err)
 	}
-	return placeholder
+	return acc
 }
 
-// Accès simplifié pour tous les modules (BankKeeper, PoSS, Genesis, etc.).
-func GetFoundationAddress() string  { return GetOfficialAddress(AddressFoundation, PlaceholderFoundation) }
-func GetDevWalletAddress() string   { return GetOfficialAddress(AddressDevWallet, PlaceholderDevWallet) }
-func GetStimulusAddress() string    { return GetOfficialAddress(AddressStimulus, PlaceholderStimulus) }
-func GetPresaleAddress() string     { return GetOfficialAddress(AddressPresale, PlaceholderPresale) }
-func GetPossReserveAddress() string { return GetOfficialAddress(AddressPossReserve, PlaceholderPossReserve) }
+// Adresses AccAddress prêtes à l'emploi pour les modules qui en ont besoin
+// (par exemple pour la réserve PoSS dans BankKeeper).
+var (
+	FoundationAccAddress  = mustAccAddressFromBech32(FoundationAddressBech32)
+	DevAccAddress         = mustAccAddressFromBech32(DevAddressBech32)
+	StimulusAccAddress    = mustAccAddressFromBech32(StimulusAddressBech32)
+	PresaleAccAddress     = mustAccAddressFromBech32(PresaleAddressBech32)
+	PossReserveAccAddress = mustAccAddressFromBech32(PossReserveAddressBech32)
+)
