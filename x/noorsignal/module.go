@@ -95,6 +95,11 @@ var _ module.AppModule = AppModule{}
 // IsAppModule est une méthode "marqueur" demandée par certains SDK récents.
 func (AppModule) IsAppModule() {}
 
+// IsOnePerModuleType est un autre marqueur requis par l'interface module.AppModule
+// dans Cosmos SDK v0.50+. Il ne fait rien, il sert juste à indiquer
+// qu'il n'y a qu'un module de ce type par app.
+func (AppModule) IsOnePerModuleType() {}
+
 // NewAppModule construit le module PoSS avec son Keeper.
 func NewAppModule(k noorsignalkeeper.Keeper) AppModule {
 	return AppModule{
