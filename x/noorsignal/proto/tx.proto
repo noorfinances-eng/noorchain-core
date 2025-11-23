@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package noorsignal;
+
+option go_package = "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types";
+
+// MsgSubmitSignal : un participant soumet un signal PoSS.
+message MsgSubmitSignal {
+  string participant = 1;
+  uint32 weight = 2;
+  string metadata = 3;
+}
+
+message MsgSubmitSignalResponse {}
+
+// MsgValidateSignal : un curator valide un signal existant.
+message MsgValidateSignal {
+  string curator = 1;
+  uint64 signal_id = 2;
+}
+
+message MsgValidateSignalResponse {}
+
+// MsgAddCurator : ajoute ou réactive un curator avec un niveau donné.
+message MsgAddCurator {
+  string authority = 1;
+  string curator = 2;
+  string level = 3;
+}
+
+message MsgAddCuratorResponse {}
+
+// MsgRemoveCurator : désactive un curator existant.
+message MsgRemoveCurator {
+  string authority = 1;
+  string curator = 2;
+}
+
+message MsgRemoveCuratorResponse {}
+
+// MsgSetConfig : met à jour la configuration PoSS (base_reward, ratios, etc.).
+message MsgSetConfig {
+  string authority = 1;
+  string base_reward = 2;
+  uint32 participant_ratio = 3;
+  uint32 curator_ratio = 4;
+  uint32 max_signals_per_day = 5;
+  uint64 era_index = 6;
+}
+
+message MsgSetConfigResponse {}
+
+// Service Msg pour la gestion des transactions PoSS.
+service Msg {
+  rpc SubmitSignal(MsgSubmitSignal) returns (MsgSubmitSignalResponse);
+  rpc ValidateSignal(MsgValidateSignal) returns (MsgValidateSignalResponse);
+  rpc AddCurator(MsgAddCurator) returns (MsgAddCuratorResponse);
+  rpc RemoveCurator(MsgRemoveCurator) returns (MsgRemoveCuratorResponse);
+  rpc SetConfig(MsgSetConfig) returns (MsgSetConfigResponse);
+}
