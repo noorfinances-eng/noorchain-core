@@ -2,7 +2,14 @@ package noorsignal
 
 import (
 	"context"
+	"encoding/json"
 
+	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+
+	"github.com/spf13/cobra"
+
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -13,37 +20,58 @@ import (
 )
 
 // ------------------------------------------------------------
-//  AppModuleBasic : version minimale (codec, nom, genesis default)
+// AppModuleBasic : partie "statique" du module (sans Keeper)
 // ------------------------------------------------------------
 
 type AppModuleBasic struct{}
 
-func (AppModuleBasic) Name() string {
-	return noorsignaltypes.ModuleName
-}
+var _ module.AppModuleBasic = AppModuleBasic{}
 
-func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
-	noorsignaltypes.RegisterLegacyAminoCodec(cdc)
-}
+func (AppModuleBasic) Name() string { return noorsignaltypes.ModuleName }
 
-func (AppModuleBasic) RegisterInterfaces(reg cdctypes.InterfaceRegistry) {
-	noorsignaltypes.RegisterInterfaces(reg)
-}
+func (AppModuleBasic) RegisterLegacyAminoCodec(_ *codec.LegacyAmino) {}
 
+// Pour l’instant, on ne déclare pas encore d’interfaces spécifiques.
+func (AppModuleBasic) RegisterInterfaces(_ cdctypes.InterfaceRegistry) {}
+
+// DefaultGenesis renvoie l'état de genèse par défaut du module.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	return cdc.MustMarshalJSON(noorsignaltypes.DefaultGenesis())
 }
 
-func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingConfig, bz json.RawMessage) error {
-	var data noorsignaltypes.GenesisState
-	if err := cdc.UnmarshalJSON(bz, &data); err != nil {
+// ValidateGenesis valide l'état de genèse.
+func (AppModuleBasic) ValidateGenesis(
+	cdc codec.JSONCodec,
+	_ client.TxEncodingConfig,
+	bz json.RawMessage,
+) error {
+	if len(bz) == 0 {
+		return nil
+	}
+
+	var gs noorsignaltypes.GenesisState
+	if err := cdc.UnmarshalJSON(bz, &gs); err != nil {
 		return err
 	}
-	return noorsignaltypes.ValidateGenesis(data)
+
+	return noorsignaltypes.ValidateGenesis(gs)
 }
 
+// RegisterGRPCGatewayRoutes : pas encore de routes spécifiques.
+func (AppModuleBasic) RegisterGRPCGatewayRoutes(
+	_ client.Context,
+	_ *runtime.ServeMux,
+) {
+}
+
+// GetTxCmd : pas encore de commandes CLI Tx spécifiques.
+func (AppModuleBasic) GetTxCmd() *cobra.Command { return nil }
+
+// GetQueryCmd : pas encore de commandes CLI Query spécifiques.
+func (AppModuleBasic) GetQueryCmd() *cobra.Command { return nil }
+
 // ------------------------------------------------------------
-//  AppModule : logique du module (keeper, services)
+// AppModule : partie "avec Keeper" (logique métier)
 // ------------------------------------------------------------
 
 type AppModule struct {
@@ -51,6 +79,9 @@ type AppModule struct {
 	keeper noorsignalkeeper.Keeper
 }
 
+var _ module.AppModule = AppModule{}
+
+// NewAppModule construit le module PoSS avec son Keeper.
 func NewAppModule(k noorsignalkeeper.Keeper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{},
@@ -58,65 +89,47 @@ func NewAppModule(k noorsignalkeeper.Keeper) AppModule {
 	}
 }
 
-// RegisterServices : l’étape IMPORTANTISSIME
+// RegisterServices enregistre les Msg et Query gRPC.
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	// 1) Msg Server (submit + validate + admin)
 	noorsignaltypes.RegisterMsgServer(
 		cfg.MsgServer(),
-		noorsignalkeeper.NewMsgServer(am.keeper),
+		noorsignalkeeper.NewMsgServer(am.keeper, nil), // BankKeeper nil pour l'instant
 	)
 
-	// 2) Query Server (GetSignal, ListSignals, etc.)
 	noorsignaltypes.RegisterQueryServer(
 		cfg.QueryServer(),
 		noorsignalkeeper.NewQueryServer(am.keeper),
 	)
 }
 
-func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
-
-func (AppModule) Route() sdk.Route { return sdk.Route{} }
-func (AppModule) QuerierRoute() string { return noorsignaltypes.ModuleName }
-
-func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier { return nil }
-
-// ------------------------------------------------------------
-//  Lifecycles : InitGenesis / ExportGenesis
-// ------------------------------------------------------------
-
-func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) []abci.ValidatorUpdate {
+// InitGenesis initialise l'état de genèse du module.
+func (am AppModule) InitGenesis(
+	ctx context.Context,
+	cdc codec.JSONCodec,
+	data json.RawMessage,
+) []abci.ValidatorUpdate {
 	var gs noorsignaltypes.GenesisState
-	cdc.MustUnmarshalJSON(data, &gs)
-
-	am.keeper.SetConfig(ctx, gs.Config)
-
-	// Charger Curators
-	for _, c := range gs.Curators {
-		addr, err := sdk.AccAddressFromBech32(c.Address)
-		if err == nil {
-			am.keeper.SetCurator(ctx, noorsignaltypes.Curator{
-				Address:               addr,
-				Level:                 c.Level,
-				TotalSignalsValidated: c.TotalSignalsValidated,
-				Active:                c.Active,
-			})
+	if len(data) == 0 {
+		gs = noorsignaltypes.DefaultGenesis()
+	} else {
+		if err := cdc.UnmarshalJSON(data, &gs); err != nil {
+			panic(err)
 		}
 	}
 
-	return []abci.ValidatorUpdate{}
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	return InitGenesis(sdkCtx, am.keeper, gs)
 }
 
-func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
-	cfg, _ := am.keeper.GetConfig(ctx)
-
-	curators := []noorsignaltypes.Curator{}
-	// TODO: Exporter curators si besoin (pas nécessaire pour testnet V1)
-
-	gs := noorsignaltypes.GenesisState{
-		Config:   cfg,
-		Signals:  []noorsignaltypes.Signal{}, // ignoré en V1
-		Curators: curators,
-	}
-
+// ExportGenesis exporte l'état de genèse courant.
+func (am AppModule) ExportGenesis(
+	ctx context.Context,
+	cdc codec.JSONCodec,
+) json.RawMessage {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	gs := ExportGenesis(sdkCtx, am.keeper)
 	return cdc.MustMarshalJSON(&gs)
 }
+
+// ConsensusVersion permet d’indiquer une version du module (pour migrations futures).
+func (am AppModule) ConsensusVersion() uint64 { return 1 }
