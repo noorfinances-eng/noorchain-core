@@ -1,13 +1,14 @@
 package types
 
-// Pour l’instant, on ne définit PAS encore de fonctions
-// de conversion vers/depuis des types Protobuf.
+// Ce fichier est volontairement minimal.
 //
-// Les types Protobuf (SignalProto, CuratorProto, PossConfigProto)
-// seront ajoutés plus tard quand on aura :
-// - écrit les fichiers .proto
-// - généré les .pb.go
-// - besoin concret de conversion dans le keeper.
+// À ce stade du projet NOORCHAIN, les conversions Protobuf
+// (SignalProto, CuratorProto, PossConfigProto, etc.)
+// NE SONT PAS encore définies.
 //
-// Ce fichier est gardé volontairement minimal à ce stade
-// pour permettre à l'application de compiler.
+// Elles seront ajoutées uniquement lorsque :
+// - les fichiers .proto seront écrits,
+// - les fichiers .pb.go seront générés,
+// - le keeper ou le module aura besoin d’une conversion.
+//
+// Laisser ce fichier vide permet de compiler sans erreur.
