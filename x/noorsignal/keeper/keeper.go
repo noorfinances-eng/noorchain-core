@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/binary"
+	"encoding/json"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -29,7 +30,7 @@ func NewKeeper(
 }
 
 // getStore retourne le KVStore brut du module à partir du contexte.
-func (k Keeper) getStore(ctx sdk.Context) storetypes.KVStore {
+func (k Keeper) getStore(ctx sdk.Context) sdk.KVStore {
 	return ctx.KVStore(k.storeKey)
 }
 
@@ -62,8 +63,11 @@ func (k Keeper) dailyCounterStore(ctx sdk.Context) prefix.Store {
 func (k Keeper) SetConfig(ctx sdk.Context, cfg noorsignaltypes.PossConfig) {
 	store := k.configStore(ctx)
 
-	// PossConfig n'est PAS un message protobuf → on passe par JSON.
-	bz := k.cdc.MustMarshalJSON(&cfg)
+	bz, err := json.Marshal(cfg)
+	if err != nil {
+		panic(err)
+	}
+
 	store.Set([]byte("config"), bz)
 }
 
@@ -76,7 +80,11 @@ func (k Keeper) GetConfig(ctx sdk.Context) (noorsignaltypes.PossConfig, bool) {
 	}
 
 	var cfg noorsignaltypes.PossConfig
-	k.cdc.MustUnmarshalJSON(bz, &cfg)
+	if err := json.Unmarshal(bz, &cfg); err != nil {
+		// Si la config est corrompue, on préfère paniquer en dev.
+		panic(err)
+	}
+
 	return cfg, true
 }
 
@@ -152,7 +160,10 @@ func (k Keeper) CreateSignal(ctx sdk.Context, sig noorsignaltypes.Signal) noorsi
 	sstore := k.signalStore(ctx)
 	key := noorsignaltypes.SignalKey(sig.Id)
 
-	bz := k.cdc.MustMarshalJSON(&sig)
+	bz, err := json.Marshal(sig)
+	if err != nil {
+		panic(err)
+	}
 	sstore.Set(key, bz)
 
 	k.setNextSignalID(ctx, nextID+1)
@@ -163,7 +174,10 @@ func (k Keeper) SetSignal(ctx sdk.Context, sig noorsignaltypes.Signal) {
 	sstore := k.signalStore(ctx)
 	key := noorsignaltypes.SignalKey(sig.Id)
 
-	bz := k.cdc.MustMarshalJSON(&sig)
+	bz, err := json.Marshal(sig)
+	if err != nil {
+		panic(err)
+	}
 	sstore.Set(key, bz)
 }
 
@@ -177,7 +191,9 @@ func (k Keeper) GetSignal(ctx sdk.Context, id uint64) (noorsignaltypes.Signal, b
 	}
 
 	var sig noorsignaltypes.Signal
-	k.cdc.MustUnmarshalJSON(bz, &sig)
+	if err := json.Unmarshal(bz, &sig); err != nil {
+		panic(err)
+	}
 	return sig, true
 }
 
@@ -255,7 +271,10 @@ func (k Keeper) SetCurator(ctx sdk.Context, curator noorsignaltypes.Curator) {
 	store := k.curatorStore(ctx)
 	key := k.curatorKey(curator.Address)
 
-	bz := k.cdc.MustMarshalJSON(&curator)
+	bz, err := json.Marshal(curator)
+	if err != nil {
+		panic(err)
+	}
 	store.Set(key, bz)
 }
 
@@ -269,7 +288,9 @@ func (k Keeper) GetCurator(ctx sdk.Context, addr sdk.AccAddress) (noorsignaltype
 	}
 
 	var curator noorsignaltypes.Curator
-	k.cdc.MustUnmarshalJSON(bz, &curator)
+	if err := json.Unmarshal(bz, &curator); err != nil {
+		panic(err)
+	}
 	return curator, true
 }
 
