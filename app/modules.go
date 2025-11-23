@@ -1,14 +1,16 @@
 package app
 
-// Nom des modules Cosmos / Ethermint / NOORCHAIN utilisés dans l'app.
+// Nom des modules Cosmos / Ethermint / NOORCHAIN utilisés dans l'application.
 //
-// Ces constantes sont utilisées pour :
-// - les clés de KVStore (StoreKeys)
-// - l'ordre des BeginBlockers / EndBlockers / InitGenesis
-//   (voir modules_layout.go).
+// Ces constantes sont utilisées par :
+// - store_keys.go           (pour créer les KVStoreKey)
+// - modules_layout.go       (pour définir l'ordre BeginBlock / EndBlock / InitGenesis)
+// - éventuellement d'autres parties de l'app plus tard.
 //
-// Toute la logique AppModules (module.Manager, etc.) est dans
-// module_manager.go.
+// IMPORTANT :
+// - Les valeurs doivent correspondre exactement aux ModuleName des modules
+//   Cosmos SDK / Ethermint / NOORCHAIN (ex: "auth", "bank", "evm", "noorsignal").
+// - Ne pas mettre d'espaces ni de majuscules.
 
 const (
 	// Modules Cosmos SDK de base
