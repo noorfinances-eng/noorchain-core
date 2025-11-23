@@ -14,10 +14,6 @@ import (
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 
-	// --- Ethermint (EVM) keepers ---
-	evmkeeper "github.com/evmos/ethermint/x/evm/keeper"
-	feemarketkeeper "github.com/evmos/ethermint/x/feemarket/keeper"
-
 	// --- NOORCHAIN PoSS ---
 	noorsignalkeeper "github.com/noorfinances-eng/noorchain-core/x/noorsignal/keeper"
 )
@@ -102,9 +98,7 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 		// --- Store PoSS
 		base.MountKVStore(sk.NoorSignalKey)
 
-		// --- Stores Ethermint (EVM)
-		base.MountKVStore(sk.EvmKey)
-		base.MountKVStore(sk.FeeMarketKey)
+		// ⚠️ AUCUN store EVM / FeeMarket pour l’instant (version light)
 
 		// --- Transient store
 		base.MountTransientStore(sk.ParamsTransientKey)
@@ -121,8 +115,7 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 }
 
 // ------------------------------------------------------------
-// BuildKeepers : crée les keepers principaux
-// (les keepers EVM seront branchés plus tard)
+// BuildKeepers : crée les keepers principaux (sans EVM pour l’instant)
 // ------------------------------------------------------------
 func (b *AppBuilder) BuildKeepers() AppKeepers {
 	sk := b.storeKeys
@@ -162,17 +155,11 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 		sk.NoorSignalKey,
 	)
 
-	// 5) EVM keepers → initialisés plus tard
-	var evmKeeperPtr *evmkeeper.Keeper = nil
-	var feeMarketKeeperPtr *feemarketkeeper.Keeper = nil
-
-	// 6) Retourner les keepers
+	// 5) Retourner les keepers (version light, sans EVM)
 	return AppKeepers{
 		AccountKeeper:    accountKeeper,
 		BankKeeper:       bankKeeper,
 		ParamsKeeper:     paramsKeeper,
 		NoorSignalKeeper: noorSignalKeeper,
-		EvmKeeper:        evmKeeperPtr,
-		FeeMarketKeeper:  feeMarketKeeperPtr,
 	}
 }
