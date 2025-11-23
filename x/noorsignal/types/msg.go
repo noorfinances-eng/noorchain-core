@@ -1,21 +1,24 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 // TypeMsgUpdateCounter est le type de message principal du module V1.
-// Il sert d'exemple simple : un message qui met à jour un compteur global.
+// C'est un exemple simple : un message qui met à jour un compteur global.
 const TypeMsgUpdateCounter = "update_counter"
 
-// Vérifie qu'une adresse est au bon format Bech32.
+// validateCreatorAddress vérifie qu'une adresse est au bon format Bech32.
 func validateCreatorAddress(addr string) error {
+	if addr == "" {
+		return fmt.Errorf("creator address cannot be empty")
+	}
 	_, err := sdk.AccAddressFromBech32(addr)
 	if err != nil {
-		return fmt.Errorf("invalid creator address: %w", err)
+		return fmt.Errorf("invalid bech32 address: %w", err)
 	}
 	return nil
 }
@@ -50,27 +53,31 @@ func (m *MsgUpdateCounter) Type() string {
 func (m *MsgUpdateCounter) GetSigners() []sdk.AccAddress {
 	addr, err := sdk.AccAddressFromBech32(m.Creator)
 	if err != nil {
-		// En théorie, ValidateBasic doit déjà avoir catch l'erreur,
-		// donc on renvoie un slice vide ici en cas de problème.
-		return []sdk.AccAddress{}
+		// ValidateBasic est censé avoir déjà validé l'adresse.
+		// Si on arrive ici, on panique pour ne pas signer avec une adresse invalide.
+		panic(fmt.Sprintf("invalid creator address in GetSigners: %v", err))
 	}
 	return []sdk.AccAddress{addr}
 }
 
-// GetSignBytes renvoie les bytes à signer (JSON canonique).
+// GetSignBytes renvoie les bytes à signer.
+// Ici on utilise simplement un JSON canonique sans ModuleCdc.
 func (m *MsgUpdateCounter) GetSignBytes() []byte {
-	bz := ModuleCdc.MustMarshalJSON(m)
+	bz, err := json.Marshal(m)
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal MsgUpdateCounter: %v", err))
+	}
 	return sdk.MustSortJSON(bz)
 }
 
 // ValidateBasic effectue les vérifications de base sur le message.
 func (m *MsgUpdateCounter) ValidateBasic() error {
 	if err := validateCreatorAddress(m.Creator); err != nil {
-		return sdkerrors.Wrap(err, "invalid creator")
+		return fmt.Errorf("invalid creator: %w", err)
 	}
 	// Exemple de validation simple : on exige une valeur > 0.
 	if m.Value == 0 {
-		return sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "value must be > 0")
+		return fmt.Errorf("value must be > 0")
 	}
 	return nil
 }
