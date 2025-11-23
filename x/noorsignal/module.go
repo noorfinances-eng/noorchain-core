@@ -6,7 +6,6 @@ import (
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -35,13 +34,23 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(_ *codec.LegacyAmino) {}
 func (AppModuleBasic) RegisterInterfaces(_ cdctypes.InterfaceRegistry) {}
 
 // DefaultGenesis renvoie l'état de genèse par défaut du module.
-func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
-	return cdc.MustMarshalJSON(noorsignaltypes.DefaultGenesis())
+func (AppModuleBasic) DefaultGenesis(_ codec.JSONCodec) json.RawMessage {
+	// Ici on ne dépend PAS de types.DefaultGenesis (qui n'existe pas encore).
+	gs := noorsignaltypes.GenesisState{
+		Config:   noorsignaltypes.DefaultPossConfig(),
+		Curators: []noorsignaltypes.Curator{},
+	}
+
+	bz, err := json.Marshal(gs)
+	if err != nil {
+		panic(err)
+	}
+	return bz
 }
 
-// ValidateGenesis valide l'état de genèse.
+// ValidateGenesis valide l'état de genèse (version minimale).
 func (AppModuleBasic) ValidateGenesis(
-	cdc codec.JSONCodec,
+	_ codec.JSONCodec,
 	_ client.TxEncodingConfig,
 	bz json.RawMessage,
 ) error {
@@ -50,11 +59,12 @@ func (AppModuleBasic) ValidateGenesis(
 	}
 
 	var gs noorsignaltypes.GenesisState
-	if err := cdc.UnmarshalJSON(bz, &gs); err != nil {
+	if err := json.Unmarshal(bz, &gs); err != nil {
 		return err
 	}
 
-	return noorsignaltypes.ValidateGenesis(gs)
+	// Version minimale : on ne fait pas encore de validation complexe.
+	return nil
 }
 
 // RegisterGRPCGatewayRoutes : pas encore de routes spécifiques.
@@ -79,7 +89,11 @@ type AppModule struct {
 	keeper noorsignalkeeper.Keeper
 }
 
+// On s'assure qu'on implémente bien module.AppModule
 var _ module.AppModule = AppModule{}
+
+// IsAppModule est une méthode "marqueur" demandée par certains SDK récents.
+func (AppModule) IsAppModule() {}
 
 // NewAppModule construit le module PoSS avec son Keeper.
 func NewAppModule(k noorsignalkeeper.Keeper) AppModule {
@@ -89,30 +103,28 @@ func NewAppModule(k noorsignalkeeper.Keeper) AppModule {
 	}
 }
 
-// RegisterServices enregistre les Msg et Query gRPC.
-func (am AppModule) RegisterServices(cfg module.Configurator) {
-	noorsignaltypes.RegisterMsgServer(
-		cfg.MsgServer(),
-		noorsignalkeeper.NewMsgServer(am.keeper, nil), // BankKeeper nil pour l'instant
-	)
-
-	noorsignaltypes.RegisterQueryServer(
-		cfg.QueryServer(),
-		noorsignalkeeper.NewQueryServer(am.keeper),
-	)
+// RegisterServices : pour l’instant, on ne branche PAS encore Msg/Query gRPC
+// car les fichiers proto / pb.go ne sont pas finalisés.
+func (am AppModule) RegisterServices(_ module.Configurator) {
+	// On ajoutera plus tard :
+	// - RegisterMsgServer
+	// - RegisterQueryServer
 }
 
 // InitGenesis initialise l'état de genèse du module.
 func (am AppModule) InitGenesis(
 	ctx context.Context,
-	cdc codec.JSONCodec,
+	_ codec.JSONCodec,
 	data json.RawMessage,
 ) []abci.ValidatorUpdate {
 	var gs noorsignaltypes.GenesisState
 	if len(data) == 0 {
-		gs = noorsignaltypes.DefaultGenesis()
+		gs = noorsignaltypes.GenesisState{
+			Config:   noorsignaltypes.DefaultPossConfig(),
+			Curators: []noorsignaltypes.Curator{},
+		}
 	} else {
-		if err := cdc.UnmarshalJSON(data, &gs); err != nil {
+		if err := json.Unmarshal(data, &gs); err != nil {
 			panic(err)
 		}
 	}
@@ -124,11 +136,16 @@ func (am AppModule) InitGenesis(
 // ExportGenesis exporte l'état de genèse courant.
 func (am AppModule) ExportGenesis(
 	ctx context.Context,
-	cdc codec.JSONCodec,
+	_ codec.JSONCodec,
 ) json.RawMessage {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	gs := ExportGenesis(sdkCtx, am.keeper)
-	return cdc.MustMarshalJSON(&gs)
+
+	bz, err := json.Marshal(gs)
+	if err != nil {
+		panic(err)
+	}
+	return bz
 }
 
 // ConsensusVersion permet d’indiquer une version du module (pour migrations futures).
