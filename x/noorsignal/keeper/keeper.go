@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/binary"
+	"encoding/json"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -62,7 +63,7 @@ func (k Keeper) dailyCounterStore(ctx sdk.Context) prefix.Store {
 func (k Keeper) SetConfig(ctx sdk.Context, cfg noorsignaltypes.PossConfig) {
 	store := k.configStore(ctx)
 
-	bz, err := k.cdc.MarshalJSON(&cfg)
+	bz, err := json.Marshal(&cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -79,7 +80,7 @@ func (k Keeper) GetConfig(ctx sdk.Context) (noorsignaltypes.PossConfig, bool) {
 	}
 
 	var cfg noorsignaltypes.PossConfig
-	if err := k.cdc.UnmarshalJSON(bz, &cfg); err != nil {
+	if err := json.Unmarshal(bz, &cfg); err != nil {
 		panic(err)
 	}
 
@@ -158,7 +159,7 @@ func (k Keeper) CreateSignal(ctx sdk.Context, sig noorsignaltypes.Signal) noorsi
 	sstore := k.signalStore(ctx)
 	key := noorsignaltypes.SignalKey(sig.Id)
 
-	bz, err := k.cdc.MarshalJSON(&sig)
+	bz, err := json.Marshal(&sig)
 	if err != nil {
 		panic(err)
 	}
@@ -172,7 +173,7 @@ func (k Keeper) SetSignal(ctx sdk.Context, sig noorsignaltypes.Signal) {
 	sstore := k.signalStore(ctx)
 	key := noorsignaltypes.SignalKey(sig.Id)
 
-	bz, err := k.cdc.MarshalJSON(&sig)
+	bz, err := json.Marshal(&sig)
 	if err != nil {
 		panic(err)
 	}
@@ -190,7 +191,7 @@ func (k Keeper) GetSignal(ctx sdk.Context, id uint64) (noorsignaltypes.Signal, b
 	}
 
 	var sig noorsignaltypes.Signal
-	if err := k.cdc.UnmarshalJSON(bz, &sig); err != nil {
+	if err := json.Unmarshal(bz, &sig); err != nil {
 		panic(err)
 	}
 
@@ -271,7 +272,7 @@ func (k Keeper) SetCurator(ctx sdk.Context, curator noorsignaltypes.Curator) {
 	store := k.curatorStore(ctx)
 	key := k.curatorKey(curator.Address)
 
-	bz, err := k.cdc.MarshalJSON(&curator)
+	bz, err := json.Marshal(&curator)
 	if err != nil {
 		panic(err)
 	}
@@ -289,7 +290,7 @@ func (k Keeper) GetCurator(ctx sdk.Context, addr sdk.AccAddress) (noorsignaltype
 	}
 
 	var curator noorsignaltypes.Curator
-	if err := k.cdc.UnmarshalJSON(bz, &curator); err != nil {
+	if err := json.Unmarshal(bz, &curator); err != nil {
 		panic(err)
 	}
 
