@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"context"
-	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -14,19 +13,19 @@ import (
 // du module PoSS (noorsignal).
 type MsgServer struct {
 	Keeper     Keeper
-	BankKeeper noorsignaltypes.BankKeeper // <— pré-câblé (future utilisation)
+	BankKeeper noorsignaltypes.BankKeeper // <— pré-câblé pour plus tard
 }
 
 // NewMsgServer construit un MsgServer avec BankKeeper (préparation future).
 func NewMsgServer(k Keeper, bk noorsignaltypes.BankKeeper) MsgServer {
 	return MsgServer{
 		Keeper:     k,
-		BankKeeper: bk, // <— pas encore utilisé
+		BankKeeper: bk, // pas encore utilisé (V1 sans transferts réels)
 	}
 }
 
 // ---------------------------------------------------------
-// SubmitSignal : pas de modification dans cette étape
+// SubmitSignal : un participant émet un signal PoSS
 // ---------------------------------------------------------
 func (s MsgServer) SubmitSignal(
 	goCtx context.Context,
@@ -34,11 +33,9 @@ func (s MsgServer) SubmitSignal(
 ) (*sdk.Result, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	if msg.Weight == 0 {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "weight must be >= 1")
-	}
-	if msg.Weight > 100 {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "weight must be <= 100")
+	// 1) Validation basique (poids, adresse…)
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
 	}
 
 	participantAddr, err := msg.GetParticipantAddress()
@@ -46,11 +43,13 @@ func (s MsgServer) SubmitSignal(
 		return nil, err
 	}
 
+	// 2) Récupérer la config PoSS actuelle (ou défaut)
 	cfg, found := s.Keeper.GetConfig(ctx)
 	if !found {
 		cfg = noorsignaltypes.DefaultPossConfig()
 	}
 
+	// 3) Vérifier la limite quotidienne si activée
 	var dayBucket uint64
 	if cfg.MaxSignalsPerDay > 0 {
 		ts := ctx.BlockTime().Unix()
@@ -61,10 +60,14 @@ func (s MsgServer) SubmitSignal(
 
 		current := s.Keeper.GetDailySignalCount(ctx, participantAddr, dayBucket)
 		if current >= cfg.MaxSignalsPerDay {
-			return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "daily signal limit reached")
+			return nil, sdkerrors.Wrap(
+				sdkerrors.ErrInvalidRequest,
+				"daily signal limit reached",
+			)
 		}
 	}
 
+	// 4) Construire le signal (sans rewards, sans curator)
 	signal := noorsignaltypes.Signal{
 		Participant:       participantAddr,
 		Curator:           nil,
@@ -76,17 +79,25 @@ func (s MsgServer) SubmitSignal(
 		RewardCurator:     0,
 	}
 
-	_ = s.Keeper.CreateSignal(ctx, signal)
+	// 5) Enregistrer le signal (ID auto-incrémenté)
+	signal = s.Keeper.CreateSignal(ctx, signal)
 
+	// 6) Incrémenter le compteur quotidien
 	if cfg.MaxSignalsPerDay > 0 {
 		s.Keeper.IncrementDailySignalCount(ctx, participantAddr, dayBucket)
 	}
+
+	// 7) Émettre un event poss.signal_submitted
+	ctx.EventManager().EmitEvent(
+		noorsignaltypes.NewSignalSubmittedEvent(signal, ctx.BlockHeight()),
+	)
 
 	return &sdk.Result{}, nil
 }
 
 // ---------------------------------------------------------
-// ValidateSignal : toujours sans BankKeeper (phase future)
+// ValidateSignal : un curator valide un signal
+// (V1 : pas encore de BankKeeper.SendCoins)
 // ---------------------------------------------------------
 func (s MsgServer) ValidateSignal(
 	goCtx context.Context,
@@ -94,24 +105,39 @@ func (s MsgServer) ValidateSignal(
 ) (*sdk.Result, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
+	// 1) Validation basique
+	if err := msg.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
 	curatorAddr, err := msg.GetCuratorAddress()
 	if err != nil {
 		return nil, err
 	}
 
+	// 2) Vérifier que le curator est actif
 	if !s.Keeper.IsActiveCurator(ctx, curatorAddr) {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "curator not active or not authorized")
+		return nil, sdkerrors.Wrap(
+			sdkerrors.ErrUnauthorized,
+			"curator not active or not authorized",
+		)
 	}
 
+	// 3) Charger le signal
 	signal, found := s.Keeper.GetSignal(ctx, msg.SignalId)
 	if !found {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrNotFound, "signal not found")
 	}
 
+	// 4) Vérifier qu'il n'est pas déjà validé
 	if signal.Curator != nil && len(signal.Curator) > 0 {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "signal already validated")
+		return nil, sdkerrors.Wrap(
+			sdkerrors.ErrInvalidRequest,
+			"signal already validated",
+		)
 	}
 
+	// 5) Calcul des rewards PoSS (local, sans transfert réel)
 	total, part, cur, ok := s.Keeper.ComputeSignalRewardsCurrentEra(ctx, signal.Weight)
 	if !ok {
 		total = 0
@@ -119,6 +145,7 @@ func (s MsgServer) ValidateSignal(
 		cur = 0
 	}
 
+	// 6) Mettre à jour le signal
 	signal.Curator = curatorAddr
 	signal.TotalReward = total
 	signal.RewardParticipant = part
@@ -126,116 +153,16 @@ func (s MsgServer) ValidateSignal(
 
 	s.Keeper.SetSignal(ctx, signal)
 
+	// 7) Incrémenter le compteur de validations du curator
 	s.Keeper.IncrementCuratorValidatedCount(ctx, curatorAddr)
 
-	// ---------------------------------------------------------
-	// FUTURE
-	// Ici, on utilisera BankKeeper.SendCoins
-	// pour créditer :
-	//   - participant
-	//   - curator
-	// depuis la réserve PoSS
-	// ---------------------------------------------------------
+	// 8) Émettre un event poss.signal_validated
+	ctx.EventManager().EmitEvent(
+		noorsignaltypes.NewSignalValidatedEvent(signal, ctx.BlockHeight()),
+	)
 
-	return &sdk.Result{}, nil
-}
+	// 9) FUTUR : ici on utilisera BankKeeper.SendCoins pour
+	// distribuer les rewards depuis la réserve PoSS.
 
-// ---------------------------------------------------------
-// AddCurator / RemoveCurator / SetConfig
-// (identiques à la version précédente)
-// ---------------------------------------------------------
-
-func (s MsgServer) AddCurator(
-	goCtx context.Context,
-	msg *noorsignaltypes.MsgAddCurator,
-) (*sdk.Result, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-
-	if msg.Authority == "" {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "missing authority")
-	}
-
-	curatorAddr, err := sdk.AccAddressFromBech32(msg.Curator)
-	if err != nil {
-		return nil, sdkerrors.Wrap(err, "invalid curator address")
-	}
-
-	curator, found := s.Keeper.GetCurator(ctx, curatorAddr)
-	if !found {
-		curator = noorsignaltypes.Curator{
-			Address:               curatorAddr,
-			Level:                 msg.Level,
-			TotalSignalsValidated: 0,
-			Active:                true,
-		}
-	} else {
-		curator.Level = msg.Level
-		curator.Active = true
-	}
-
-	s.Keeper.SetCurator(ctx, curator)
-	return &sdk.Result{}, nil
-}
-
-func (s MsgServer) RemoveCurator(
-	goCtx context.Context,
-	msg *noorsignaltypes.MsgRemoveCurator,
-) (*sdk.Result, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-
-	if msg.Authority == "" {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "missing authority")
-	}
-
-	curatorAddr, err := sdk.AccAddressFromBech32(msg.Curator)
-	if err != nil {
-		return nil, sdkerrors.Wrap(err, "invalid curator address")
-	}
-
-	curator, found := s.Keeper.GetCurator(ctx, curatorAddr)
-	if !found {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrNotFound, "curator not found")
-	}
-
-	curator.Active = false
-	s.Keeper.SetCurator(ctx, curator)
-
-	return &sdk.Result{}, nil
-}
-
-func (s MsgServer) SetConfig(
-	goCtx context.Context,
-	msg *noorsignaltypes.MsgSetConfig,
-) (*sdk.Result, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-
-	if msg.Authority == "" {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrUnauthorized, "missing authority")
-	}
-
-	baseReward, err := strconv.ParseUint(msg.BaseReward, 10, 64)
-	if err != nil {
-		return nil, sdkerrors.Wrap(err, "invalid base_reward")
-	}
-
-	totalRatio := msg.ParticipantRatio + msg.CuratorRatio
-	if totalRatio != 100 {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "participant_ratio + curator_ratio must = 100")
-	}
-
-	if msg.EraIndex > uint64(^uint32(0)) {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "era_index out of range")
-	}
-
-	newCfg := noorsignaltypes.PossConfig{
-		BaseReward:       baseReward,
-		ParticipantShare: msg.ParticipantRatio,
-		CuratorShare:     msg.CuratorRatio,
-		MaxSignalsPerDay: msg.MaxSignalsPerDay,
-		Enabled:          true,
-		EraIndex:         uint32(msg.EraIndex),
-	}
-
-	s.Keeper.SetConfig(ctx, newCfg)
 	return &sdk.Result{}, nil
 }
