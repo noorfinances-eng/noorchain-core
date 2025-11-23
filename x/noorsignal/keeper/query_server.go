@@ -2,10 +2,12 @@ package keeper
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	query "github.com/cosmos/cosmos-sdk/types/query"
 
 	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
@@ -28,18 +30,17 @@ func (q QueryServer) Signal(
 	req *noorsignaltypes.QuerySignalRequest,
 ) (*noorsignaltypes.QuerySignalResponse, error) {
 	if req == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "empty request")
+		return nil, errors.New("empty request")
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	sig, found := q.Keeper.GetSignal(ctx, req.Id)
 	if !found {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrNotFound, "signal not found")
+		return nil, errors.New("signal not found")
 	}
 
-	// Ici, nous renvoyons directement la struct Signal Go définie dans types.go.
-	// La version proto générée (plus tard) pourra mapper exactement cette structure.
+	// On renvoie directement la struct Signal Go définie dans types.go.
 	return &noorsignaltypes.QuerySignalResponse{
 		Signal: &sig,
 	}, nil
@@ -51,7 +52,7 @@ func (q QueryServer) Signals(
 	req *noorsignaltypes.QuerySignalsRequest,
 ) (*noorsignaltypes.QuerySignalsResponse, error) {
 	if req == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "empty request")
+		return nil, errors.New("empty request")
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
@@ -64,13 +65,15 @@ func (q QueryServer) Signals(
 		req.Pagination,
 		func(key, value []byte) error {
 			var sig noorsignaltypes.Signal
-			q.Keeper.cdc.MustUnmarshal(value, &sig)
+			if err := json.Unmarshal(value, &sig); err != nil {
+				return err
+			}
 			signals = append(signals, sig)
 			return nil
 		},
 	)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "failed to paginate signals")
+		return nil, fmt.Errorf("failed to paginate signals: %w", err)
 	}
 
 	return &noorsignaltypes.QuerySignalsResponse{
@@ -85,22 +88,22 @@ func (q QueryServer) Curator(
 	req *noorsignaltypes.QueryCuratorRequest,
 ) (*noorsignaltypes.QueryCuratorResponse, error) {
 	if req == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "empty request")
+		return nil, errors.New("empty request")
 	}
 	if req.Address == "" {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "address cannot be empty")
+		return nil, errors.New("address cannot be empty")
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	addr, err := sdk.AccAddressFromBech32(req.Address)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "invalid curator address")
+		return nil, fmt.Errorf("invalid curator address: %w", err)
 	}
 
 	curator, found := q.Keeper.GetCurator(ctx, addr)
 	if !found {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrNotFound, "curator not found")
+		return nil, errors.New("curator not found")
 	}
 
 	return &noorsignaltypes.QueryCuratorResponse{
@@ -133,17 +136,17 @@ func (q QueryServer) DailyCount(
 	req *noorsignaltypes.QueryDailyCountRequest,
 ) (*noorsignaltypes.QueryDailyCountResponse, error) {
 	if req == nil {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidRequest, "empty request")
+		return nil, errors.New("empty request")
 	}
 	if req.Address == "" {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "address cannot be empty")
+		return nil, errors.New("address cannot be empty")
 	}
 
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	addr, err := sdk.AccAddressFromBech32(req.Address)
 	if err != nil {
-		return nil, sdkerrors.Wrap(err, "invalid address")
+		return nil, fmt.Errorf("invalid address: %w", err)
 	}
 
 	count := q.Keeper.getDailySignalCount(ctx, addr, req.Day)
