@@ -22,8 +22,7 @@ type AppKeepers struct {
 	// NOOR PoSS module
 	NoorSignalKeeper noorsignalkeeper.Keeper
 
-	// ⚠️ Les keepers EVM / FeeMarket (Ethermint) seront ajoutés plus tard
-	// quand on aura choisi une version Ethermint compatible Cosmos SDK v0.50+.
-	// EvmKeeper       *evmkeeper.Keeper
-	// FeeMarketKeeper *feemarketkeeper.Keeper
+	// 🔥 IMPORTANT :
+	// EvmKeeper / FeeMarketKeeper (Ethermint) ont été retirés
+	// pour la version "light" de NOORCHAIN (pas d'EVM pour l'instant).
 }
