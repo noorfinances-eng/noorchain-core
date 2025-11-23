@@ -1,96 +1,18 @@
 syntax = "proto3";
 
-package noorchain.noorsignal.v1;
+package noorsignal;
 
 option go_package = "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types";
 
-// -----------------------------------------------------------------------------
-// Messages de base (réutilisés par les réponses)
-// -----------------------------------------------------------------------------
+// Requête pour récupérer la configuration PoSS actuelle.
+message QueryConfigRequest {}
 
-// SignalPoSS est une version proto simplifiée de x/noorsignal/types.Signal.
-// (Elle pourra être alignée plus tard si on génère tout à partir des .proto.)
-message SignalPoSS {
-  uint64 id            = 1;
-  string participant   = 2; // bech32
-  string curator       = 3; // bech32 (peut être vide si non validé)
-  uint32 weight        = 4;
-  string time          = 5; // RFC3339
-  string metadata      = 6;
-
-  uint64 total_reward        = 7;
-  uint64 reward_participant  = 8;
-  uint64 reward_curator      = 9;
-}
-
-// CuratorPoSS est une version proto simplifiée de x/noorsignal/types.Curator.
-message CuratorPoSS {
-  string address                = 1; // bech32
-  string level                  = 2;
-  uint64 total_signals_validated = 3;
-  bool   active                 = 4;
-}
-
-// PossConfigPoSS est une version proto de x/noorsignal/types.PossConfig.
-message PossConfigPoSS {
-  uint64 base_reward        = 1;
-  uint32 participant_share  = 2;
-  uint32 curator_share      = 3;
-  uint32 max_signals_per_day = 4;
-  bool   enabled            = 5;
-  uint32 era_index          = 6;
-}
-
-// -----------------------------------------------------------------------------
-// Requêtes / Réponses pour gRPC Query
-// -----------------------------------------------------------------------------
-
-message QuerySignalRequest {
-  uint64 id = 1;
-}
-
-message QuerySignalResponse {
-  SignalPoSS signal = 1;
-}
-
-message QuerySignalsRequest {
-  // V1 simple : pas de pagination avancée, on peut ajouter
-  // des filtres plus tard si besoin (adresse, jour, etc.).
-}
-
-message QuerySignalsResponse {
-  repeated SignalPoSS signals = 1;
-}
-
-message QueryCuratorRequest {
-  string address = 1; // bech32
-}
-
-message QueryCuratorResponse {
-  CuratorPoSS curator = 1;
-}
-
-message QueryConfigRequest {
-}
-
+// Réponse contenant la configuration PoSS.
 message QueryConfigResponse {
-  PossConfigPoSS config = 1;
+  PossConfig config = 1;
 }
 
-// -----------------------------------------------------------------------------
-// Service gRPC Query pour le module PoSS (noorsignal)
-// -----------------------------------------------------------------------------
-
+// Service Query pour le module noorsignal.
 service Query {
-  // Récupérer un signal PoSS par ID.
-  rpc Signal(QuerySignalRequest) returns (QuerySignalResponse);
-
-  // Lister les signaux (V1 simple).
-  rpc Signals(QuerySignalsRequest) returns (QuerySignalsResponse);
-
-  // Récupérer un curator par adresse.
-  rpc Curator(QueryCuratorRequest) returns (QueryCuratorResponse);
-
-  // Récupérer la configuration PoSS courante.
   rpc Config(QueryConfigRequest) returns (QueryConfigResponse);
 }
