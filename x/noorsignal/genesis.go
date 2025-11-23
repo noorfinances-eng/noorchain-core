@@ -15,21 +15,16 @@ func InitGenesis(
 	k noorsignalkeeper.Keeper,
 	genState noorsignaltypes.GenesisState,
 ) []abci.ValidatorUpdate {
-	// 1) Config PoSS
-	if genState.Config != nil {
-		k.SetConfig(ctx, *genState.Config)
-	} else {
-		k.InitDefaultConfig(ctx)
-	}
+	// 1) Config PoSS : on applique simplement la config fournie
+	// (si elle est "zero value", ce sera la responsabilité de DefaultGenesis).
+	k.SetConfig(ctx, genState.Config)
 
 	// 2) Curators
 	for _, c := range genState.Curators {
 		k.SetCurator(ctx, c)
 	}
 
-	// 3) (Optionnel) Signaux initiaux, compteurs, etc.
-	// Pour l’instant on ne charge rien d’autre.
-
+	// Pas de validators spécifiques à renvoyer pour PoSS.
 	return []abci.ValidatorUpdate{}
 }
 
@@ -43,10 +38,10 @@ func ExportGenesis(
 		cfg = noorsignaltypes.DefaultPossConfig()
 	}
 
-	// Pour l’instant, on n'exporte pas les signaux ni les compteurs journaliers.
-	// On retournera une liste vide de curators tant qu’on n’a pas besoin de plus.
+	// Pour l’instant, on n'exporte pas les signaux ni les compteurs journaliers
+	// et on laisse la liste de curators vide (ou à améliorer plus tard).
 	return noorsignaltypes.GenesisState{
-		Config:   &cfg,
+		Config:   cfg,
 		Curators: []noorsignaltypes.Curator{},
 	}
 }
