@@ -31,7 +31,7 @@ func NewKeeper(
 }
 
 // getStore retourne le KVStore brut du module à partir du contexte.
-func (k Keeper) getStore(ctx sdk.Context) sdk.KVStore {
+func (k Keeper) getStore(ctx sdk.Context) storetypes.KVStore {
 	return ctx.KVStore(k.storeKey)
 }
 
