@@ -12,15 +12,16 @@ import (
 // MsgServer est le point d'entrée pour les transactions (Msg)
 // du module PoSS (noorsignal).
 type MsgServer struct {
-	Keeper     Keeper
-	BankKeeper noorsignaltypes.BankKeeper // <— pré-câblé pour plus tard
+	Keeper Keeper
 }
 
-// NewMsgServer construit un MsgServer avec BankKeeper (préparation future).
-func NewMsgServer(k Keeper, bk noorsignaltypes.BankKeeper) MsgServer {
+// NewMsgServer construit un MsgServer basé uniquement sur le Keeper PoSS.
+//
+// NOTE : Dans cette V1, on ne branche PAS encore de BankKeeper.
+//        Les transferts réels de NUR seront ajoutés plus tard.
+func NewMsgServer(k Keeper) MsgServer {
 	return MsgServer{
-		Keeper:     k,
-		BankKeeper: bk, // pas encore utilisé (V1 sans transferts réels)
+		Keeper: k,
 	}
 }
 
