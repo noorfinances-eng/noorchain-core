@@ -5,6 +5,8 @@ import (
 
 	dbm "github.com/cosmos/cosmos-db"
 
+	"cosmossdk.io/log"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -22,7 +24,7 @@ import (
 // AppBuilder : construit progressivement NOORCHAIN
 // ------------------------------------------------------------
 type AppBuilder struct {
-	logger     sdk.Logger
+	logger     log.Logger
 	db         dbm.DB
 	traceStore io.Writer
 	loadLatest bool
@@ -36,7 +38,7 @@ type AppBuilder struct {
 // NewAppBuilder : constructeur
 // ------------------------------------------------------------
 func NewAppBuilder(
-	logger sdk.Logger,
+	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
 	loadLatest bool,
@@ -98,8 +100,6 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 		// --- Store PoSS
 		base.MountKVStore(sk.NoorSignalKey)
 
-		// ⚠️ AUCUN store EVM / FeeMarket pour l’instant (version light)
-
 		// --- Transient store
 		base.MountTransientStore(sk.ParamsTransientKey)
 	}
@@ -115,7 +115,7 @@ func (b *AppBuilder) BuildBaseApp() *baseapp.BaseApp {
 }
 
 // ------------------------------------------------------------
-// BuildKeepers : crée les keepers principaux (sans EVM pour l’instant)
+// BuildKeepers : crée les keepers principaux
 // ------------------------------------------------------------
 func (b *AppBuilder) BuildKeepers() AppKeepers {
 	sk := b.storeKeys
@@ -155,7 +155,7 @@ func (b *AppBuilder) BuildKeepers() AppKeepers {
 		sk.NoorSignalKey,
 	)
 
-	// 5) Retourner les keepers (version light, sans EVM)
+	// 5) Retourner les keepers (EVM = nil pour l’instant)
 	return AppKeepers{
 		AccountKeeper:    accountKeeper,
 		BankKeeper:       bankKeeper,
