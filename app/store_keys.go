@@ -1,7 +1,7 @@
 package app
 
 import (
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	storetypes "cosmossdk.io/store/types"
 )
 
 // StoreKeys regroupe toutes les clés de KVStore et TransientStore
@@ -42,7 +42,7 @@ func NewStoreKeys() StoreKeys {
 		// PoSS module store
 		NoorSignalKey: storetypes.NewKVStoreKey(ModuleNoorSignal),
 
-		// EVM & FeeMarket (Ethermint)
+		// EVM & FeeMarket (Ethermint) — à cabler plus tard
 		EvmKey:       storetypes.NewKVStoreKey(ModuleEvm),
 		FeeMarketKey: storetypes.NewKVStoreKey(ModuleFeeMarket),
 
