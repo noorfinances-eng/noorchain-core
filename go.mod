@@ -1,23 +1,27 @@
 module github.com/noorfinances-eng/noorchain-core
 
-go 1.24
+go 1.22
 
 require (
-    // Noyau Cosmos
+    // Cosmos SDK core (v0.50.x)
     github.com/cosmos/cosmos-sdk v0.50.5
+
+    // DB Cosmos (utilisé dans app_builder.go : dbm "github.com/cosmos/cosmos-db")
     github.com/cosmos/cosmos-db v1.0.2
 
-    // CometBFT – version forcée compatible avec Cosmos SDK 0.50.x
-    github.com/cometbft/cometbft v1.0.0
-
-    // Dépendances utilitaires
-    github.com/gogo/protobuf v1.3.2
-    github.com/gorilla/mux v1.8.0
-    github.com/spf13/cast v1.6.0
+    // CLI
     github.com/spf13/cobra v1.8.1
+
+    // Protobuf gogo (utilisé par Cosmos)
+    github.com/gogo/protobuf v1.3.2
+
+    // Router HTTP simple (si tu l’utilises plus tard)
+    github.com/gorilla/mux v1.8.0
+
+    // Tests
     github.com/stretchr/testify v1.10.0
-    google.golang.org/grpc v1.68.1
-    google.golang.org/protobuf v1.35.2
 )
 
-replace github.com/cometbft/cometbft => github.com/cometbft/cometbft v1.0.0
+// ⚠️ IMPORTANT : PAS DE "replace" sur github.com/cometbft/cometbft ici.
+// go mod tidy téléchargera la version attendue par le Cosmos SDK.
+// Si tu avais des "replace" avant pour CometBFT ou Ethermint, on les enlève.
