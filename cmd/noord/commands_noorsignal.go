@@ -1,62 +1,41 @@
 package main
 
 import (
-	"github.com/spf13/cobra"
+	"fmt"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
+	"github.com/spf13/cobra"
 )
 
-// NewNoorSignalQueryCmd assemble les commandes "noord query noorsignal ..."
-func NewNoorSignalQueryCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "noorsignal",
-		Short: "Querying commands for the PoSS module",
-	}
-
-	// query noorsignal config
-	cmd.AddCommand(
-		&cobra.Command{
-			Use:   "config",
-			Short: "Query the PoSS configuration",
-			RunE: func(cmd *cobra.Command, args []string) error {
-				clientCtx, err := client.GetClientQueryContext(cmd)
-				if err != nil {
-					return err
-				}
-
-				queryClient := noorsignaltypes.NewQueryClient(clientCtx)
-				res, err := queryClient.Config(cmd.Context(), &noorsignaltypes.QueryConfigRequest{})
-				if err != nil {
-					return err
-				}
-
-				return clientCtx.PrintProto(res)
-			},
-		},
-	)
-
-	return cmd
+// noorsignalCmd est la commande parente pour toutes les requêtes
+// liées au module PoSS (x/noorsignal).
+//
+// Exemple d'utilisation cible (plus tard, quand le gRPC sera branché):
+//   noord query noorsignal config
+var noorsignalCmd = &cobra.Command{
+	Use:   "noorsignal",
+	Short: "Requêtes liées au module PoSS (noorsignal)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println("Utilise une sous-commande, par ex.:")
+		fmt.Println("  noord query noorsignal config")
+		return nil
+	},
 }
 
-// NewNoorSignalTxCmd assemble les commandes "noord tx noorsignal ..."
-func NewNoorSignalTxCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "noorsignal",
-		Short: "Transaction commands for the PoSS module",
-	}
+// noorsignalConfigCmd sera plus tard branchée sur une requête gRPC
+// vers le QueryServer du module PoSS. Pour l'instant, elle affiche
+// simplement un message indiquant que la fonctionnalité est à venir.
+var noorsignalConfigCmd = &cobra.Command{
+	Use:   "config",
+	Short: "Affiche la configuration PoSS (placeholder)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Println("noord query noorsignal config: requête non implémentée (placeholder).")
+		fmt.Println("Plus tard, cette commande interrogera le QueryServer gRPC du module PoSS.")
+		return nil
+	},
+}
 
-	// tx noorsignal submit
-	cmd.AddCommand(
-		&cobra.Command{
-			Use:   "submit",
-			Short: "Submit a new PoSS signal",
-			RunE: func(cmd *cobra.Command, args []string) error {
-				// Ce sera rempli plus tard (testnet)
-				return nil
-			},
-		},
-	)
-
-	return cmd
+func init() {
+	// Rattacher "noorsignal" à "query", puis "config" à "noorsignal".
+	queryCmd.AddCommand(noorsignalCmd)
+	noorsignalCmd.AddCommand(noorsignalConfigCmd)
 }
