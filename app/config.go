@@ -4,21 +4,44 @@ package app
 //
 // Ce fichier définit :
 // - le nom de la chaîne
-// - le chain-id
-// - le prefix Bech32
-// - la monnaie native (denom) utilisée pour les frais, le staking et PoSS.
+// - le chain-id par défaut (testnet)
+// - les préfixes Bech32
+// - la monnaie native (denom) utilisée pour les frais, le staking et PoSS
+// - quelques paramètres EVM de base (chain ID).
+
+// -----------------------------------------------------------------------------
+//  Identité de la chaîne
+// -----------------------------------------------------------------------------
 
 const (
 	// Nom interne de l'application.
 	AppName = "NOORCHAIN"
 
 	// ChainID utilisé pour le testnet actuel.
-	// Il sera ajusté plus tard pour mainnet (ex: "noorchain-1").
+	// Il sera ajusté plus tard pour le mainnet (ex: "noorchain-mainnet-1").
 	ChainID = "noorchain-testnet-1"
+)
 
-	// Préfixe Bech32 pour les adresses NOORCHAIN.
-	// Exemple d'adresse : noor1xxxx...
-	Bech32MainPrefix = "noor"
+// -----------------------------------------------------------------------------
+//  Préfixes Bech32
+// -----------------------------------------------------------------------------
+
+// Préfixe principal pour les adresses NOORCHAIN.
+// Exemple d'adresse compte : noor1xxxx...
+const Bech32MainPrefix = "noor"
+
+const (
+	// Comptes utilisateurs (acc)
+	Bech32PrefixAccAddr = Bech32MainPrefix
+	Bech32PrefixAccPub  = Bech32MainPrefix + "pub"
+
+	// Adresses de validateurs (valoper)
+	Bech32PrefixValAddr = Bech32MainPrefix + "valoper"
+	Bech32PrefixValPub  = Bech32MainPrefix + "valoperpub"
+
+	// Adresses de consensus (valcons)
+	Bech32PrefixConsAddr = Bech32MainPrefix + "valcons"
+	Bech32PrefixConsPub  = Bech32MainPrefix + "valconspub"
 )
 
 // -----------------------------------------------------------------------------
@@ -43,4 +66,16 @@ const (
 	// BondDenom est le denom utilisé pour le staking, les frais, etc.
 	// On le met égal à CoinDenom pour garder une seule monnaie native.
 	BondDenom = CoinDenom
+
+	// TokenSymbol est le symbole lisible (alias de CoinDisplayDenom).
+	TokenSymbol = CoinDisplayDenom
 )
+
+// -----------------------------------------------------------------------------
+//  Paramètres EVM (Ethermint)
+// -----------------------------------------------------------------------------
+
+// EvmChainID est l'ID de chaîne EVM utilisé par Ethermint.
+// Valeur symbolique "vitesse de la lumière" pour NOORCHAIN.
+// (On pourra l'ajuster plus tard pour éviter tout conflit si nécessaire.)
+const EvmChainID = 299792458
