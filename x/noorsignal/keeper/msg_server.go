@@ -2,9 +2,9 @@ package keeper
 
 import (
 	"context"
+	"errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
 )
@@ -61,10 +61,7 @@ func (s MsgServer) SubmitSignal(
 
 		current := s.Keeper.GetDailySignalCount(ctx, participantAddr, dayBucket)
 		if current >= cfg.MaxSignalsPerDay {
-			return nil, sdkerrors.Wrap(
-				sdkerrors.ErrInvalidRequest,
-				"daily signal limit reached",
-			)
+			return nil, errors.New("daily signal limit reached")
 		}
 	}
 
@@ -118,24 +115,18 @@ func (s MsgServer) ValidateSignal(
 
 	// 2) Vérifier que le curator est actif
 	if !s.Keeper.IsActiveCurator(ctx, curatorAddr) {
-		return nil, sdkerrors.Wrap(
-			sdkerrors.ErrUnauthorized,
-			"curator not active or not authorized",
-		)
+		return nil, errors.New("curator not active or not authorized")
 	}
 
 	// 3) Charger le signal
 	signal, found := s.Keeper.GetSignal(ctx, msg.SignalId)
 	if !found {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrNotFound, "signal not found")
+		return nil, errors.New("signal not found")
 	}
 
 	// 4) Vérifier qu'il n'est pas déjà validé
 	if signal.Curator != nil && len(signal.Curator) > 0 {
-		return nil, sdkerrors.Wrap(
-			sdkerrors.ErrInvalidRequest,
-			"signal already validated",
-		)
+		return nil, errors.New("signal already validated")
 	}
 
 	// 5) Calcul des rewards PoSS (local, sans transfert réel)
