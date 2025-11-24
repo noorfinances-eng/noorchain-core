@@ -1,7 +1,7 @@
 package main
 
 // Commands groups the high-level NOORCHAIN CLI actions.
-// In Phase 2 this is a thin wrapper around placeholder functions.
+// This structure prepares future Cosmos-aligned commands.
 type Commands struct{}
 
 // NewCommands returns a new Commands collection.
