@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	"github.com/tendermint/tendermint/libs/log"
 )
 
 // NOORChainApp is the root structure for the real Cosmos SDK application.
@@ -16,12 +17,15 @@ type NOORChainApp struct {
 // NewNOORChainApp constructs the skeleton of a Cosmos SDK application.
 // In Phase 2, it initializes only BaseApp and basic store keys.
 func NewNOORChainApp() *NOORChainApp {
-	// Placeholder BaseApp
+	// Minimal logger for Phase 2 (stdout)
+	logger := log.NewNopLogger()
+
+	// Placeholder BaseApp with logger
 	bApp := baseapp.NewBaseApp(
 		AppName,
-		nil,                 // Logger (will be added later)
-		nil,                 // DB (added later)
-		nil,                 // TxDecoder (added later with encoding)
+		logger,
+		nil, // DB (added later)
+		nil, // TxDecoder (added later with encoding)
 	)
 
 	keys := NewCosmosKeys()
