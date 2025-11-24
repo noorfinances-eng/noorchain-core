@@ -4,9 +4,7 @@ import (
 	"github.com/noorfinances-eng/noorchain-core/app"
 )
 
-// Start initializes and runs the NOORCHAIN application server.
-// Now uses the Cosmos-based NOORChainApp returned by InitApp().
+// Start triggers the Cosmos-based NOORCHAIN application startup.
 func Start() error {
-	noorApp := app.InitApp()
-	return app.BuildServer(noorApp)
+	return app.StartNOORChain()
 }
