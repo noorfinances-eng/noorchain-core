@@ -1,7 +1,7 @@
 package main
 
 // Execute runs the NOORCHAIN command dispatcher.
-// In Phase 2 this links the CLI entrypoint to placeholder logic.
+// It now relies on the updated Command flow for the Cosmos-based app.
 func Execute() error {
 	return Dispatch()
 }
