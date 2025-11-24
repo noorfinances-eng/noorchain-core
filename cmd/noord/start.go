@@ -5,8 +5,8 @@ import (
 )
 
 // Start initializes and runs the NOORCHAIN application server.
-// In Phase 2 this is only a thin wrapper around placeholders.
+// Now uses the Cosmos-based NOORChainApp returned by InitApp().
 func Start() error {
-	a := app.InitApp()
-	return app.BuildServer(a)
+	noorApp := app.InitApp()
+	return app.BuildServer(noorApp)
 }
