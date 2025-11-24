@@ -3,7 +3,7 @@ package app
 import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
-	"github.com/tendermint/tendermint/libs/log"
+	"cosmossdk.io/log"
 )
 
 // NOORChainApp is the root structure for the real Cosmos SDK application.
