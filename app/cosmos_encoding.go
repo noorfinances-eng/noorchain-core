@@ -3,7 +3,6 @@ package app
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/types/module"
 )
 
 // CosmosEncodingConfig defines the real Cosmos encoding configuration.
@@ -17,10 +16,11 @@ type CosmosEncodingConfig struct {
 
 // MakeCosmosEncodingConfig creates an empty CosmosEncodingConfig placeholder.
 func MakeCosmosEncodingConfig() CosmosEncodingConfig {
-	// Placeholder: in the next steps we will initialize the real registries/codecs.
+	ir := codectypes.NewInterfaceRegistry()
+
 	return CosmosEncodingConfig{
-		InterfaceRegistry: codectypes.NewInterfaceRegistry(),
-		Marshaler:         codec.NewProtoCodec(codectypes.NewInterfaceRegistry()),
+		InterfaceRegistry: ir,
+		Marshaler:         codec.NewProtoCodec(ir),
 		TxConfig:          nil,
 		Amino:             codec.NewLegacyAmino(),
 	}
