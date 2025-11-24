@@ -16,7 +16,7 @@ type NOORChainApp struct {
 }
 
 // NewNOORChainApp constructs the skeleton of a Cosmos SDK application.
-// In Phase 2, it initializes only BaseApp, a minimal logger, and a MemDB.
+// In Phase 2, it initializes BaseApp, logger, MemDB, and TxDecoder placeholder.
 func NewNOORChainApp() *NOORChainApp {
 	// Minimal logger for Phase 2
 	logger := log.NewNopLogger()
@@ -24,12 +24,12 @@ func NewNOORChainApp() *NOORChainApp {
 	// In-memory database for Phase 2 (no persistent storage yet)
 	db := memdb.NewDB()
 
-	// Placeholder BaseApp with logger and MemDB
+	// Placeholder BaseApp with logger, MemDB, and TxDecoder
 	bApp := baseapp.NewBaseApp(
 		AppName,
 		logger,
-		db,  // <-- Phase 2 DB
-		nil, // TxDecoder (added later with encoding)
+		db,
+		CosmosTxDecoder, // <-- Étape 95 : branchement du TxDecoder
 	)
 
 	keys := NewCosmosKeys()
