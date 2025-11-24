@@ -1,7 +1,7 @@
 package main
 
-// Dispatch runs the NOORCHAIN command flow.
-// For now, the dispatcher always triggers the Start command.
+// Dispatch executes the default NOORCHAIN command flow.
+// It now uses the updated Start() logic based on StartNOORChain().
 func Dispatch() error {
 	cmds := NewCommands()
 	return cmds.Start()
