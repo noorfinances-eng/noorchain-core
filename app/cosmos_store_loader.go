@@ -4,19 +4,24 @@ import (
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 )
 
-// CosmosStoreLoader is a placeholder responsible for setting up the store keys
-// inside the Cosmos BaseApp. In Phase 2 it does not perform any initialization.
+// CosmosStoreLoader is responsible for mounting the store keys
+// inside the Cosmos BaseApp.
 type CosmosStoreLoader struct{}
 
-// NewCosmosStoreLoader returns an empty placeholder loader.
+// NewCosmosStoreLoader returns an empty loader for Phase 2.
 func NewCosmosStoreLoader() CosmosStoreLoader {
 	return CosmosStoreLoader{}
 }
 
-// LoadStores attaches placeholder store keys to the BaseApp.
-// In Phase 2, this function does not register real stores yet.
+// LoadStores mounts the Cosmos store keys into the BaseApp.
+// In Phase 2, only the basic keys are mounted.
 func LoadStores(base *CosmosBaseApp, keys CosmosKeys) {
-	// Placeholder: real store mounting will happen in later steps.
-	_ = base
-	_ = keys
+	if base == nil {
+		return
+	}
+
+	// Mounting the basic store keys (Phase 2)
+	base.MountStore(keys.MainKey, storetypes.StoreTypeIAVL)
+	base.MountStore(keys.TransientKey, storetypes.StoreTypeTransient)
+	base.MountStore(keys.MemoryKey, storetypes.StoreTypeMemory)
 }
