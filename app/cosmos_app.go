@@ -2,7 +2,6 @@ package app
 
 import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"cosmossdk.io/log"
 	"github.com/cometbft/cometdb/memdb"
 )
@@ -16,7 +15,8 @@ type NOORChainApp struct {
 }
 
 // NewNOORChainApp constructs the skeleton of a Cosmos SDK application.
-// In Phase 2, it initializes BaseApp, logger, MemDB, and TxDecoder placeholder.
+// In Phase 2, it initializes BaseApp, logger, MemDB, TxDecoder placeholder,
+// and mounts the basic store keys.
 func NewNOORChainApp() *NOORChainApp {
 	// Minimal logger for Phase 2
 	logger := log.NewNopLogger()
@@ -29,10 +29,13 @@ func NewNOORChainApp() *NOORChainApp {
 		AppName,
 		logger,
 		db,
-		CosmosTxDecoder, // <-- Étape 95 : branchement du TxDecoder
+		CosmosTxDecoder,
 	)
 
 	keys := NewCosmosKeys()
+
+	// Mount basic stores into the BaseApp
+	LoadStores(bApp, keys)
 
 	return &NOORChainApp{
 		BaseApp: bApp,
