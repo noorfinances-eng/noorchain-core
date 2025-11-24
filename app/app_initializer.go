@@ -1,9 +1,8 @@
 package app
 
-// InitApp creates a basic NOORCHAIN App instance.
-// In Phase 2 this only wires placeholder modules and a placeholder module manager.
-func InitApp() *App {
-	mods := NewAppModules()
-	_ = BuildModuleManager(mods)
-	return New()
+// InitApp initializes the real Cosmos application structure for NOORCHAIN.
+// In Phase 2 this delegates to BuildCosmosApp, which remains a placeholder
+// until module wiring is implemented.
+func InitApp() *NOORChainApp {
+	return BuildCosmosApp()
 }
