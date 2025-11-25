@@ -9,16 +9,16 @@ func BuildCosmosApp() *NOORChainApp {
 
 	// Build keepers (placeholder)
 	keepers := BuildCosmosKeepers()
-	_ = keepers
 
 	// Create store loader (placeholder)
 	loader := NewCosmosStoreLoader()
-	_ = loader
 
 	// Create the module manager (placeholder)
 	mm := NewCosmosModuleManager()
-	_ = mm
 
-	// Phase 2: no real wiring yet.
+	app.Keepers = keepers
+	app.StoreLoader = loader
+	app.ModuleManager = mm
+
 	return app
 }
