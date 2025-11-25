@@ -64,6 +64,9 @@ func NewNOORChainApp() *NOORChainApp {
 		Encoding:      encoding,
 	}
 
+	// Register query router (Phase 2 placeholder)
+	app.RegisterQueryRouter()
+
 	// Register AnteHandler (Phase 2 placeholder)
 	app.SetAnteHandler(app.AnteHandler())
 
