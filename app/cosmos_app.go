@@ -7,11 +7,14 @@ import (
 )
 
 // NOORChainApp is the root structure for the real Cosmos SDK application.
-// In Phase 2, this is only a placeholder base containing BaseApp + Keys.
+// In Phase 2, this is only a placeholder base containing BaseApp + structures.
 type NOORChainApp struct {
 	*baseapp.BaseApp
 
-	Keys CosmosKeys
+	Keys          CosmosKeys
+	Keepers       CosmosKeepers
+	ModuleManager CosmosModuleManager
+	StoreLoader   CosmosStoreLoader
 }
 
 // NewNOORChainApp constructs the skeleton of a Cosmos SDK application.
@@ -38,7 +41,10 @@ func NewNOORChainApp() *NOORChainApp {
 	LoadStores(bApp, keys)
 
 	return &NOORChainApp{
-		BaseApp: bApp,
-		Keys:    keys,
+		BaseApp:      bApp,
+		Keys:         keys,
+		Keepers:      NewCosmosKeepers(),
+		ModuleManager: NewCosmosModuleManager(),
+		StoreLoader:  NewCosmosStoreLoader(),
 	}
 }
