@@ -16,9 +16,15 @@ func BuildCosmosApp() *NOORChainApp {
 	// Create the module manager (placeholder)
 	mm := NewCosmosModuleManager()
 
+	// Assign structures to the app
 	app.Keepers = keepers
 	app.StoreLoader = loader
 	app.ModuleManager = mm
+
+	// Configure module execution order (even if empty)
+	app.ModuleManager.SetOrderInitGenesis()
+	app.ModuleManager.SetOrderBeginBlockers()
+	app.ModuleManager.SetOrderEndBlockers()
 
 	return app
 }
