@@ -1,7 +1,8 @@
 package app
 
 // BuildCosmosApp assembles the Cosmos structures
-// (BaseApp, keepers, store loader, module manager) into a NOORChainApp.
+// (BaseApp, keepers, store loader, module manager, module basics)
+// into a NOORChainApp.
 // In Phase 2 this performs minimal assembly.
 func BuildCosmosApp() *NOORChainApp {
 	// Create the base Cosmos application
@@ -25,6 +26,9 @@ func BuildCosmosApp() *NOORChainApp {
 	app.ModuleManager.SetOrderInitGenesis()
 	app.ModuleManager.SetOrderBeginBlockers()
 	app.ModuleManager.SetOrderEndBlockers()
+
+	// Assign ModuleBasics (Phase 2 placeholder)
+	_ = ModuleBasics
 
 	return app
 }
