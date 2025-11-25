@@ -67,6 +67,9 @@ func NewNOORChainApp() *NOORChainApp {
 	// Register query router (Phase 2 placeholder)
 	app.RegisterQueryRouter()
 
+	// Register msg service router (Phase 2 placeholder)
+	app.RegisterMsgServiceRouter()
+
 	// Register AnteHandler (Phase 2 placeholder)
 	app.SetAnteHandler(app.AnteHandler())
 
