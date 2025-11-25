@@ -19,8 +19,6 @@ type NOORChainApp struct {
 }
 
 // NewNOORChainApp constructs the skeleton of a Cosmos SDK application.
-// In Phase 2, it initializes BaseApp, logger, MemDB, TxDecoder placeholder,
-// mounts the basic store keys, and prepares the encoding config.
 func NewNOORChainApp() *NOORChainApp {
 	// Minimal logger for Phase 2
 	logger := log.NewNopLogger()
@@ -45,7 +43,8 @@ func NewNOORChainApp() *NOORChainApp {
 	encodingBuilder := NewCosmosEncodingBuilder()
 	encoding := encodingBuilder.Build()
 
-	return &NOORChainApp{
+	// Construct the application
+	app := &NOORChainApp{
 		BaseApp:       bApp,
 		Keys:          keys,
 		Keepers:       NewCosmosKeepers(),
@@ -53,4 +52,11 @@ func NewNOORChainApp() *NOORChainApp {
 		StoreLoader:   NewCosmosStoreLoader(),
 		Encoding:      encoding,
 	}
+
+	// Register ABCI handlers (Phase 2 placeholders)
+	app.SetBeginBlocker(app.BeginBlocker)
+	app.SetEndBlocker(app.EndBlocker)
+	app.SetInitChainer(app.InitChainer)
+
+	return app
 }
