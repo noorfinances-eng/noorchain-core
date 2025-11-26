@@ -8,3 +8,4 @@ require (
 )
 
 replace github.com/evmos/ethermint => github.com/b-harvest/ethermint v0.22.0-sdk50-1
+replace github.com/cometbft/cometbft => github.com/cometbft/cometbft v0.38.8
