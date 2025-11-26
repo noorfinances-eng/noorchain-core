@@ -2,9 +2,8 @@ package app
 
 import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"cosmossdk.io/log"
-	"github.com/cometbft/cometdb/memdb"
+	dbm "github.com/cosmos/cosmos-db"
 )
 
 // NOORChainApp is the root structure for the real Cosmos SDK application.
@@ -19,23 +18,13 @@ type NOORChainApp struct {
 	Encoding      CosmosEncodingConfig
 }
 
-// AnteHandler returns a minimal AnteHandler for NOORCHAIN.
-// In Phase 2 this is a placeholder that always accepts the transaction.
-func (app *NOORChainApp) AnteHandler() sdk.AnteHandler {
-	return func(ctx sdk.Context, tx sdk.Tx, simulate bool) (sdk.Context, error) {
-		_ = tx
-		_ = simulate
-		return ctx, nil
-	}
-}
-
 // NewNOORChainApp constructs the skeleton of a Cosmos SDK application.
 func NewNOORChainApp() *NOORChainApp {
 	// Minimal logger for Phase 2
 	logger := log.NewNopLogger()
 
 	// In-memory database for Phase 2 (no persistent storage yet)
-	db := memdb.NewDB()
+	db := dbm.NewMemDB()
 
 	// Placeholder BaseApp with logger, MemDB, and TxDecoder
 	bApp := baseapp.NewBaseApp(
@@ -63,15 +52,6 @@ func NewNOORChainApp() *NOORChainApp {
 		StoreLoader:   NewCosmosStoreLoader(),
 		Encoding:      encoding,
 	}
-
-	// Register query router (Phase 2 placeholder)
-	app.RegisterQueryRouter()
-
-	// Register msg service router (Phase 2 placeholder)
-	app.RegisterMsgServiceRouter()
-
-	// Register AnteHandler (Phase 2 placeholder)
-	app.SetAnteHandler(app.AnteHandler())
 
 	// Register ABCI handlers (Phase 2 placeholders)
 	app.SetBeginBlocker(app.BeginBlocker)
