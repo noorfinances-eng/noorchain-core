@@ -6,66 +6,127 @@
 
 ## 1. Objectif de la Phase 2
 
-- Créer une structure propre de blockchain Cosmos SDK + Ethermint.
-- Avoir une application NOORCHAIN qui **compile** avec `go build ./...`.
+- Créer une structure propre de blockchain **Cosmos SDK + Ethermint**.
+- Avoir une application NOORCHAIN qui **compile avec `go build ./...`**.
 - Préparer toute l’infrastructure de base **avant** d’ajouter PoSS (Phase 4).
+- Ne brancher **aucune logique**, **aucun keeper réel**, **aucun PoSS**.
 
 ---
 
 ## 2. État actuel (structure technique)
 
-- Projet Go initialisé (`go.mod`, `cmd/`, `app/`, `x/`, `config/`, `scripts/`, `docs/`).
-- CLI `noord` minimal :
-  - `main`, `Execute`, `Dispatch`, `Start`, `Run`, `Version`, `Help`.
-  - `Start` → `StartNOORChain()`.
+### ✔️ Structure du projet
+- `go.mod` configuré
+- Arborescence propre : `cmd/`, `app/`, `x/`, `config/`, `scripts/`, `docs/`
 
-- Application Cosmos `NOORChainApp` :
-  - `BaseApp` avec :
-    - logger minimal,
-    - base de données en mémoire (`MemDB`),
-    - `CosmosTxDecoder` (placeholder).
-  - Stores montés via `LoadStores`.
-  - Encoding Cosmos (`CosmosEncodingConfig` + builder).
-  - Keepers, ModuleManager, StoreLoader (placeholders).
-  - Query router + Msg service router (placeholders).
-  - AnteHandler (placeholder, accepte tout).
-  - ABCI hooks :
-    - `BeginBlocker`,
-    - `EndBlocker`,
-    - `InitChainer` + `InitGenesis` + `DefaultGenesis`.
+### ✔️ CLI `noord` opérationnel (squelette)
+- `main`
+- `Execute`
+- `Dispatch`
+- `Start`
+- `Run`
+- `Version`
+- `Help`
+
+### ✔️ Application Cosmos `NOORChainApp`
+- `BaseApp` initialisée avec :
+  - logger minimal,
+  - base en mémoire (`MemDB`),
+  - `CosmosTxDecoder` placeholder
+- Stores montés (`LoadStores`)
+- Encoding Cosmos complet (`CosmosEncodingConfig` + builder)
+- Keepers placeholders
+- ModuleManager complet
+- StoreLoader placeholder
+- Query router + Msg service router placeholders
+- AnteHandler placeholder (accepte tout)
+
+### ✔️ ABCI hooks
+- `BeginBlocker`
+- `EndBlocker`
+- `InitChainer` (appelle `InitGenesis(DefaultGenesis())`)
 
 ---
 
-## 3. ModuleManager
+## 3. Module Manager (ÉTAPE 132 COMPLÉTÉE)
 
-- `CosmosModuleManager` créé.
-- `SetOrderInitGenesis`, `SetOrderBeginBlockers`, `SetOrderEndBlockers` appelés (listes encore vides).
-- Aucun module réel encore branché (auth, bank, staking, gov, evm, feemarket).
+### ✔️ Modules enregistrés :
+- `auth`
+- `bank`
+- `staking`
+- `gov`
+- `evm` (Ethermint)
+- `feemarket` (Ethermint)
+
+### ✔️ Ordres configurés :
+- `SetOrderInitGenesis`
+- `SetOrderBeginBlockers`
+- `SetOrderEndBlockers`
+
+### ✔️ ModuleBasics
+Tous les modules sont présents dans `module.BasicManager`.
 
 ---
 
 ## 4. Génesis
 
-- Type `GenesisState` (vide).
-- `DefaultGenesis()` + `ValidateGenesis()` placeholders.
-- `InitGenesis()` appelée depuis `InitChainer()` avec `DefaultGenesis()`.
+- `GenesisState` (structure minimale vide)
+- `DefaultGenesis()`
+- `ValidateGenesis()`
+- `InitGenesis()` appelée dans `InitChainer()`
 
 ---
 
-## 5. Scripts & Config
+## 5. Keepers (Phase 2)
 
-- Dossier `config/` :
-  - config, loader, paths, files, validator, env_loader.
-- Dossier `scripts/` :
-  - init, env, testnet, reset, status, keys, logs, validators, network,
-    upgrade, health, tools, debug, security (placeholders).
+Tous les keepers sont **placeholder** (nil) :
+- AuthKeeper
+- BankKeeper
+- StakingKeeper
+- GovKeeper
+- EvmKeeper
+- FeeMarketKeeper
+
+Documentés dans :  
+`docs/PHASE2_KEEPERS_1.1.md`
 
 ---
 
-## 6. À faire pour clôturer la Phase 2
+## 6. Documentation Phase 2 (ÉTAPE 134–136)
 
-- Wiring minimal des **modules Cosmos réels** (auth, bank, staking, gov).
-- Intégration Ethermint (evm, feemarket) dans l’app et le ModuleManager.
-- Ajout d’un `init` / `start` Cosmos plus standard dans le CLI.
-- Génération d’un genesis minimal complet (avec modules déclarés).
-- Vérification finale : `go build ./...` + notes des erreurs éventuelles.
+- `PHASE2_STATUS_1.1.md` (ce fichier)
+- `PHASE2_TODO_1.1.md`
+- `PHASE2_CHECKS_1.1.md`
+- `PHASE2_MODULES_1.1.md`
+- `PHASE2_KEEPERS_1.1.md`
+- `PHASE2_ERRORS_1.1.md`
+
+---
+
+## 7. Ce qu'il reste pour clôturer la Phase 2
+
+### Prochaines étapes officielles :
+1. Générer un **genesis complet minimal** avec tous les modules (AUTH → FEEMARKET)
+2. Ajouter ce genesis dans `InitChainer` proprement
+3. Vérifier :
+   - `go mod tidy`
+   - `go build ./...`
+4. Reporter les erreurs dans `PHASE2_ERRORS_1.1.md`
+5. Corriger les erreurs une par une (Phase 2 finale)
+6. Obtenir une blockchain qui **compile**, même sans logique
+
+---
+
+## 8. Rappel important
+
+Phase 2 = SQUELETTE  
+- ❌ pas de keeper réel  
+- ❌ pas de store réel  
+- ❌ pas de params réels  
+- ❌ pas de PoSS  
+- ❌ pas de logique  
+- ✔️ uniquement infrastructure Cosmos + Ethermint
+
+---
+
+Fin du fichier.
