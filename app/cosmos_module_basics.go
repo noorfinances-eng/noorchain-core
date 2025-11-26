@@ -5,12 +5,14 @@ import (
 	authmodule "github.com/cosmos/cosmos-sdk/x/auth/module"
 	bankmodule "github.com/cosmos/cosmos-sdk/x/bank/module"
 	stakingmodule "github.com/cosmos/cosmos-sdk/x/staking/module"
+	govmodule "github.com/cosmos/cosmos-sdk/x/gov/module"
 )
 
 // ModuleBasics defines the basic module elements for NOORCHAIN.
-// Phase 2: includes AUTH + BANK + STAKING modules.
+// Phase 2: includes AUTH + BANK + STAKING + GOV modules.
 var ModuleBasics = module.BasicManager(
 	authmodule.AppModuleBasic{},
 	bankmodule.AppModuleBasic{},
 	stakingmodule.AppModuleBasic{},
+	govmodule.AppModuleBasic{},
 )
