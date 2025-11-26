@@ -13,7 +13,6 @@ import (
 )
 
 // ModuleBasics defines the basic modules (AppModuleBasic) enabled in NOORCHAIN Phase 2.
-// For l'instant, c'est une simple liste sans logique personnalisée.
 var ModuleBasics = module.NewBasicManager(
 	auth.AppModuleBasic{},
 	bank.AppModuleBasic{},
