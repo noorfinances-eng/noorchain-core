@@ -1,7 +1,7 @@
 package app
 
 import (
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	storetypes "cosmossdk.io/store/types"
 )
 
 // CosmosKeys holds placeholder Cosmos SDK store keys.
