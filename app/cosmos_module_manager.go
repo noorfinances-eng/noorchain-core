@@ -17,6 +17,15 @@ func NewCosmosModuleManager() CosmosModuleManager {
 	}
 }
 
+// RegisterModules is a Phase 2 placeholder for registering app modules.
+// The real registration (AUTH, BANK, STAKING, GOV, EVM, FEEMARKET) will be added later.
+func (mm *CosmosModuleManager) RegisterModules() {
+	if mm.Manager == nil {
+		return
+	}
+	// Placeholder: module registration will be implemented in the wiring step.
+}
+
 // SetOrderInitGenesis configures the InitGenesis order for modules.
 // Phase 2: no modules registered yet, so this calls the underlying method with no args.
 func (mm *CosmosModuleManager) SetOrderInitGenesis() {
