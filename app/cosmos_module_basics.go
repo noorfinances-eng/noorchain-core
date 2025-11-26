@@ -2,21 +2,23 @@ package app
 
 import (
 	"github.com/cosmos/cosmos-sdk/types/module"
-	authmodule "github.com/cosmos/cosmos-sdk/x/auth/module"
-	bankmodule "github.com/cosmos/cosmos-sdk/x/bank/module"
-	stakingmodule "github.com/cosmos/cosmos-sdk/x/staking/module"
-	govmodule "github.com/cosmos/cosmos-sdk/x/gov/module"
-	evmmodule "github.com/evmos/ethermint/x/evm/module"
-	feemarketmodule "github.com/evmos/ethermint/x/feemarket/module"
+
+	auth "github.com/cosmos/cosmos-sdk/x/auth"
+	bank "github.com/cosmos/cosmos-sdk/x/bank"
+	gov "github.com/cosmos/cosmos-sdk/x/gov"
+	staking "github.com/cosmos/cosmos-sdk/x/staking"
+
+	evm "github.com/evmos/ethermint/x/evm"
+	feemarket "github.com/evmos/ethermint/x/feemarket"
 )
 
-// ModuleBasics defines the basic module elements for NOORCHAIN.
-// Phase 2: includes AUTH + BANK + STAKING + GOV + EVM + FEEMARKET modules.
-var ModuleBasics = module.BasicManager(
-	authmodule.AppModuleBasic{},
-	bankmodule.AppModuleBasic{},
-	stakingmodule.AppModuleBasic{},
-	govmodule.AppModuleBasic{},
-	evmmodule.AppModuleBasic{},
-	feemarketmodule.AppModuleBasic{},
+// ModuleBasics defines the basic modules (AppModuleBasic) enabled in NOORCHAIN Phase 2.
+// For l'instant, c'est une simple liste sans logique personnalisée.
+var ModuleBasics = module.NewBasicManager(
+	auth.AppModuleBasic{},
+	bank.AppModuleBasic{},
+	staking.AppModuleBasic{},
+	gov.AppModuleBasic{},
+	evm.AppModuleBasic{},
+	feemarket.AppModuleBasic{},
 )
