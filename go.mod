@@ -4,9 +4,7 @@ go 1.22
 
 require (
     github.com/cosmos/cosmos-sdk v0.50.14
-    github.com/evmos/ethermint v0.22.0
-    github.com/cometbft/cometbft v0.38.12
-    cosmossdk.io/core v0.11.0
+   
 )
 
 replace github.com/evmos/ethermint => github.com/b-harvest/ethermint v0.22.0-sdk50-1
