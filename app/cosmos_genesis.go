@@ -1,28 +1,62 @@
 package app
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"encoding/json"
 )
 
-// GenesisState is a placeholder type for NOORCHAIN genesis state.
-// In Phase 2 this remains empty and will be expanded in later phases.
-type GenesisState struct{}
+// ----------------------------------------------------------------------------
+// Genesis State Types (Phase 2 placeholder)
+// ----------------------------------------------------------------------------
 
-// DefaultGenesis returns a minimal default genesis state for NOORCHAIN.
-// In Phase 2 this is an empty struct.
+// GenesisState defines the NOORCHAIN genesis structure.
+// Phase 2: empty objects for each module.
+type GenesisState map[string]json.RawMessage
+
+// DefaultGenesis returns a minimal genesis with empty module states.
 func DefaultGenesis() GenesisState {
-	return GenesisState{}
+	return GenesisState{
+		"auth":       MustMarshalEmpty(),
+		"bank":       MustMarshalEmpty(),
+		"staking":    MustMarshalEmpty(),
+		"gov":        MustMarshalEmpty(),
+		"evm":        MustMarshalEmpty(),
+		"feemarket":  MustMarshalEmpty(),
+	}
 }
 
-// ValidateGenesis performs basic validation of the NOORCHAIN genesis state.
-// In Phase 2 this always returns nil (no error).
-func ValidateGenesis(_ GenesisState) error {
+// ----------------------------------------------------------------------------
+// Helpers
+// ----------------------------------------------------------------------------
+
+// MustMarshalEmpty returns an empty JSON object `{}` in RawMessage form.
+func MustMarshalEmpty() json.RawMessage {
+	b, err := json.Marshal(struct{}{})
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+// ----------------------------------------------------------------------------
+// Validation (Phase 2 placeholder)
+// ----------------------------------------------------------------------------
+
+// ValidateGenesis performs a basic validation of the genesis state.
+// In Phase 2, everything is considered valid.
+func ValidateGenesis(data GenesisState) error {
+	// No validation in Phase 2
+	_ = data
 	return nil
 }
 
-// InitGenesis is a placeholder helper that will initialize the chain state
-// from the given genesis state. For Phase 2 it does nothing.
-func (app *NOORChainApp) InitGenesis(ctx sdk.Context, state GenesisState) {
+// ----------------------------------------------------------------------------
+// InitGenesis (Phase 2 placeholder)
+// ----------------------------------------------------------------------------
+
+// InitGenesis initializes NOORCHAIN state from a given genesis state.
+// In Phase 2, no state is actually written.
+func (app *NOORChainApp) InitGenesis(ctx Context, data GenesisState) {
 	_ = ctx
-	_ = state
+	_ = data
+	// No state initialization in Phase 2
 }
