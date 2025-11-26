@@ -5,6 +5,7 @@ go 1.22
 require (
     github.com/cosmos/cosmos-sdk v0.50.14
    github.com/gogo/protobuf v1.3.2
+    github.com/evmos/ethermint v0.22.0
 )
 
 replace github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
