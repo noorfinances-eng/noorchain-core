@@ -8,7 +8,7 @@ import (
 
 // GenesisState defines the NOORCHAIN genesis structure.
 // Phase 2: empty objects for each module.
-type GenesisState map[string]json.RawMessage"
+type GenesisState map[string]json.RawMessage
 
 // DefaultGenesis returns a minimal genesis with empty module states.
 func DefaultGenesis() GenesisState {
@@ -33,8 +33,8 @@ func MustMarshalEmpty() json.RawMessage {
 
 // ValidateGenesis performs a basic validation of the genesis state.
 // In Phase 2, everything is considered valid.
-func ValidateGenesis(data GenesisState) error {
-	_ = data
+func ValidateGenesis(state GenesisState) error {
+	_ = state
 	return nil
 }
 
