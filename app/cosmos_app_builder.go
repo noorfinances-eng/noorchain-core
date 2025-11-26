@@ -27,8 +27,9 @@ func BuildCosmosApp() *NOORChainApp {
 	app.ModuleManager.SetOrderBeginBlockers()
 	app.ModuleManager.SetOrderEndBlockers()
 
-	// Assign ModuleBasics (Phase 2 placeholder)
-	_ = ModuleBasics
+	// Register codecs and interfaces for all basic modules
+	ModuleBasics.RegisterLegacyAminoCodec(app.Encoding.Amino)
+	ModuleBasics.RegisterInterfaces(app.Encoding.InterfaceRegistry)
 
 	return app
 }
