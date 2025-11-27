@@ -1,42 +1,32 @@
 package app
 
-// ------------------------------------------------------------
-//  NOORCHAIN — Configuration centrale de la blockchain
-// ------------------------------------------------------------
-//
-//  Toutes les valeurs officielles sont définies ici.
-//  Elles sont utilisées ensuite par :
-//   - app.go
-//   - encoding.go
-//   - module manager
-//   - genesis
-//   - CLI (plus tard)
-// ------------------------------------------------------------
+// Configuration de base de NOORCHAIN.
+// Ici on ne fait que définir des constantes simples, sans aucun import.
+// Elles seront utilisées plus tard dans la Phase 2 (initialisation Cosmos).
 
-// Nom officiel de l'application (visible dans BaseApp)
-const AppName = "noorchain"
-
-// Identifiant de chaîne par défaut (modifiable dans un testnet)
-const DefaultChainID = "noorchain-1"
-
-// Bech32 prefix
-//
-// Résultat :
-//   - noor1...        (comptes)
-//   - noorvaloper1... (validateurs)
-//   - noorvalcons1... (clés consensus)
 const (
-	Bech32MainPrefix = "noor"
-)
+	// Nom de l'application et ID de chaîne par défaut.
+	AppName = "noorchain"
+	ChainID = "noorchain-1"
 
-// Token et denomination
-//
-// Décision officielle NOORCHAIN :
-// - Token public : NUR
-// - Dénomination interne base-unit : unur
-// - Décimales : 18 (aligné Ethereum / Cosmos moderne)
-const (
-	CoinDenom         = "unur" // base denom
-	CoinDisplayDenom  = "NUR"  // affichage humain
-	CoinDecimals uint8 = 18
+	// Monnaie principale de NOORCHAIN.
+	// On garde la logique NOOR : NUR affiché, unur en "micro-unités".
+	BondDenom     = "unur" // unité interne (10^6 = 1 NUR)
+	DisplayDenom  = "NUR"
+	CoinDecimals  = 6      // 1 NUR = 10^6 unur
+
+	// Préfixes Bech32 (adresses NOORCHAIN).
+	//
+	// Résultat :
+	// - noor1...        (comptes)
+	// - noorvaloper1... (validateurs)
+	// - noorvalcons1... (clés consensus)
+	// - noorvalconspub1... (clés consensus publiques)
+	Bech32MainPrefix   = "noor"
+	Bech32PrefixAccAddr  = Bech32MainPrefix
+	Bech32PrefixAccPub   = Bech32MainPrefix + "pub"
+	Bech32PrefixValAddr  = Bech32MainPrefix + "valoper"
+	Bech32PrefixValPub   = Bech32MainPrefix + "valoperpub"
+	Bech32PrefixConsAddr = Bech32MainPrefix + "valcons"
+	Bech32PrefixConsPub  = Bech32MainPrefix + "valconspub"
 )
