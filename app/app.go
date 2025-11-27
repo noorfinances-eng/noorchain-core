@@ -28,10 +28,15 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
+
+	// Ethermint store types (Bloc A: only keys, no keepers yet)
+	evmtypes "github.com/evmos/ethermint/x/evm/types"
+	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
 )
 
 // NoorchainApp is the minimal Cosmos SDK application for NOORCHAIN.
-// Phase 4 (impl1): version SANS EVM, SANS PoSS, SANS Gov.
+// Phase 4 (impl1 + Bloc A EVM): auth / bank / staking + EVM/feemarket store keys.
+// Pas encore de Gov, pas encore de keepers EVM/feemarket.
 type NoorchainApp struct {
 	*baseapp.BaseApp
 
@@ -47,7 +52,7 @@ type NoorchainApp struct {
 	mm *module.Manager
 }
 
-// NewNoorchainApp creates the base Cosmos SDK app (no EVM, no PoSS yet).
+// NewNoorchainApp creates the base Cosmos SDK app (no EVM logic yet).
 func NewNoorchainApp(
 	logger tmlog.Logger,
 	db dbm.DB,
@@ -72,6 +77,10 @@ func NewNoorchainApp(
 	app.keys[authtypes.StoreKey] = storetypes.NewKVStoreKey(authtypes.StoreKey)
 	app.keys[banktypes.StoreKey] = storetypes.NewKVStoreKey(banktypes.StoreKey)
 	app.keys[stakingtypes.StoreKey] = storetypes.NewKVStoreKey(stakingtypes.StoreKey)
+
+	// Bloc A: ajouter les stores EVM + FeeMarket (KV uniquement pour l'instant)
+	app.keys[evmtypes.StoreKey] = storetypes.NewKVStoreKey(evmtypes.StoreKey)
+	app.keys[feemarkettypes.StoreKey] = storetypes.NewKVStoreKey(feemarkettypes.StoreKey)
 
 	for _, key := range app.keys {
 		app.MountStore(key, storetypes.StoreTypeIAVL)
@@ -138,7 +147,6 @@ func NewNoorchainApp(
 }
 
 // NewApp is a thin wrapper used by cmd/noord.
-// It matches the signature expected by the Cosmos SDK server.
 func NewApp(
 	logger tmlog.Logger,
 	db dbm.DB,
