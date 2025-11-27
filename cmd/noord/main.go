@@ -7,11 +7,20 @@ import (
 )
 
 func main() {
-	// Création de l'application minimale NOORCHAIN (Phase 2)
+	// Crée une instance minimale de l'application NOORCHAIN
 	app := noorapp.NewApp()
+
+	// Récupère les métadonnées (nom, version)
 	info := app.Info
 
-	// Affichage d'un message placeholder propre
+	// Placeholder Phase 2
 	fmt.Println("NOORCHAIN node placeholder (Phase 2 – skeleton only)")
-	fmt.Printf("App: %s v%s\n", info.Name, info.Version)
+	fmt.Printf("App Name: %s\n", info.Name)
+	fmt.Printf("App Version: %s\n", info.Version)
+
+	// NOTE :
+	// - En Phase 3+, on ajoutera :
+	//   * BaseApp + stores
+	//   * Tendermint / CometBFT node
+	//   * CLI, genesis, PoSS, etc.
 }
