@@ -1,27 +1,10 @@
 package main
 
-import (
-	"fmt"
+import "fmt"
 
-	noorapp "github.com/noorfinances-eng/noorchain-core/app"
-)
-
+// Phase 4 – minimal placeholder binary for NOORCHAIN.
+// The real node wiring (Cosmos SDK server, TM/CometBFT, CLI, genesis, etc.)
+// will be added later in Phase 4C / Phase 5.
 func main() {
-	// Crée une instance minimale de l'application NOORCHAIN
-	app := noorapp.NewApp()
-
-	// Récupère les métadonnées (nom, version)
-	info := app.Info
-
-	// Placeholder Phase 2
-	fmt.Println("NOORCHAIN node placeholder (Phase 2 – skeleton only)")
-	fmt.Printf("App Name: %s\n", info.Name)
-	fmt.Printf("App Version: %s\n", info.Version)
-
-	// NOTE :
-	// - En Phase 3+, on ajoutera :
-	//   * Cosmos SDK
-	//   * BaseApp + stores
-	//   * Tendermint / CometBFT node
-	//   * CLI, genesis, PoSS, etc.
+	fmt.Println("NOORCHAIN — minimal core app compiled (Phase 4 placeholder)")
 }
