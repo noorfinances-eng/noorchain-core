@@ -29,30 +29,39 @@ import (
 
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
-	// Ethermint store types (Bloc A: only keys, no keepers yet)
+	// Ethermint store types
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
+
+	// Ethermint FeeMarket keeper
+	feemarketkeeper "github.com/evmos/ethermint/x/feemarket/keeper"
 )
 
 // NoorchainApp is the minimal Cosmos SDK application for NOORCHAIN.
-// Phase 4 (impl1 + Bloc A EVM): auth / bank / staking + EVM/feemarket store keys.
-// Pas encore de Gov, pas encore de keepers EVM/feemarket.
+// Phase 4 — Impl1 + EVM Bloc A/B/C (FeeMarket store keys + keeper).
 type NoorchainApp struct {
 	*baseapp.BaseApp
 
 	appCodec          codec.Codec
 	interfaceRegistry codectypes.InterfaceRegistry
 
+	// KV stores
 	keys map[string]*storetypes.KVStoreKey
+	// Transient stores (used by FeeMarket for gas accounting)
+	tkeys map[string]*storetypes.TransientStoreKey
 
+	// Cosmos SDK keepers
 	AccountKeeper authkeeper.AccountKeeper
 	BankKeeper    bankkeeper.BaseKeeper
 	StakingKeeper stakingkeeper.Keeper
 
+	// Ethermint FeeMarket keeper (fully wired, module to be added later)
+	FeeMarketKeeper feemarketkeeper.Keeper
+
 	mm *module.Manager
 }
 
-// NewNoorchainApp creates the base Cosmos SDK app (no EVM logic yet).
+// NewNoorchainApp creates the base app (no EVM execution yet).
 func NewNoorchainApp(
 	logger tmlog.Logger,
 	db dbm.DB,
@@ -71,6 +80,7 @@ func NewNoorchainApp(
 		appCodec:          encCfg.Marshaler,
 		interfaceRegistry: encCfg.InterfaceRegistry,
 		keys:              make(map[string]*storetypes.KVStoreKey),
+		tkeys:             make(map[string]*storetypes.TransientStoreKey),
 	}
 
 	// --- Store keys (KV) ---
@@ -78,19 +88,26 @@ func NewNoorchainApp(
 	app.keys[banktypes.StoreKey] = storetypes.NewKVStoreKey(banktypes.StoreKey)
 	app.keys[stakingtypes.StoreKey] = storetypes.NewKVStoreKey(stakingtypes.StoreKey)
 
-	// Bloc A: ajouter les stores EVM + FeeMarket (KV uniquement pour l'instant)
+	// EVM + FeeMarket KV store keys
 	app.keys[evmtypes.StoreKey] = storetypes.NewKVStoreKey(evmtypes.StoreKey)
 	app.keys[feemarkettypes.StoreKey] = storetypes.NewKVStoreKey(feemarkettypes.StoreKey)
 
+	// --- Transient store keys (FeeMarket) ---
+	app.tkeys[feemarkettypes.StoreKey] = storetypes.NewTransientStoreKey(feemarkettypes.StoreKey)
+
+	// Mount KV stores
 	for _, key := range app.keys {
 		app.MountStore(key, storetypes.StoreTypeIAVL)
 	}
+	// Mount transient stores
+	for _, tkey := range app.tkeys {
+		app.MountStore(tkey, storetypes.StoreTypeTransient)
+	}
 
-	// --- Fake / empty params subspace (pour satisfaire la signature) ---
-	// On branchera le vrai params keeper plus tard.
+	// --- Params subspace (placeholder, real ParamsKeeper later) ---
 	emptySubspace := paramstypes.Subspace{}
 
-	// --- Keepers de base ---
+	// --- Base Cosmos keepers ---
 
 	// Accounts
 	app.AccountKeeper = authkeeper.NewAccountKeeper(
@@ -120,7 +137,20 @@ func NewNoorchainApp(
 		emptySubspace,
 	)
 
-	// --- Module manager minimal (auth + bank + staking) ---
+	// --- Ethermint FeeMarket keeper (fully initialised, not yet in module manager) ---
+	// Authority: for now we use the gov module account address placeholder.
+	// Later, when Gov is wired, we can switch to govtypes.ModuleName if needed.
+	feeAuthority := authtypes.NewModuleAddress("gov")
+
+	app.FeeMarketKeeper = feemarketkeeper.NewKeeper(
+		app.appCodec,
+		feeAuthority,
+		app.keys[feemarkettypes.StoreKey],
+		app.tkeys[feemarkettypes.StoreKey],
+		emptySubspace,
+	)
+
+	// --- Module manager (minimal: auth + bank + staking uniquement) ---
 	app.mm = module.NewManager(
 		auth.NewAppModule(app.appCodec, app.AccountKeeper, nil),
 		bank.NewAppModule(app.appCodec, app.BankKeeper, app.AccountKeeper),
