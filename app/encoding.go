@@ -1,36 +1,36 @@
 package app
 
 import (
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/cosmos/cosmos-sdk/x/auth/tx"
+    "github.com/cosmos/cosmos-sdk/codec"
+    cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+
+    "github.com/cosmos/cosmos-sdk/types/module"
 )
 
-// EncodingConfig defines the application encoding configuration.
-// It is used to initialize all codec-related features.
+// EncodingConfig holds all encoding-related types for NOORCHAIN.
 type EncodingConfig struct {
-	InterfaceRegistry codectypes.InterfaceRegistry
-	Marshaler         codec.Codec
-	TxConfig          client.TxConfig
-	Amino             *codec.LegacyAmino
+    InterfaceRegistry cdctypes.InterfaceRegistry
+    Codec             codec.Codec
+    Amino             *codec.LegacyAmino
+    TxConfig          codec.TxConfig
 }
 
-// MakeEncodingConfig creates an EncodingConfig for testing or app setup.
-func MakeEncodingConfig(modules module.BasicManager) EncodingConfig {
-	amino := codec.NewLegacyAmino()
-	interfaceRegistry := codectypes.NewInterfaceRegistry()
-	marshaler := codec.NewProtoCodec(interfaceRegistry)
-	txConfig := tx.NewTxConfig(marshaler, tx.DefaultSignModes)
+// MakeEncodingConfig builds the encoding configuration for the app.
+func MakeEncodingConfig() EncodingConfig {
+    amino := codec.NewLegacyAmino()
+    interfaceRegistry := cdctypes.NewInterfaceRegistry()
+    codec := codec.NewProtoCodec(interfaceRegistry)
 
-	// Register modules interfaces & codecs
-	modules.RegisterLegacyAminoCodec(amino)
-	modules.RegisterInterfaces(interfaceRegistry)
+    txConfig := codec.NewTxConfig(codec, amino)
 
-	return EncodingConfig{
-		InterfaceRegistry: interfaceRegistry,
-		Marshaler:         marshaler,
-		TxConfig:          txConfig,
-		Amino:             amino,
-	}
+    // Register all modules’ interfaces
+    ModuleBasics.RegisterLegacyAminoCodec(amino)
+    ModuleBasics.RegisterInterfaces(interfaceRegistry)
+
+    return EncodingConfig{
+        InterfaceRegistry: interfaceRegistry,
+        Codec:             codec,
+        Amino:             amino,
+        TxConfig:          txConfig,
+    }
 }
