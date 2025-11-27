@@ -14,6 +14,8 @@ import (
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+
 	auth "github.com/cosmos/cosmos-sdk/x/auth"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -37,6 +39,9 @@ import (
 	// Ethermint FeeMarket keeper
 	feemarketkeeper "github.com/evmos/ethermint/x/feemarket/keeper"
 )
+
+// Temporary reference to govtypes (will be fully used when wiring x/gov module).
+var _ = govtypes.ModuleName
 
 // NoorchainApp is the minimal Cosmos SDK application for NOORCHAIN.
 // Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper.
@@ -122,16 +127,15 @@ func NewNoorchainApp(
 		app.tkeys[paramstypes.TStoreKey],
 	)
 
-	// // Subspaces par module
-authSubspace := app.ParamsKeeper.Subspace(authtypes.ModuleName)
-bankSubspace := app.ParamsKeeper.Subspace(banktypes.ModuleName)
-stakingSubspace := app.ParamsKeeper.Subspace(stakingtypes.ModuleName)
+	// Subspaces par module
+	authSubspace := app.ParamsKeeper.Subspace(authtypes.ModuleName)
+	bankSubspace := app.ParamsKeeper.Subspace(banktypes.ModuleName)
+	stakingSubspace := app.ParamsKeeper.Subspace(stakingtypes.ModuleName)
 
-// EVM subspace is prepared but not used yet (EVM keeper will come later).
-// evmSubspace := app.ParamsKeeper.Subspace(evmtypes.ModuleName)
+	// EVM subspace is prepared but EVM keeper will be wired later.
+	_ = app.ParamsKeeper.Subspace(evmtypes.ModuleName)
 
-feemarketSubspace := app.ParamsKeeper.Subspace(feemarkettypes.ModuleName)
-
+	feemarketSubspace := app.ParamsKeeper.Subspace(feemarkettypes.ModuleName)
 
 	// --- Base Cosmos keepers ---
 
