@@ -20,6 +20,7 @@ func main() {
 
 	// NOTE :
 	// - En Phase 3+, on ajoutera :
+	//   * Cosmos SDK
 	//   * BaseApp + stores
 	//   * Tendermint / CometBFT node
 	//   * CLI, genesis, PoSS, etc.
