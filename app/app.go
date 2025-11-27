@@ -28,6 +28,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
+	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 
 	// Ethermint store types
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
@@ -38,7 +39,7 @@ import (
 )
 
 // NoorchainApp is the minimal Cosmos SDK application for NOORCHAIN.
-// Phase 4 — Impl1 + EVM Bloc A/B/C (FeeMarket store keys + keeper).
+// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper.
 type NoorchainApp struct {
 	*baseapp.BaseApp
 
@@ -47,15 +48,18 @@ type NoorchainApp struct {
 
 	// KV stores
 	keys map[string]*storetypes.KVStoreKey
-	// Transient stores (used by FeeMarket for gas accounting)
+	// Transient stores (used by Params + FeeMarket)
 	tkeys map[string]*storetypes.TransientStoreKey
+
+	// Params
+	ParamsKeeper paramskeeper.Keeper
 
 	// Cosmos SDK keepers
 	AccountKeeper authkeeper.AccountKeeper
 	BankKeeper    bankkeeper.BaseKeeper
 	StakingKeeper stakingkeeper.Keeper
 
-	// Ethermint FeeMarket keeper (fully wired, module to be added later)
+	// Ethermint FeeMarket keeper
 	FeeMarketKeeper feemarketkeeper.Keeper
 
 	mm *module.Manager
@@ -88,11 +92,17 @@ func NewNoorchainApp(
 	app.keys[banktypes.StoreKey] = storetypes.NewKVStoreKey(banktypes.StoreKey)
 	app.keys[stakingtypes.StoreKey] = storetypes.NewKVStoreKey(stakingtypes.StoreKey)
 
+	// Params KV store
+	app.keys[paramstypes.StoreKey] = storetypes.NewKVStoreKey(paramstypes.StoreKey)
+
 	// EVM + FeeMarket KV store keys
 	app.keys[evmtypes.StoreKey] = storetypes.NewKVStoreKey(evmtypes.StoreKey)
 	app.keys[feemarkettypes.StoreKey] = storetypes.NewKVStoreKey(feemarkettypes.StoreKey)
 
-	// --- Transient store keys (FeeMarket) ---
+	// --- Transient store keys ---
+	// Params transient store
+	app.tkeys[paramstypes.TStoreKey] = storetypes.NewTransientStoreKey(paramstypes.TStoreKey)
+	// FeeMarket transient store (uses same name as module store key)
 	app.tkeys[feemarkettypes.StoreKey] = storetypes.NewTransientStoreKey(feemarkettypes.StoreKey)
 
 	// Mount KV stores
@@ -104,8 +114,24 @@ func NewNoorchainApp(
 		app.MountStore(tkey, storetypes.StoreTypeTransient)
 	}
 
-	// --- Params subspace (placeholder, real ParamsKeeper later) ---
-	emptySubspace := paramstypes.Subspace{}
+	// --- ParamsKeeper réel ---
+	app.ParamsKeeper = paramskeeper.NewKeeper(
+		app.appCodec,
+		encCfg.Amino,
+		app.keys[paramstypes.StoreKey],
+		app.tkeys[paramstypes.TStoreKey],
+	)
+
+	// // Subspaces par module
+authSubspace := app.ParamsKeeper.Subspace(authtypes.ModuleName)
+bankSubspace := app.ParamsKeeper.Subspace(banktypes.ModuleName)
+stakingSubspace := app.ParamsKeeper.Subspace(stakingtypes.ModuleName)
+
+// EVM subspace is prepared but not used yet (EVM keeper will come later).
+// evmSubspace := app.ParamsKeeper.Subspace(evmtypes.ModuleName)
+
+feemarketSubspace := app.ParamsKeeper.Subspace(feemarkettypes.ModuleName)
+
 
 	// --- Base Cosmos keepers ---
 
@@ -113,7 +139,7 @@ func NewNoorchainApp(
 	app.AccountKeeper = authkeeper.NewAccountKeeper(
 		app.appCodec,
 		app.keys[authtypes.StoreKey],
-		emptySubspace,
+		authSubspace,
 		authtypes.ProtoBaseAccount,
 		map[string][]string{},
 		"noorchain", // bech32 prefix / name
@@ -124,7 +150,7 @@ func NewNoorchainApp(
 		app.appCodec,
 		app.keys[banktypes.StoreKey],
 		app.AccountKeeper,
-		emptySubspace,
+		bankSubspace,
 		map[string]bool{},
 	)
 
@@ -134,12 +160,10 @@ func NewNoorchainApp(
 		app.keys[stakingtypes.StoreKey],
 		app.AccountKeeper,
 		app.BankKeeper,
-		emptySubspace,
+		stakingSubspace,
 	)
 
-	// --- Ethermint FeeMarket keeper (fully initialised, not yet in module manager) ---
-	// Authority: for now we use the gov module account address placeholder.
-	// Later, when Gov is wired, we can switch to govtypes.ModuleName if needed.
+	// --- Ethermint FeeMarket keeper (avec vrai subspace params) ---
 	feeAuthority := authtypes.NewModuleAddress("gov")
 
 	app.FeeMarketKeeper = feemarketkeeper.NewKeeper(
@@ -147,10 +171,10 @@ func NewNoorchainApp(
 		feeAuthority,
 		app.keys[feemarkettypes.StoreKey],
 		app.tkeys[feemarkettypes.StoreKey],
-		emptySubspace,
+		feemarketSubspace,
 	)
 
-	// --- Module manager (minimal: auth + bank + staking uniquement) ---
+	// --- Module manager (toujours minimal : auth + bank + staking) ---
 	app.mm = module.NewManager(
 		auth.NewAppModule(app.appCodec, app.AccountKeeper, nil),
 		bank.NewAppModule(app.appCodec, app.BankKeeper, app.AccountKeeper),
