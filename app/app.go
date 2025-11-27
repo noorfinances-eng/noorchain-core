@@ -40,7 +40,7 @@ import (
 	feemarketkeeper "github.com/evmos/ethermint/x/feemarket/keeper"
 )
 
-// Temporary reference to govtypes (will be fully used when wiring x/gov module).
+// Temporary reference to govtypes (we will wire x/gov keeper later).
 var _ = govtypes.ModuleName
 
 // NoorchainApp is the minimal Cosmos SDK application for NOORCHAIN.
@@ -132,6 +132,10 @@ func NewNoorchainApp(
 	bankSubspace := app.ParamsKeeper.Subspace(banktypes.ModuleName)
 	stakingSubspace := app.ParamsKeeper.Subspace(stakingtypes.ModuleName)
 
+	// Gov subspace (préparé pour le futur GovKeeper)
+	govSubspace := app.ParamsKeeper.Subspace(govtypes.ModuleName)
+	_ = govSubspace
+
 	// EVM subspace is prepared but EVM keeper will be wired later.
 	_ = app.ParamsKeeper.Subspace(evmtypes.ModuleName)
 
@@ -168,6 +172,7 @@ func NewNoorchainApp(
 	)
 
 	// --- Ethermint FeeMarket keeper (avec vrai subspace params) ---
+	// Pour l’instant, l’autorité est le module "gov" (on branchera le vrai x/gov plus tard).
 	feeAuthority := authtypes.NewModuleAddress("gov")
 
 	app.FeeMarketKeeper = feemarketkeeper.NewKeeper(
