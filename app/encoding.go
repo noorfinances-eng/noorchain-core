@@ -1,12 +1,13 @@
 package app
 
 import (
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 )
 
-// EncodingConfig regroupe tous les encodeurs / decodeurs nécessaires
-// pour les modules Cosmos SDK.
+// EncodingConfig rassemble tous les encodeurs / décodeurs nécessaires
+// au fonctionnement de NOORCHAIN. Ce fichier est stable et compatible
+// Cosmos SDK v0.46.x.
 type EncodingConfig struct {
 	Amino             *codec.LegacyAmino
 	InterfaceRegistry codectypes.InterfaceRegistry
@@ -15,9 +16,8 @@ type EncodingConfig struct {
 }
 
 // MakeEncodingConfig initialise tous les encodeurs Cosmos SDK.
-//
-// NOTE : pour l'instant, aucun module personnalisé n'est ajouté ici.
-// Lors de la Phase 4, le module PoSS sera enregistré.
+// Aucun module personnalisé n'est enregistré ici pour l’instant.
+// (Le module PoSS sera ajouté en Phase 4.)
 func MakeEncodingConfig() EncodingConfig {
 	amino := codec.NewLegacyAmino()
 	interfaceRegistry := codectypes.NewInterfaceRegistry()
