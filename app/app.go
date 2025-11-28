@@ -32,17 +32,18 @@ import (
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 
-	// Ethermint store types
-	evmtypes "github.com/evmos/ethermint/x/evm/types"
-	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
-
-	// Ethermint keepers
+	// Ethermint EVM
 	evmkeeper "github.com/evmos/ethermint/x/evm/keeper"
+	evmtypes "github.com/evmos/ethermint/x/evm/types"
+	evmvm "github.com/evmos/ethermint/x/evm/vm"
+
+	// Ethermint FeeMarket
+	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
 	feemarketkeeper "github.com/evmos/ethermint/x/feemarket/keeper"
 )
 
 // NoorchainApp is the minimal Cosmos SDK application for NOORCHAIN.
-// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper (+ Gov store prep, EVM stores).
+// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper (+ Gov store prep + EvmKeeper).
 type NoorchainApp struct {
 	*baseapp.BaseApp
 
@@ -51,7 +52,7 @@ type NoorchainApp struct {
 
 	// KV stores
 	keys map[string]*storetypes.KVStoreKey
-	// Transient stores (used by Params + EVM + FeeMarket)
+	// Transient stores (used by Params + FeeMarket + EVM)
 	tkeys map[string]*storetypes.TransientStoreKey
 
 	// Params
@@ -63,14 +64,13 @@ type NoorchainApp struct {
 	StakingKeeper stakingkeeper.Keeper
 
 	// Ethermint keepers
-	// EvmKeeper will be wired in later EVM blocks (execution, antehandlers, etc.).
-	EvmKeeper       evmkeeper.Keeper
 	FeeMarketKeeper feemarketkeeper.Keeper
+	EvmKeeper       *evmkeeper.Keeper
 
 	mm *module.Manager
 }
 
-// NewNoorchainApp creates the base app (no EVM execution yet).
+// NewNoorchainApp creates the base app (no EVM execution logic wired to Begin/EndBlock yet).
 func NewNoorchainApp(
 	logger tmlog.Logger,
 	db dbm.DB,
@@ -112,8 +112,8 @@ func NewNoorchainApp(
 	app.tkeys[paramstypes.TStoreKey] = storetypes.NewTransientStoreKey(paramstypes.TStoreKey)
 	// FeeMarket transient store (uses same name as module store key)
 	app.tkeys[feemarkettypes.StoreKey] = storetypes.NewTransientStoreKey(feemarkettypes.StoreKey)
-	// EVM transient store (used for block bloom, gas, etc.)
-	app.tkeys[evmtypes.TransientKey] = storetypes.NewTransientStoreKey(evmtypes.TransientKey)
+	// EVM transient store (utilisée pour logs / bloom / gas transient)
+	app.tkeys[evmtypes.StoreKey] = storetypes.NewTransientStoreKey(evmtypes.StoreKey)
 
 	// Mount KV stores
 	for _, key := range app.keys {
@@ -141,8 +141,8 @@ func NewNoorchainApp(
 	govSubspace := app.ParamsKeeper.Subspace(govtypes.ModuleName)
 	_ = govSubspace
 
-	// EVM subspace is prepared but EVM keeper will be wired later.
-	_ = app.ParamsKeeper.Subspace(evmtypes.ModuleName)
+	// EVM subspace (maintenant vraiment utilisé par EvmKeeper)
+	evmSubspace := app.ParamsKeeper.Subspace(evmtypes.ModuleName)
 
 	feemarketSubspace := app.ParamsKeeper.Subspace(feemarkettypes.ModuleName)
 
@@ -188,17 +188,45 @@ func NewNoorchainApp(
 		feemarketSubspace,
 	)
 
+	// --- Ethermint EvmKeeper (Bloc 3) ---
+	// Même autorité "gov" pour MsgUpdateParams du module EVM.
+	evmAuthority := authtypes.NewModuleAddress("gov")
+
+	// Précompiles custom vides pour l’instant (on en ajoutera éventuellement plus tard).
+	var emptyPrecompiles evmvm.PrecompiledContracts
+	// Constructor EVM : on laisse le constructor nil pour Phase 4 (il sera fourni via wiring plus tard).
+	var evmConstructor evmvm.Constructor
+	// Tracer désactivé pour l’instant (string vide).
+	tracer := ""
+
+	app.EvmKeeper = evmkeeper.NewKeeper(
+		app.appCodec,
+		app.keys[evmtypes.StoreKey],
+		app.tkeys[evmtypes.StoreKey],
+		evmAuthority,
+		app.AccountKeeper,
+		app.BankKeeper,
+		app.StakingKeeper,
+		app.FeeMarketKeeper,
+		emptyPrecompiles,
+		evmConstructor,
+		tracer,
+		evmSubspace,
+	)
+
 	// --- Module manager (toujours minimal : auth + bank + staking) ---
 	app.mm = module.NewManager(
 		auth.NewAppModule(app.appCodec, app.AccountKeeper, nil),
 		bank.NewAppModule(app.appCodec, app.BankKeeper, app.AccountKeeper),
 		staking.NewAppModule(app.appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper),
+		// ⚠️ x/gov, x/evm, x/feemarket seront ajoutés plus tard dans le ModuleManager
 	)
 
 	app.mm.SetOrderInitGenesis(
 		authtypes.ModuleName,
 		banktypes.ModuleName,
 		stakingtypes.ModuleName,
+		// govtypes.ModuleName, evmtypes.ModuleName, feemarkettypes.ModuleName viendront plus tard
 	)
 
 	app.mm.RegisterServices(
