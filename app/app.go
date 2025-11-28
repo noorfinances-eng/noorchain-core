@@ -226,6 +226,11 @@ func NewApp(
 	return NewNoorchainApp(logger, db, traceStore, true, appOpts)
 }
 
+// GetEvmKeeper returns the EVM keeper (can be nil before full wiring).
+func (app *NoorchainApp) GetEvmKeeper() *evmkeeper.Keeper {
+	return app.EvmKeeper
+}
+
 // --- Encoding config minimal ---
 
 type EncodingConfig struct {
