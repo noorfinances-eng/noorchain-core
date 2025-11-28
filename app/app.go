@@ -14,6 +14,7 @@ import (
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
+	gov "github.com/cosmos/cosmos-sdk/x/gov"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
@@ -43,7 +44,7 @@ import (
 )
 
 // NoorchainApp is the minimal Cosmos SDK application for NOORCHAIN.
-// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper (+ Gov store + GovKeeper).
+// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper (+ Gov store + GovKeeper + Gov module).
 type NoorchainApp struct {
 	*baseapp.BaseApp
 
@@ -175,18 +176,18 @@ func NewNoorchainApp(
 
 	// --- GovKeeper (SDK v0.46.11, v1beta1 router) ---
 	govRouter := govv1beta1.NewRouter()
-	// On ajoutera les handlers de propositions plus tard (GOV4).
+	// On ajoutera les handlers de propositions plus tard (GOV5).
 
 	app.GovKeeper = govkeeper.NewKeeper(
-		app.appCodec,                    // codec.BinaryCodec
-		app.keys[govtypes.StoreKey],     // store key
-		govSubspace,                     // govtypes.ParamSubspace
-		app.AccountKeeper,               // govtypes.AccountKeeper
-		app.BankKeeper,                  // govtypes.BankKeeper
-		app.StakingKeeper,               // govtypes.StakingKeeper
-		govRouter,                       // v1beta1.Router
-		app.MsgServiceRouter(),          // *baseapp.MsgServiceRouter
-		govtypes.DefaultConfig(),        // govtypes.Config
+		app.appCodec,                // codec.BinaryCodec
+		app.keys[govtypes.StoreKey], // store key
+		govSubspace,                 // govtypes.ParamSubspace
+		app.AccountKeeper,           // govtypes.AccountKeeper
+		app.BankKeeper,              // govtypes.BankKeeper
+		app.StakingKeeper,           // govtypes.StakingKeeper
+		govRouter,                   // v1beta1.Router
+		app.MsgServiceRouter(),      // *baseapp.MsgServiceRouter
+		govtypes.DefaultConfig(),    // govtypes.Config
 	)
 
 	// --- Ethermint FeeMarket keeper (avec vrai subspace params) ---
@@ -201,19 +202,19 @@ func NewNoorchainApp(
 		feemarketSubspace,
 	)
 
-	// --- Module manager (toujours minimal : auth + bank + staking) ---
+	// --- Module manager (auth + bank + staking + gov) ---
 	app.mm = module.NewManager(
 		auth.NewAppModule(app.appCodec, app.AccountKeeper, nil),
 		bank.NewAppModule(app.appCodec, app.BankKeeper, app.AccountKeeper),
 		staking.NewAppModule(app.appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper),
-		// ⚠️ gov.NewAppModule(...) sera ajouté plus tard (GOV4)
+		gov.NewAppModule(app.appCodec, app.GovKeeper, app.AccountKeeper, app.BankKeeper),
 	)
 
 	app.mm.SetOrderInitGenesis(
 		authtypes.ModuleName,
 		banktypes.ModuleName,
 		stakingtypes.ModuleName,
-		// govtypes.ModuleName viendra plus tard
+		govtypes.ModuleName,
 	)
 
 	app.mm.RegisterServices(
