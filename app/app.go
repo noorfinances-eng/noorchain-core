@@ -215,11 +215,12 @@ func NewNoorchainApp(
 		gov.NewAppModule(app.appCodec, app.GovKeeper, app.AccountKeeper, app.BankKeeper),
 	)
 
-	// Pour l’instant, Gov n’est pas encore dans l’InitGenesis order (GOV5 plus tard)
+	// ✅ GOV5 — Gov est maintenant dans l’ordre InitGenesis
 	app.mm.SetOrderInitGenesis(
 		authtypes.ModuleName,
 		banktypes.ModuleName,
 		stakingtypes.ModuleName,
+		govtypes.ModuleName,
 	)
 
 	app.mm.RegisterServices(
