@@ -15,6 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 
 	// Gov
+	gov "github.com/cosmos/cosmos-sdk/x/gov"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
@@ -206,19 +207,19 @@ func NewNoorchainApp(
 		feemarketSubspace,
 	)
 
-	// --- Module manager (toujours minimal : auth + bank + staking) ---
+	// --- Module manager (auth + bank + staking + gov) ---
 	app.mm = module.NewManager(
 		auth.NewAppModule(app.appCodec, app.AccountKeeper, nil),
 		bank.NewAppModule(app.appCodec, app.BankKeeper, app.AccountKeeper),
 		staking.NewAppModule(app.appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper),
-		// ⚠️ On ajoutera gov.NewAppModule(...) plus tard (GOV4)
+		gov.NewAppModule(app.appCodec, app.GovKeeper, app.AccountKeeper, app.BankKeeper),
 	)
 
+	// Pour l’instant, Gov n’est pas encore dans l’InitGenesis order (GOV5 plus tard)
 	app.mm.SetOrderInitGenesis(
 		authtypes.ModuleName,
 		banktypes.ModuleName,
 		stakingtypes.ModuleName,
-		// govtypes.ModuleName viendra plus tard (GOV5)
 	)
 
 	app.mm.RegisterServices(
