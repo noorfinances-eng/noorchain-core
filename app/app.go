@@ -42,7 +42,7 @@ import (
 )
 
 // NoorchainApp is the minimal Cosmos SDK application for NOORCHAIN.
-// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper (+ Gov store prep).
+// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper (+ Gov store prep, EVM stores).
 type NoorchainApp struct {
 	*baseapp.BaseApp
 
@@ -51,7 +51,7 @@ type NoorchainApp struct {
 
 	// KV stores
 	keys map[string]*storetypes.KVStoreKey
-	// Transient stores (used by Params + FeeMarket)
+	// Transient stores (used by Params + EVM + FeeMarket)
 	tkeys map[string]*storetypes.TransientStoreKey
 
 	// Params
@@ -63,7 +63,7 @@ type NoorchainApp struct {
 	StakingKeeper stakingkeeper.Keeper
 
 	// Ethermint keepers
-	// EvmKeeper is declared here but will be wired in a later EVM block.
+	// EvmKeeper will be wired in later EVM blocks (execution, antehandlers, etc.).
 	EvmKeeper       evmkeeper.Keeper
 	FeeMarketKeeper feemarketkeeper.Keeper
 
@@ -112,6 +112,8 @@ func NewNoorchainApp(
 	app.tkeys[paramstypes.TStoreKey] = storetypes.NewTransientStoreKey(paramstypes.TStoreKey)
 	// FeeMarket transient store (uses same name as module store key)
 	app.tkeys[feemarkettypes.StoreKey] = storetypes.NewTransientStoreKey(feemarkettypes.StoreKey)
+	// EVM transient store (used for block bloom, gas, etc.)
+	app.tkeys[evmtypes.TransientKey] = storetypes.NewTransientStoreKey(evmtypes.TransientKey)
 
 	// Mount KV stores
 	for _, key := range app.keys {
