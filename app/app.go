@@ -39,11 +39,12 @@ import (
 
 	// Ethermint FeeMarket
 	feemarketkeeper "github.com/evmos/ethermint/x/feemarket/keeper"
+	feemarketmodule "github.com/evmos/ethermint/x/feemarket"
 	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
 )
 
 // NoorchainApp is the minimal Cosmos SDK application for NOORCHAIN.
-// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper + EVM keeper + EVM AppModule.
+// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper + EVM keeper + EVM/FeeMarket AppModules.
 type NoorchainApp struct {
 	*baseapp.BaseApp
 
@@ -208,18 +209,25 @@ func NewNoorchainApp(
 
 	app.EvmKeeper = evmKeeper
 
-	// --- Module manager (auth + bank + staking + evm) ---
+	// --- AppModules EVM + FeeMarket ---
 	evmAppModule := evmmodule.NewAppModule(
 		app.EvmKeeper,
 		app.AccountKeeper,
 		evmSubspace,
 	)
 
+	feemarketAppModule := feemarketmodule.NewAppModule(
+		app.FeeMarketKeeper,
+		feemarketSubspace,
+	)
+
+	// --- Module manager (auth + bank + staking + evm + feemarket) ---
 	app.mm = module.NewManager(
 		auth.NewAppModule(app.appCodec, app.AccountKeeper, nil),
 		bank.NewAppModule(app.appCodec, app.BankKeeper, app.AccountKeeper),
 		staking.NewAppModule(app.appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper),
 		evmAppModule,
+		feemarketAppModule,
 	)
 
 	app.mm.SetOrderInitGenesis(
@@ -227,6 +235,7 @@ func NewNoorchainApp(
 		banktypes.ModuleName,
 		stakingtypes.ModuleName,
 		evmtypes.ModuleName,
+		feemarkettypes.ModuleName,
 	)
 
 	app.mm.RegisterServices(
