@@ -32,17 +32,15 @@ import (
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 
-	// Ethermint store types
-	evmtypes "github.com/evmos/ethermint/x/evm/types"
-	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
-
-	// Ethermint keepers
-	feemarketkeeper "github.com/evmos/ethermint/x/feemarket/keeper"
+	// Ethermint EVM & FeeMarket
 	evmkeeper "github.com/evmos/ethermint/x/evm/keeper"
+	evmtypes "github.com/evmos/ethermint/x/evm/types"
+	feemarketkeeper "github.com/evmos/ethermint/x/feemarket/keeper"
+	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
 )
 
 // NoorchainApp is the minimal Cosmos SDK application for NOORCHAIN.
-// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper (+ Gov store prep, + EvmKeeper placeholder).
+// Phase 4 — Cosmos core + ParamsKeeper + EVM store/keeper + FeeMarket keeper (+ Gov store prep).
 type NoorchainApp struct {
 	*baseapp.BaseApp
 
@@ -51,7 +49,7 @@ type NoorchainApp struct {
 
 	// KV stores
 	keys map[string]*storetypes.KVStoreKey
-	// Transient stores (used by Params + FeeMarket)
+	// Transient stores (used by Params + EVM + FeeMarket)
 	tkeys map[string]*storetypes.TransientStoreKey
 
 	// Params
@@ -62,16 +60,14 @@ type NoorchainApp struct {
 	BankKeeper    bankkeeper.BaseKeeper
 	StakingKeeper stakingkeeper.Keeper
 
-	// Ethermint FeeMarket keeper
+	// Ethermint keepers
+	EvmKeeper       *evmkeeper.Keeper
 	FeeMarketKeeper feemarketkeeper.Keeper
-
-	// Ethermint EVM keeper (préparé, wiring complet viendra plus tard)
-	EvmKeeper *evmkeeper.Keeper
 
 	mm *module.Manager
 }
 
-// NewNoorchainApp creates the base app (no EVM execution yet).
+// NewNoorchainApp creates the base app (no ante-handler / begin / end block logic yet).
 func NewNoorchainApp(
 	logger tmlog.Logger,
 	db dbm.DB,
@@ -94,11 +90,13 @@ func NewNoorchainApp(
 	}
 
 	// --- Store keys (KV) ---
+
+	// Core Cosmos
 	app.keys[authtypes.StoreKey] = storetypes.NewKVStoreKey(authtypes.StoreKey)
 	app.keys[banktypes.StoreKey] = storetypes.NewKVStoreKey(banktypes.StoreKey)
 	app.keys[stakingtypes.StoreKey] = storetypes.NewKVStoreKey(stakingtypes.StoreKey)
 
-	// Gov KV store (préparation GovKeeper / x-gov pour plus tard)
+	// Gov KV store (préparation x/gov pour plus tard)
 	app.keys[govtypes.StoreKey] = storetypes.NewKVStoreKey(govtypes.StoreKey)
 
 	// Params KV store
@@ -109,8 +107,13 @@ func NewNoorchainApp(
 	app.keys[feemarkettypes.StoreKey] = storetypes.NewKVStoreKey(feemarkettypes.StoreKey)
 
 	// --- Transient store keys ---
+
 	// Params transient store
 	app.tkeys[paramstypes.TStoreKey] = storetypes.NewTransientStoreKey(paramstypes.TStoreKey)
+
+	// EVM transient store (pour bloom, tx index, logs, gas used)
+	app.tkeys[evmtypes.StoreKey] = storetypes.NewTransientStoreKey(evmtypes.StoreKey)
+
 	// FeeMarket transient store (uses same name as module store key)
 	app.tkeys[feemarkettypes.StoreKey] = storetypes.NewTransientStoreKey(feemarkettypes.StoreKey)
 
@@ -124,6 +127,7 @@ func NewNoorchainApp(
 	}
 
 	// --- ParamsKeeper réel ---
+
 	app.ParamsKeeper = paramskeeper.NewKeeper(
 		app.appCodec,
 		encCfg.Amino,
@@ -135,14 +139,11 @@ func NewNoorchainApp(
 	authSubspace := app.ParamsKeeper.Subspace(authtypes.ModuleName)
 	bankSubspace := app.ParamsKeeper.Subspace(banktypes.ModuleName)
 	stakingSubspace := app.ParamsKeeper.Subspace(stakingtypes.ModuleName)
-
-	// Gov subspace (préparé pour le futur GovKeeper)
-	govSubspace := app.ParamsKeeper.Subspace(govtypes.ModuleName)
-	_ = govSubspace
-
-	// EVM subspace is prepared but EVM keeper will be wired later.
-	_ = app.ParamsKeeper.Subspace(evmtypes.ModuleName)
-
+	// Gov subspace (pour plus tard, GovKeeper complet si besoin)
+	_ = app.ParamsKeeper.Subspace(govtypes.ModuleName)
+	// EVM subspace (utilisé par EVM keeper)
+	evmSubspace := app.ParamsKeeper.Subspace(evmtypes.ModuleName)
+	// FeeMarket subspace
 	feemarketSubspace := app.ParamsKeeper.Subspace(feemarkettypes.ModuleName)
 
 	// --- Base Cosmos keepers ---
@@ -176,7 +177,7 @@ func NewNoorchainApp(
 	)
 
 	// --- Ethermint FeeMarket keeper (avec vrai subspace params) ---
-	// Pour l’instant, l’autorité est l’adresse de module "gov" (on branchera le vrai x/gov plus tard).
+
 	feeAuthority := authtypes.NewModuleAddress("gov")
 
 	app.FeeMarketKeeper = feemarketkeeper.NewKeeper(
@@ -187,10 +188,33 @@ func NewNoorchainApp(
 		feemarketSubspace,
 	)
 
-	// EvmKeeper sera branché plus tard (EVM blocs suivants)
-	app.EvmKeeper = nil
+	// --- Ethermint EVM keeper (version minimale, sans custom precompiles) ---
+
+	// NOTE :
+	// - On passe `nil` pour customPrecompiles et evmConstructor (valeurs neutres).
+	// - On met un tracer vide "" (pas de debug EVM pour l’instant).
+	evmAuthority := authtypes.NewModuleAddress("gov")
+
+	evmKeeper := evmkeeper.NewKeeper(
+		app.appCodec,
+		app.keys[evmtypes.StoreKey],
+		app.tkeys[evmtypes.StoreKey],
+		evmAuthority,
+		app.AccountKeeper,
+		app.BankKeeper,
+		app.StakingKeeper,
+		app.FeeMarketKeeper,
+		nil, // customPrecompiles
+		nil, // evmConstructor
+		"",  // tracer
+		evmSubspace,
+	)
+
+	// ⚠️ Ici la correction : evmKeeper est déjà un *Keeper
+	app.EvmKeeper = evmKeeper
 
 	// --- Module manager (toujours minimal : auth + bank + staking) ---
+	// On n’a pas encore branché les AppModules EVM / FeeMarket / Gov.
 	app.mm = module.NewManager(
 		auth.NewAppModule(app.appCodec, app.AccountKeeper, nil),
 		bank.NewAppModule(app.appCodec, app.BankKeeper, app.AccountKeeper),
@@ -224,11 +248,6 @@ func NewApp(
 	appOpts servertypes.AppOptions,
 ) *NoorchainApp {
 	return NewNoorchainApp(logger, db, traceStore, true, appOpts)
-}
-
-// GetEvmKeeper returns the EVM keeper (can be nil before full wiring).
-func (app *NoorchainApp) GetEvmKeeper() *evmkeeper.Keeper {
-	return app.EvmKeeper
 }
 
 // --- Encoding config minimal ---
