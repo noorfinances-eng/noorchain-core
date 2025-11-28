@@ -14,7 +14,9 @@ import (
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
+	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 
 	auth "github.com/cosmos/cosmos-sdk/x/auth"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
@@ -41,7 +43,7 @@ import (
 )
 
 // NoorchainApp is the minimal Cosmos SDK application for NOORCHAIN.
-// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper (+ Gov store prep).
+// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper (+ Gov store + GovKeeper).
 type NoorchainApp struct {
 	*baseapp.BaseApp
 
@@ -60,6 +62,7 @@ type NoorchainApp struct {
 	AccountKeeper authkeeper.AccountKeeper
 	BankKeeper    bankkeeper.BaseKeeper
 	StakingKeeper stakingkeeper.Keeper
+	GovKeeper     govkeeper.Keeper
 
 	// Ethermint FeeMarket keeper
 	FeeMarketKeeper feemarketkeeper.Keeper
@@ -94,7 +97,7 @@ func NewNoorchainApp(
 	app.keys[banktypes.StoreKey] = storetypes.NewKVStoreKey(banktypes.StoreKey)
 	app.keys[stakingtypes.StoreKey] = storetypes.NewKVStoreKey(stakingtypes.StoreKey)
 
-	// Gov KV store (préparation GovKeeper / x-gov pour plus tard)
+	// Gov KV store
 	app.keys[govtypes.StoreKey] = storetypes.NewKVStoreKey(govtypes.StoreKey)
 
 	// Params KV store
@@ -132,9 +135,8 @@ func NewNoorchainApp(
 	bankSubspace := app.ParamsKeeper.Subspace(banktypes.ModuleName)
 	stakingSubspace := app.ParamsKeeper.Subspace(stakingtypes.ModuleName)
 
-	// Gov subspace (préparé pour le futur GovKeeper)
+	// Gov subspace (pour GovKeeper)
 	govSubspace := app.ParamsKeeper.Subspace(govtypes.ModuleName)
-	_ = govSubspace
 
 	// EVM subspace is prepared but EVM keeper will be wired later.
 	_ = app.ParamsKeeper.Subspace(evmtypes.ModuleName)
@@ -171,8 +173,24 @@ func NewNoorchainApp(
 		stakingSubspace,
 	)
 
+	// --- GovKeeper (SDK v0.46.11, v1beta1 router) ---
+	govRouter := govv1beta1.NewRouter()
+	// On ajoutera les handlers de propositions plus tard (GOV4).
+
+	app.GovKeeper = govkeeper.NewKeeper(
+		app.appCodec,                    // codec.BinaryCodec
+		app.keys[govtypes.StoreKey],     // store key
+		govSubspace,                     // govtypes.ParamSubspace
+		app.AccountKeeper,               // govtypes.AccountKeeper
+		app.BankKeeper,                  // govtypes.BankKeeper
+		app.StakingKeeper,               // govtypes.StakingKeeper
+		govRouter,                       // v1beta1.Router
+		app.MsgServiceRouter(),          // *baseapp.MsgServiceRouter
+		govtypes.DefaultConfig(),        // govtypes.Config
+	)
+
 	// --- Ethermint FeeMarket keeper (avec vrai subspace params) ---
-	// Pour l’instant, l’autorité est l’adresse de module "gov" (on branchera le vrai x/gov plus tard).
+	// Pour l’instant, l’autorité est l’adresse de module "gov"
 	feeAuthority := authtypes.NewModuleAddress("gov")
 
 	app.FeeMarketKeeper = feemarketkeeper.NewKeeper(
@@ -188,12 +206,14 @@ func NewNoorchainApp(
 		auth.NewAppModule(app.appCodec, app.AccountKeeper, nil),
 		bank.NewAppModule(app.appCodec, app.BankKeeper, app.AccountKeeper),
 		staking.NewAppModule(app.appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper),
+		// ⚠️ gov.NewAppModule(...) sera ajouté plus tard (GOV4)
 	)
 
 	app.mm.SetOrderInitGenesis(
 		authtypes.ModuleName,
 		banktypes.ModuleName,
 		stakingtypes.ModuleName,
+		// govtypes.ModuleName viendra plus tard
 	)
 
 	app.mm.RegisterServices(
