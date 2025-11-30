@@ -13,7 +13,8 @@ import (
 // At this stage, it handles only:
 // - codec (for future state encoding/decoding),
 // - storeKey (access to the KVStore),
-// - simple daily counters for PoSS signals.
+// - simple daily counters for PoSS signals,
+// - a thin wrapper around the PoSS Params and reward helpers.
 type Keeper struct {
 	// Codec used to encode/decode module state (for future use).
 	cdc codec.Codec
@@ -34,10 +35,18 @@ func NewKeeper(
 	}
 }
 
+// -----------------------------------------------------------------------------
+// Internal store helpers
+// -----------------------------------------------------------------------------
+
 // getStore is a tiny helper to access the PoSS KVStore from a context.
 func (k Keeper) getStore(ctx sdk.Context) sdk.KVStore {
 	return ctx.KVStore(k.storeKey)
 }
+
+// -----------------------------------------------------------------------------
+// Daily counters (per address, per day)
+// -----------------------------------------------------------------------------
 
 // GetDailySignalsCount returns how many PoSS signals have already been
 // recorded for a given (address, date) pair.
@@ -77,4 +86,47 @@ func (k Keeper) IncrementDailySignalsCount(ctx sdk.Context, address, date string
 	next := current + 1
 	k.SetDailySignalsCount(ctx, address, date, next)
 	return next
+}
+
+// -----------------------------------------------------------------------------
+// Params & reward helpers (PoSS Logic 11)
+// -----------------------------------------------------------------------------
+
+// GetParams returns the current PoSS params.
+//
+// For now, we simply return DefaultParams(), which means:
+// - PoSS is effectively configured off-chain in code,
+// - later we will plug this into x/params with a subspace
+//   and make everything adjustable by governance.
+func (k Keeper) GetParams(ctx sdk.Context) noorsignaltypes.Params {
+	_ = ctx // context will be useful once we use a ParamSubspace
+	return noorsignaltypes.DefaultParams()
+}
+
+// ComputeSignalRewardForBlock is a thin wrapper around the pure helpers
+// in types/rewards.go. It:
+//
+//   1) fetches PoSS Params (currently DefaultParams),
+//   2) uses the current block height from the context,
+//   3) calls ComputeSignalReward (base * weight -> halving -> 70/30 split).
+//
+// It DOES NOT:
+//   - check daily limits,
+//   - check balances in the PoSS reserve,
+//   - persist anything in the store.
+//
+// All those checks and state updates will be implemented in later PoSS Logic
+// steps inside the Keeper.
+func (k Keeper) ComputeSignalRewardForBlock(
+	ctx sdk.Context,
+	signalType noorsignaltypes.SignalType,
+) (participant sdk.Coin, curator sdk.Coin, err error) {
+	params := k.GetParams(ctx)
+	height := ctx.BlockHeight()
+
+	return noorsignaltypes.ComputeSignalReward(
+		params,
+		signalType,
+		height,
+	)
 }
