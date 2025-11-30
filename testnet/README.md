@@ -19,8 +19,14 @@ Pour l’instant, il s’agit d’un **squelette** : aucun état applicatif rée
 ## 📁 Fichiers
 
 - `genesis.noorchain-testnet-1.template.json`  
-  → Modèle de genesis, **non utilisable en production** tel quel.  
-  L’objectif est d’avoir un point de départ homogène pour les futures étapes Testnet 2 / Testnet 3.
+  → Modèle de genesis **structurel** (consensus, chain_id, app_state vide).
+
+- `genesis_distribution.noorchain-testnet-1.template.json`  
+  → Modèle de **distribution économique** pour NOORCHAIN Testnet 1,
+    basé sur le schéma 5 / 5 / 5 / 5 / 80 (Fondation / Dev / PoSS Stimulus / Pré-vente / PoSS mintables).
+
+Ces fichiers sont des **TEMPLATES** :
+ils ne sont pas encore utilisables tels quels pour lancer un nœud.
 
 ---
 
@@ -34,7 +40,5 @@ Les prochaines étapes (Testnet 2, Testnet 3, …) ajouteront :
 
 - Des comptes de test (fondation, fondateur, réserve PoSS…)
 - Un validateur de test
-- Les params de chaines (staking, gov, EVM, FeeMarket, PoSS)
+- Les params de chaîne (staking, gov, EVM, FeeMarket, PoSS)
 - Les scripts pour lancer un réseau local (un seul nœud, puis multi-nœuds).
-
----
