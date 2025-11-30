@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/spf13/cobra"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 
@@ -16,6 +17,7 @@ import (
 	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
 )
 
+//
 // -----------------------------------------------------------------------------
 // AppModuleBasic
 // -----------------------------------------------------------------------------
@@ -57,12 +59,25 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 // On complétera plus tard (Msgs, queries, etc.).
 func (AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) {}
 
+// GetTxCmd returns the root tx command for the module.
+// PoSS 2 : pas encore de CLI, on renvoie nil.
+func (AppModuleBasic) GetTxCmd() *cobra.Command {
+	return nil
+}
+
+// GetQueryCmd returns the root query command for the module.
+// PoSS 2 : pas encore de CLI, on renvoie nil.
+func (AppModuleBasic) GetQueryCmd() *cobra.Command {
+	return nil
+}
+
+//
 // -----------------------------------------------------------------------------
 // AppModule
 // -----------------------------------------------------------------------------
 
 // AppModule is the full module type for x/noorsignal.
-// Pour l’instant, il ne contient que le codec (pas encore de keeper).
+// Pour l’instant, il ne contient que le codec (pas encore de keeper métier).
 type AppModule struct {
 	AppModuleBasic
 
@@ -76,12 +91,6 @@ func NewAppModule(cdc codec.Codec) AppModule {
 		AppModuleBasic: AppModuleBasic{},
 		cdc:            cdc,
 	}
-}
-
-// ConsensusVersion returns the consensus version of the module.
-// Obligatoire depuis Cosmos SDK v0.46.x pour satisfaire module.AppModule.
-func (am AppModule) ConsensusVersion() uint64 {
-	return 1
 }
 
 // RegisterServices registers module services (Msg/Query servers).
@@ -116,4 +125,32 @@ func (am AppModule) BeginBlock(ctx sdk.Context, _ abci.RequestBeginBlock) {
 func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
 	// Pas de changement sur les validateurs pour PoSS.
 	return []abci.ValidatorUpdate{}
+}
+
+// RegisterInvariants registers invariants for the module.
+// Pour l’instant, aucune invariant métier.
+func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
+
+// Route returns the message routing key for the module.
+// PoSS 2 : pas encore de Msg handler, on renvoie une route vide.
+func (am AppModule) Route() sdk.Route {
+	return sdk.Route{}
+}
+
+// QuerierRoute returns the module's querier route name.
+// PoSS 2 : aucun legacy querier, donc chaîne vide.
+func (am AppModule) QuerierRoute() string {
+	return ""
+}
+
+// LegacyQuerierHandler returns the legacy querier handler for the module.
+// PoSS 2 : aucun handler legacy, on renvoie nil.
+func (am AppModule) LegacyQuerierHandler(cdc *codec.LegacyAmino) sdk.Querier {
+	return nil
+}
+
+// ConsensusVersion returns the module consensus version.
+// On démarre simplement à 1.
+func (am AppModule) ConsensusVersion() uint64 {
+	return 1
 }

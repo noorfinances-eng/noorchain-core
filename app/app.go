@@ -45,13 +45,14 @@ import (
 	feemarketmodule "github.com/evmos/ethermint/x/feemarket"
 	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
 
-	// NOORCHAIN PoSS (x/noorsignal) — store uniquement pour l’instant
+	// NOORCHAIN PoSS (noorsignal)
+	noorsignalkeeper "github.com/noorfinances-eng/noorchain-core/x/noorsignal/keeper"
+	noorsignalmodule "github.com/noorfinances-eng/noorchain-core/x/noorsignal"
 	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
 )
 
 // NoorchainApp is the minimal Cosmos SDK application for NOORCHAIN.
-// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper + EVM keeper
-// + EVM/FeeMarket AppModules (+ PoSS store monté, module à venir).
+// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper + EVM keeper + EVM/FeeMarket AppModules + PoSS skeleton.
 type NoorchainApp struct {
 	*baseapp.BaseApp
 
@@ -76,10 +77,13 @@ type NoorchainApp struct {
 	FeeMarketKeeper feemarketkeeper.Keeper
 	EvmKeeper       *evmkeeper.Keeper
 
+	// NOORCHAIN PoSS keeper
+	NoorsignalKeeper noorsignalkeeper.Keeper
+
 	mm *module.Manager
 }
 
-// NewNoorchainApp creates the base app (no PoSS logic / full ante EVM yet).
+// NewNoorchainApp creates the base app (no PoSS logic / ante EVM avancé yet).
 func NewNoorchainApp(
 	logger tmlog.Logger,
 	db dbm.DB,
@@ -117,7 +121,7 @@ func NewNoorchainApp(
 	app.keys[evmtypes.StoreKey] = storetypes.NewKVStoreKey(evmtypes.StoreKey)
 	app.keys[feemarkettypes.StoreKey] = storetypes.NewKVStoreKey(feemarkettypes.StoreKey)
 
-	// PoSS / x.noorsignal KV store (monté mais module pas encore branché)
+	// PoSS / noorsignal KV store
 	app.keys[noorsignaltypes.StoreKey] = storetypes.NewKVStoreKey(noorsignaltypes.StoreKey)
 
 	// --- Transient store keys ---
@@ -159,6 +163,8 @@ func NewNoorchainApp(
 
 	// FeeMarket subspace
 	feemarketSubspace := app.ParamsKeeper.Subspace(feemarkettypes.ModuleName)
+
+	// NOTE: noorsignal (PoSS) n’a pas encore de params subspace dédié; on pourra en ajouter plus tard si besoin.
 
 	// --- Base Cosmos keepers ---
 
@@ -221,6 +227,12 @@ func NewNoorchainApp(
 
 	app.EvmKeeper = evmKeeper
 
+	// --- NOORCHAIN PoSS keeper (noorsignal) ---
+	app.NoorsignalKeeper = noorsignalkeeper.NewKeeper(
+		app.appCodec,
+		app.keys[noorsignaltypes.StoreKey],
+	)
+
 	// --- AppModules EVM + FeeMarket ---
 	evmAppModule := evmmodule.NewAppModule(
 		app.EvmKeeper,
@@ -233,14 +245,19 @@ func NewNoorchainApp(
 		feemarketSubspace,
 	)
 
-	// --- Module manager (auth + bank + staking + evm + feemarket)
-	// PoSS sera ajouté ici plus tard quand le module respectera AppModule.
+	// --- AppModule PoSS / noorsignal (squelette) ---
+	noorsignalAppModule := noorsignalmodule.NewAppModule(
+		app.appCodec,
+	)
+
+	// --- Module manager (auth + bank + staking + evm + feemarket + noorsignal) ---
 	app.mm = module.NewManager(
 		auth.NewAppModule(app.appCodec, app.AccountKeeper, nil),
 		bank.NewAppModule(app.appCodec, app.BankKeeper, app.AccountKeeper),
 		staking.NewAppModule(app.appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper),
 		evmAppModule,
 		feemarketAppModule,
+		noorsignalAppModule,
 	)
 
 	app.mm.SetOrderInitGenesis(
@@ -249,20 +266,20 @@ func NewNoorchainApp(
 		stakingtypes.ModuleName,
 		evmtypes.ModuleName,
 		feemarkettypes.ModuleName,
-		// noorsignaltypes.ModuleName viendra plus tard
+		noorsignaltypes.ModuleName,
 	)
 
 	app.mm.RegisterServices(
 		module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter()),
 	)
 
-	// 🔐 AnteHandler minimal (EVM-aware plus tard, pour l’instant no-op)
-	app.SetupAnteHandler()
-
 	// 🔗 ABCI handlers (EVM bloc 10)
 	app.SetInitChainer(app.InitChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
+
+	// 🔗 AnteHandler (minimal au début, puis EVM-compatible dans ante.go)
+	app.SetupAnteHandler()
 
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {
