@@ -34,17 +34,36 @@ func (AppModuleBasic) Name() string {
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {}
 
 // DefaultGenesis returns default genesis state as raw JSON.
+// We delegate to noorsignaltypes.DefaultGenesis() and marshal with encoding/json
+// to AVOID any gogo/proto dependency.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
-	return json.RawMessage(`{}`)
+	gs := noorsignaltypes.DefaultGenesis()
+	bz, err := json.Marshal(gs)
+	if err != nil {
+		panic(err)
+	}
+	return bz
 }
 
 // ValidateGenesis performs genesis state validation.
+// We unmarshal with encoding/json into GenesisState and call ValidateGenesis,
+// again avoiding any proto.Message constraints.
 func (AppModuleBasic) ValidateGenesis(
 	cdc codec.JSONCodec,
 	txCfg client.TxEncodingConfig,
 	bz json.RawMessage,
 ) error {
-	return nil
+	if len(bz) == 0 {
+		// Empty genesis = use default, always valid.
+		return nil
+	}
+
+	var gs noorsignaltypes.GenesisState
+	if err := json.Unmarshal(bz, &gs); err != nil {
+		return err
+	}
+
+	return noorsignaltypes.ValidateGenesis(&gs)
 }
 
 // RegisterGRPCGatewayRoutes registers gRPC-Gateway routes.
@@ -106,7 +125,24 @@ func (am AppModule) InitGenesis(
 	cdc codec.JSONCodec,
 	data json.RawMessage,
 ) []abci.ValidatorUpdate {
-	// PoSS logic will be wired later.
+	var gs noorsignaltypes.GenesisState
+
+	if len(data) == 0 {
+		// Use default PoSS genesis if nothing is provided.
+		gs = *noorsignaltypes.DefaultGenesis()
+	} else {
+		if err := json.Unmarshal(data, &gs); err != nil {
+			panic(err)
+		}
+	}
+
+	// Basic validation of the PoSS genesis state.
+	if err := noorsignaltypes.ValidateGenesis(&gs); err != nil {
+		panic(err)
+	}
+
+	// Later we will initialize on-chain PoSS state here (counters, params, ...).
+
 	return []abci.ValidatorUpdate{}
 }
 
@@ -115,13 +151,26 @@ func (am AppModule) ExportGenesis(
 	ctx sdk.Context,
 	cdc codec.JSONCodec,
 ) json.RawMessage {
-	return json.RawMessage(`{}`)
+	// For now, we simply export the default genesis state.
+	// Later we will read real state from the keeper and export it.
+	gs := noorsignaltypes.DefaultGenesis()
+
+	bz, err := json.Marshal(gs)
+	if err != nil {
+		panic(err)
+	}
+
+	return bz
 }
 
 // BeginBlock is called at the beginning of every block.
 func (am AppModule) BeginBlock(ctx sdk.Context, _ abci.RequestBeginBlock) {
-	// PoSS daily limits, halving, etc. will live here later.
-	am.keeper.ResetDailyCountersIfNeeded(ctx)
+	// In future PoSS Logic steps, we will plug:
+	// - daily counters checks,
+	// - halving period checks,
+	// - PoSS emission statistics, etc.
+	//
+	// For now: no per-block PoSS logic is executed.
 }
 
 // EndBlock is called at the end of every block.
