@@ -78,6 +78,12 @@ func NewAppModule(cdc codec.Codec) AppModule {
 	}
 }
 
+// ConsensusVersion returns the consensus version of the module.
+// Obligatoire depuis Cosmos SDK v0.46.x pour satisfaire module.AppModule.
+func (am AppModule) ConsensusVersion() uint64 {
+	return 1
+}
+
 // RegisterServices registers module services (Msg/Query servers).
 // On les ajoutera quand on aura les proto + keepers PoSS.
 func (am AppModule) RegisterServices(cfg module.Configurator) {}
