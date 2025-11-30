@@ -88,7 +88,7 @@ func NewNoorchainApp(
 	bApp.SetCommitMultiStoreTracer(traceStore)
 	bApp.SetInterfaceRegistry(encCfg.InterfaceRegistry)
 
-	app := &NoorchainApp {
+	app := &NoorchainApp{
 		BaseApp:           bApp,
 		appCodec:          encCfg.Marshaler,
 		interfaceRegistry: encCfg.InterfaceRegistry,
@@ -245,13 +245,13 @@ func NewNoorchainApp(
 		module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter()),
 	)
 
-	// 🔗 ANTE HANDLER (minimal, Phase 4)
-	app.SetupAnteHandler()
-
-	// 🔗 ABCI handlers (EVM bloc 10)
+	// 🔗 ABCI handlers
 	app.SetInitChainer(app.InitChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
+
+	// 🔗 Ante handler minimal (ante.go)
+	app.SetupAnteHandler()
 
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {
