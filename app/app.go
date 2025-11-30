@@ -250,6 +250,10 @@ func NewNoorchainApp(
 	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
 
+	// 🔐 AnteHandler (squelette EVM-ready)
+	// La logique est dans app/ante.go → SetupAnteHandler().
+	app.SetupAnteHandler()
+
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {
 			panic(err)
