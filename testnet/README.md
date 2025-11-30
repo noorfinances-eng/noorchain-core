@@ -1,44 +1,87 @@
-# NOORCHAIN — Internal Testnet 1 (squelette)
+# NOORCHAIN — Testnet Toolbox
 
-Ce dossier contient les fichiers de base pour le **Testnet interne 1** de NOORCHAIN.
-Pour l’instant, il s’agit d’un **squelette** : aucun état applicatif réel, aucun validateur configuré.
-
----
-
-## 🎯 Objectifs de Testnet 1
-
-- Définir un **`chain_id` propre** pour le testnet :  
-  `noorchain-testnet-1`
-- Créer un **modèle de fichier `genesis`** qui servira de base aux prochaines étapes :
-  - Ajout des comptes de test
-  - Ajout des validateurs
-  - Ajout des modules PoSS (x/noorsignal), EVM, etc.
+Ce dossier contient les fichiers et outils liés au **testnet** de NOORCHAIN.
+Pour l’instant, il s’agit surtout de squelettes documentaires.  
+Le vrai genesis final et les distributions seront définis plus tard, quand on aura les **adresses réelles** (fondation, fondateur, réserve PoSS, validateurs, etc.).
 
 ---
 
-## 📁 Fichiers
+## 1. Fichiers présents
 
-- `genesis.noorchain-testnet-1.template.json`  
-  → Modèle de genesis **structurel** (consensus, chain_id, app_state vide).
+### `genesis_skeleton.json`
 
-- `genesis_distribution.noorchain-testnet-1.template.json`  
-  → Modèle de **distribution économique** pour NOORCHAIN Testnet 1,
-    basé sur le schéma 5 / 5 / 5 / 5 / 80 (Fondation / Dev / PoSS Stimulus / Pré-vente / PoSS mintables).
-
-Ces fichiers sont des **TEMPLATES** :
-ils ne sont pas encore utilisables tels quels pour lancer un nœud.
+- **But :** servir de *modèle documentaire* pour le futur `genesis.json`.
+- **Statut :** non utilisé directement pour démarrer un nœud, uniquement une base de travail.
+- **Contenu :**
+  - `chain_id = "noorchain-testnet-1"`
+  - Modules principaux documentés :
+    - `auth` (params de base, comptes vides)
+    - `bank` (balances et supply vides)
+    - `staking` (bond_denom = `unur`, params génériques)
+    - `evm` (params Ethermint de base, chain_config London activable plus tard)
+    - `feemarket` (EIP-1559, à ajuster avant le vrai testnet)
+    - `noorsignal` (module PoSS, pour l’instant vide)
 
 ---
 
-## 🚧 État actuel
+## 2. Fichiers prévus (prochaines étapes)
 
-- Aucun nœud NOORCHAIN n’est configuré pour utiliser ce genesis.
-- Les modules `auth`, `bank`, `staking`, `evm`, `feemarket`, `noorsignal` n’ont pas encore de configuration de genesis spécifique.
-- Ce dossier sert uniquement de **base documentaire et technique** pour les prochaines étapes.
+Ces fichiers **n’existent pas encore**, ils seront créés plus tard dans la Phase Testnet :
 
-Les prochaines étapes (Testnet 2, Testnet 3, …) ajouteront :
+### `genesis.json`
 
-- Des comptes de test (fondation, fondateur, réserve PoSS…)
-- Un validateur de test
-- Les params de chaîne (staking, gov, EVM, FeeMarket, PoSS)
-- Les scripts pour lancer un réseau local (un seul nœud, puis multi-nœuds).
+- Le **genesis réel** utilisé par les nœuds de NOORCHAIN Testnet.
+- Sera généré à partir :
+  - du modèle `genesis_skeleton.json`,
+  - des adresses bech32 réelles (fondation, fondateur, réserve PoSS, etc.),
+  - de la distribution initiale (5 % / 5 % / 5 % / 5 % / 80 % en `unur`).
+
+### `genesis_distribution.json`
+
+- Fichier de travail pour décrire **qui reçoit quoi** au lancement :
+  - Fondation NOORCHAIN
+  - Noor Dev (fondateur)
+  - Réserve PoSS Stimulus
+  - Pré-vente optionnelle (si utilisée)
+  - Réserve PoSS mintable (80 %)
+- Permet de garder une **trace claire, diff-able et audit-able** de la distribution économique.
+
+---
+
+## 3. Règles officielles à respecter pour le Testnet
+
+Rappel des contraintes de NOORCHAIN 1.0 :
+
+- **Supply fixe :** `299 792 458 NUR` (unur au niveau technique).
+- **Modèle économique :**  
+  - 5 % Fondation NOOR  
+  - 5 % Noor Dev Sàrl (ou wallet fondateur temporaire)  
+  - 5 % PoSS Stimulus  
+  - 5 % Pré-vente optionnelle  
+  - 80 % PoSS mintables (Proof of Signal Social)
+- **Halving :** tous les 8 ans.
+- **Legal Light CH :**
+  - Aucun yield garanti.
+  - Aucune promesse de performance.
+  - Transparence totale sur la distribution et les règles PoSS.
+
+Ces règles devront être **strictement respectées** au moment où nous remplirons `genesis.json` et `genesis_distribution.json`.
+
+---
+
+## 4. Prochaine étape (technique)
+
+La prochaine phase Testnet consistera à :
+
+1. Générer les **5 adresses bech32 réelles** (fondation, fondateur, PoSS Stimulus, pré-vente, réserve PoSS).
+2. Synchroniser ces adresses dans :
+   - `testnet/genesis.json`
+   - `testnet/genesis_distribution.json`
+   - `x/noorsignal/types/addresses.go`
+3. Vérifier la cohérence entre :
+   - le code Go (PoSS, BankKeeper, StakingKeeper, etc.),
+   - et les fichiers `genesis*.json`.
+
+Ce README sert simplement de **boussole** pour ne pas se perdre entre les phases.
+
+---
