@@ -54,6 +54,9 @@ type NoorchainApp struct {
 	appCodec          codec.Codec
 	interfaceRegistry codectypes.InterfaceRegistry
 
+	// ⭐ NEW: garder la TxConfig pour l’AnteHandler
+	TxConfig client.TxConfig
+
 	// KV stores
 	keys map[string]*storetypes.KVStoreKey
 	// Transient stores (used by Params + FeeMarket + EVM)
@@ -92,6 +95,7 @@ func NewNoorchainApp(
 		BaseApp:           bApp,
 		appCodec:          encCfg.Marshaler,
 		interfaceRegistry: encCfg.InterfaceRegistry,
+		TxConfig:          encCfg.TxConfig, // ⭐ NEW: on garde la TxConfig
 		keys:              make(map[string]*storetypes.KVStoreKey),
 		tkeys:             make(map[string]*storetypes.TransientStoreKey),
 	}
@@ -245,12 +249,12 @@ func NewNoorchainApp(
 		module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter()),
 	)
 
-	// 🔗 ABCI handlers
+	// 🔗 ABCI handlers (EVM bloc 10)
 	app.SetInitChainer(app.InitChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
 
-	// 🔗 Ante handler minimal (ante.go)
+	// ⭐ NEW : câbler le vrai AnteHandler Ethermint (EVM + Cosmos)
 	app.SetupAnteHandler()
 
 	if loadLatest {
