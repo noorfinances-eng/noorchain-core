@@ -21,60 +21,68 @@ import (
 // AppModuleBasic
 // -----------------------------------------------------------------------------
 
-// AppModuleBasic implements the basic methods for the PoSS module without any
-// keeper wiring. C'est le squelette minimal : pas de logique métier ici.
+// AppModuleBasic implements the basic, stateless methods of the PoSS module.
 type AppModuleBasic struct{}
 
-// Name returns the PoSS module name.
+// Name returns the module name.
 func (AppModuleBasic) Name() string {
 	return noorsignaltypes.ModuleName
 }
 
-// RegisterLegacyAminoCodec registers the module's types on the Amino codec.
-// Pour l'instant, aucun type spécifique.
+// RegisterLegacyAminoCodec registers module types on the Amino codec.
+// We don't use Amino for PoSS, so this is intentionally empty.
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {}
 
-// DefaultGenesis returns default genesis state as raw JSON.
-// On retourne simplement un objet JSON vide.
+// DefaultGenesis returns the default genesis state as raw JSON.
+//
+// IMPORTANT: we use encoding/json directly instead of codec.JSONCodec
+// to avoid requiring proto.Message on GenesisState.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
-	return json.RawMessage(`{}`)
+	gs := noorsignaltypes.DefaultGenesis()
+	bz, err := json.Marshal(gs)
+	if err != nil {
+		panic(err)
+	}
+	return bz
 }
 
-// ValidateGenesis performs genesis state validation.
-// Pour l’instant, on se contente de vérifier que le JSON est bien formé.
+// ValidateGenesis performs basic validation of the genesis state.
 func (AppModuleBasic) ValidateGenesis(
-	cdc codec.JSONCodec,
-	txCfg client.TxEncodingConfig,
+	_ codec.JSONCodec,
+	_ client.TxEncodingConfig,
 	bz json.RawMessage,
 ) error {
 	if len(bz) == 0 {
+		// Empty genesis is allowed and treated as default.
 		return nil
 	}
 
-	var raw map[string]interface{}
-	if err := json.Unmarshal(bz, &raw); err != nil {
+	var gs noorsignaltypes.GenesisState
+	if err := json.Unmarshal(bz, &gs); err != nil {
 		return err
 	}
 
+	// For now, no validation rules. When we add real PoSS fields,
+	// we can call noorsignaltypes.ValidateGenesis(&gs).
 	return nil
 }
 
 // RegisterGRPCGatewayRoutes registers gRPC-Gateway routes.
-// Aucun endpoint pour l’instant.
+// No public PoSS gRPC endpoints yet.
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {}
 
-// RegisterInterfaces registers the module's interface types.
-// On complétera plus tard (Msgs, queries, etc.).
+// RegisterInterfaces registers module interface types.
+// We will add Msg / Query interfaces later with real PoSS logic.
 func (AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) {}
 
 // GetTxCmd returns the root tx command for the module.
-// On ne définit pas encore de commandes CLI, donc on renvoie nil.
+// No CLI commands yet, so we return nil.
 func (AppModuleBasic) GetTxCmd() *cobra.Command {
 	return nil
 }
 
 // GetQueryCmd returns the root query command for the module.
-// On ne définit pas encore de commandes CLI, donc on renvoie nil.
+// No CLI queries yet, so we return nil.
 func (AppModuleBasic) GetQueryCmd() *cobra.Command {
 	return nil
 }
@@ -84,15 +92,14 @@ func (AppModuleBasic) GetQueryCmd() *cobra.Command {
 // -----------------------------------------------------------------------------
 
 // AppModule is the full module type for x/noorsignal.
-// Pour l’instant, il ne contient que le codec (pas encore de keeper branché).
+// For now it only wraps AppModuleBasic and the codec.
+// The Keeper will be wired here when PoSS logic is implemented.
 type AppModule struct {
 	AppModuleBasic
-
 	cdc codec.Codec
 }
 
 // NewAppModule creates a new AppModule instance for x/noorsignal.
-// À ce stade, il est volontairement "léger".
 func NewAppModule(cdc codec.Codec) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{},
@@ -100,65 +107,84 @@ func NewAppModule(cdc codec.Codec) AppModule {
 	}
 }
 
-// RegisterInvariants registers the module invariants.
-// PoSS minimal : aucune invariant à enregistrer pour le moment.
-func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
+// ConsensusVersion implements AppModule. We start at version 1.
+func (am AppModule) ConsensusVersion() uint64 {
+	return 1
+}
 
-// Route returns the message routing key for the module (legacy SDK).
-// PoSS v1 : pas de Msg handler legacy, on renvoie une route vide.
+// RegisterInvariants registers module invariants. None for PoSS yet.
+func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
+
+// Route is deprecated in v0.46; PoSS does not use legacy routing.
 func (am AppModule) Route() sdk.Route {
 	return sdk.Route{}
 }
 
-// QuerierRoute returns the module's querier route name.
-// On ne supporte pas encore le querier legacy, donc chaîne vide.
+// QuerierRoute is deprecated in v0.46; PoSS does not use legacy queries.
 func (am AppModule) QuerierRoute() string {
 	return ""
 }
 
-// LegacyQuerierHandler returns the legacy querier handler for the module.
-// Non utilisé avec le stack gRPC moderne → nil.
-func (am AppModule) LegacyQuerierHandler(*codec.LegacyAmino) sdk.Querier {
+// LegacyQuerierHandler is deprecated; we return nil (no legacy querier).
+func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
 	return nil
 }
 
-// RegisterServices registers module services (Msg/Query servers).
-// On les ajoutera quand on aura les proto + keepers PoSS.
+// RegisterServices registers gRPC Msg and Query servers.
+// For now, PoSS has no services yet.
 func (am AppModule) RegisterServices(cfg module.Configurator) {}
 
 // InitGenesis initializes the module genesis state.
 func (am AppModule) InitGenesis(
 	ctx sdk.Context,
-	cdc codec.JSONCodec,
+	_ codec.JSONCodec,
 	data json.RawMessage,
 ) []abci.ValidatorUpdate {
-	// PoSS minimal : on ignore le contenu pour l'instant.
-	// Plus tard, on utilisera un vrai GenesisState et un keeper.
+	var gs noorsignaltypes.GenesisState
+
+	if len(data) == 0 {
+		def := noorsignaltypes.DefaultGenesis()
+		if def != nil {
+			gs = *def
+		} else {
+			gs = noorsignaltypes.GenesisState{}
+		}
+	} else {
+		if err := json.Unmarshal(data, &gs); err != nil {
+			panic(err)
+		}
+	}
+
+	// Later: use the Keeper to set PoSS state from gs.
 	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis exports the module genesis state.
 func (am AppModule) ExportGenesis(
 	ctx sdk.Context,
-	cdc codec.JSONCodec,
+	_ codec.JSONCodec,
 ) json.RawMessage {
-	// Pour l’instant, on exporte simplement "{}".
-	return json.RawMessage(`{}`)
+	// Later: build the real PoSS genesis from keeper state.
+	gs := noorsignaltypes.DefaultGenesis()
+	if gs == nil {
+		gs = &noorsignaltypes.GenesisState{}
+	}
+
+	bz, err := json.Marshal(gs)
+	if err != nil {
+		panic(err)
+	}
+	return bz
 }
 
 // BeginBlock is called at the beginning of every block.
 func (am AppModule) BeginBlock(ctx sdk.Context, _ abci.RequestBeginBlock) {
-	// La logique PoSS par bloc viendra plus tard (limites journalières, etc.).
+	// PoSS per-block logic will be added here later
+	// (daily limits, halving checks, etc.).
 }
 
 // EndBlock is called at the end of every block.
 func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
-	// Pas de changement sur les validateurs pour PoSS.
+	// PoSS does not change validator set.
 	return []abci.ValidatorUpdate{}
-}
-
-// ConsensusVersion returns the x/noorsignal module consensus version.
-// On démarre à 1 (première version du module PoSS).
-func (am AppModule) ConsensusVersion() uint64 {
-	return 1
 }
