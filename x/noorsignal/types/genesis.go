@@ -2,50 +2,63 @@ package types
 
 import "fmt"
 
-// GenesisState defines the initial state of the PoSS (x/noorsignal) module.
-//
-// For PoSS Logic 1 – Step A, we only track a very simple global counter:
-// - TotalSignals: how many social signals have been registered in total.
-//   At this stage, this is just a placeholder field; it will be updated
-//   later when we wire real PoSS logic (messages, daily limits, rewards, etc.).
+// GenesisState defines the PoSS module genesis state.
+// This is the minimal but real structure for NOORCHAIN PoSS.
 type GenesisState struct {
-	// TotalSignals is a global counter of all validated PoSS signals
-	// (participants + curators) since the genesis of the chain.
-	//
-	// NOTE:
-	// - For now, this value will always be 0 at genesis and will not
-	//   be modified by any logic yet. It is a placeholder for future steps.
+	// Total number of PoSS signals already processed on the chain.
+	// Starts at 0 on a fresh network and increases over time.
 	TotalSignals uint64 `json:"total_signals" yaml:"total_signals"`
+
+	// Total NUR minted via PoSS, in the smallest unit (unur).
+	// Stored as a string to avoid precision issues and to stay simple for now.
+	TotalMinted string `json:"total_minted" yaml:"total_minted"`
+
+	// Maximum number of PoSS signals allowed per address per day.
+	// This is the first anti-abuse guardrail.
+	MaxSignalsPerDay uint32 `json:"max_signals_per_day" yaml:"max_signals_per_day"`
+
+	// Reward split (must always sum to 100).
+	// Official NOORCHAIN rule:
+	//   - 70 % for the participant
+	//   - 30 % for the curator
+	ParticipantShare uint32 `json:"participant_share" yaml:"participant_share"`
+	CuratorShare     uint32 `json:"curator_share" yaml:"curator_share"`
 }
 
-// NewGenesisState creates a new GenesisState instance.
-//
-// For now, it only sets the global TotalSignals counter.
-func NewGenesisState(totalSignals uint64) *GenesisState {
-	return &GenesisState{
-		TotalSignals: totalSignals,
-	}
-}
-
-// DefaultGenesis returns the default genesis state for the PoSS module.
-//
-// We start Noorchain with zero PoSS signals counted.
+// DefaultGenesis returns the default PoSS genesis state.
+// These values are aligned with the official NOORCHAIN rules.
 func DefaultGenesis() *GenesisState {
-	return NewGenesisState(0)
+	return &GenesisState{
+		TotalSignals:     0,
+		TotalMinted:      "0",
+		MaxSignalsPerDay: 50, // simple, conservative daily limit per address
+		ParticipantShare: 70, // 70 % participant
+		CuratorShare:     30, // 30 % curator
+	}
 }
 
 // ValidateGenesis performs basic validation of the PoSS genesis state.
-//
-// At this stage, we only check that the pointer is not nil and that the
-// TotalSignals counter is non-negative (which is guaranteed by uint64).
-// More advanced checks (limits, params, reserved supply, etc.) will be added
-// later during PoSS Logic 2/3.
+// It ensures that the reward split is coherent and that mandatory fields are set.
 func ValidateGenesis(gs *GenesisState) error {
 	if gs == nil {
-		return fmt.Errorf("noorsignal genesis state cannot be nil")
+		return fmt.Errorf("genesis state cannot be nil")
 	}
 
-	// No complex validation yet; this keeps the module very simple
-	// while still allowing us to evolve the structure safely later.
+	// Reward split must always be 100 %.
+	if gs.ParticipantShare+gs.CuratorShare != 100 {
+		return fmt.Errorf("participant_share + curator_share must equal 100 (got %d + %d)",
+			gs.ParticipantShare, gs.CuratorShare)
+	}
+
+	// TotalMinted must not be empty (at least "0").
+	if gs.TotalMinted == "" {
+		return fmt.Errorf("total_minted cannot be empty (use \"0\" for a fresh chain)")
+	}
+
+	// MaxSignalsPerDay must be > 0 to avoid a "locked" PoSS system.
+	if gs.MaxSignalsPerDay == 0 {
+		return fmt.Errorf("max_signals_per_day must be greater than 0")
+	}
+
 	return nil
 }
