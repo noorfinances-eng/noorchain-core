@@ -44,10 +44,14 @@ import (
 	feemarketkeeper "github.com/evmos/ethermint/x/feemarket/keeper"
 	feemarketmodule "github.com/evmos/ethermint/x/feemarket"
 	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
+
+	// NOORCHAIN PoSS (x/noorsignal) — store uniquement pour l’instant
+	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
 )
 
 // NoorchainApp is the minimal Cosmos SDK application for NOORCHAIN.
-// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper + EVM keeper + EVM/FeeMarket AppModules.
+// Phase 4 — Cosmos core + ParamsKeeper + FeeMarket keeper + EVM keeper
+// + EVM/FeeMarket AppModules (+ PoSS store monté, module à venir).
 type NoorchainApp struct {
 	*baseapp.BaseApp
 
@@ -75,7 +79,7 @@ type NoorchainApp struct {
 	mm *module.Manager
 }
 
-// NewNoorchainApp creates the base app (no PoSS yet, EVM ante en cours).
+// NewNoorchainApp creates the base app (no PoSS logic / full ante EVM yet).
 func NewNoorchainApp(
 	logger tmlog.Logger,
 	db dbm.DB,
@@ -112,6 +116,9 @@ func NewNoorchainApp(
 	// EVM + FeeMarket KV store keys
 	app.keys[evmtypes.StoreKey] = storetypes.NewKVStoreKey(evmtypes.StoreKey)
 	app.keys[feemarkettypes.StoreKey] = storetypes.NewKVStoreKey(feemarkettypes.StoreKey)
+
+	// PoSS / x.noorsignal KV store (monté mais module pas encore branché)
+	app.keys[noorsignaltypes.StoreKey] = storetypes.NewKVStoreKey(noorsignaltypes.StoreKey)
 
 	// --- Transient store keys ---
 	// Params transient store
@@ -226,7 +233,8 @@ func NewNoorchainApp(
 		feemarketSubspace,
 	)
 
-	// --- Module manager (auth + bank + staking + evm + feemarket) ---
+	// --- Module manager (auth + bank + staking + evm + feemarket)
+	// PoSS sera ajouté ici plus tard quand le module respectera AppModule.
 	app.mm = module.NewManager(
 		auth.NewAppModule(app.appCodec, app.AccountKeeper, nil),
 		bank.NewAppModule(app.appCodec, app.BankKeeper, app.AccountKeeper),
@@ -241,13 +249,14 @@ func NewNoorchainApp(
 		stakingtypes.ModuleName,
 		evmtypes.ModuleName,
 		feemarkettypes.ModuleName,
+		// noorsignaltypes.ModuleName viendra plus tard
 	)
 
 	app.mm.RegisterServices(
 		module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter()),
 	)
 
-	// 🔐 AnteHandler EVM / Cosmos (Ethermint)
+	// 🔐 AnteHandler minimal (EVM-aware plus tard, pour l’instant no-op)
 	app.SetupAnteHandler()
 
 	// 🔗 ABCI handlers (EVM bloc 10)
