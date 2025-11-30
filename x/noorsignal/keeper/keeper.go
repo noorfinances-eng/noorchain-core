@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/store/prefix"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -9,23 +10,18 @@ import (
 )
 
 // Keeper is the minimal keeper for the x/noorsignal (PoSS) module.
-//
-// For PoSS Logic 1 – Step B, it only manages a single global counter:
-// TotalSignals (stored under KeyTotalSignals in the KVStore).
+// In PoSS Logic 7 we add the daily reset logic and internal helpers.
 type Keeper struct {
-	// cdc is the codec used to (un)marshal state if needed.
+	// Codec used to (de)serialize state (kept for future use).
 	cdc codec.Codec
 
-	// storeKey gives access to the module's KVStore.
+	// storeKey gives access to the module KVStore.
 	storeKey storetypes.StoreKey
 }
 
-// NewKeeper creates a new PoSS Keeper instance.
+// NewKeeper creates a new minimal PoSS keeper.
 //
-// In future steps, we will extend this keeper with:
-// - params
-// - references to Bank / Staking / EVM
-// - PoSS reward and limit logic.
+// Later we will extend it with params, hooks and links to Bank/Staking.
 func NewKeeper(
 	cdc codec.Codec,
 	storeKey storetypes.StoreKey,
@@ -36,47 +32,81 @@ func NewKeeper(
 	}
 }
 
-// getStore returns the module KVStore for the given context.
+// -----------------------------------------------------------------------------
+// Internal helpers
+// -----------------------------------------------------------------------------
+
+// getStore returns the KVStore for the PoSS module.
 func (k Keeper) getStore(ctx sdk.Context) sdk.KVStore {
 	return ctx.KVStore(k.storeKey)
 }
 
-// -----------------------------------------------------------------------------
-// Global TotalSignals counter
-// -----------------------------------------------------------------------------
+// getCurrentDay returns the current day as an integer
+// (Unix timestamp in seconds divided by 86400).
+func (k Keeper) getCurrentDay(ctx sdk.Context) int64 {
+	return ctx.BlockTime().Unix() / 86400
+}
 
-// GetTotalSignals returns the current global number of validated PoSS signals.
-//
-// If the value has never been set, it returns 0.
-func (k Keeper) GetTotalSignals(ctx sdk.Context) uint64 {
+// GetLastResetDay returns the last day (Unix days) when the daily counters were reset.
+// If it has never been set, it returns 0.
+func (k Keeper) GetLastResetDay(ctx sdk.Context) int64 {
 	store := k.getStore(ctx)
-	bz := store.Get(noorsignaltypes.KeyTotalSignals)
-	if bz == nil {
+	bz := store.Get(noorsignaltypes.KeyLastResetDay)
+	if len(bz) == 0 {
 		return 0
 	}
 
-	return sdk.BigEndianToUint64(bz)
+	return int64(sdk.BigEndianToUint64(bz))
 }
 
-// SetTotalSignals sets the global TotalSignals counter to the given value.
-//
-// This is a low-level method; in most cases, we will use IncrementTotalSignals.
-func (k Keeper) SetTotalSignals(ctx sdk.Context, total uint64) {
+// setLastResetDay stores the last reset day as a uint64.
+func (k Keeper) setLastResetDay(ctx sdk.Context, day int64) {
 	store := k.getStore(ctx)
-	bz := sdk.Uint64ToBigEndian(total)
-	store.Set(noorsignaltypes.KeyTotalSignals, bz)
+	bz := sdk.Uint64ToBigEndian(uint64(day))
+	store.Set(noorsignaltypes.KeyLastResetDay, bz)
 }
 
-// IncrementTotalSignals increments the global TotalSignals counter by `delta`
-// and returns the new value.
+// -----------------------------------------------------------------------------
+// Daily reset logic (PoSS Logic 7)
+// -----------------------------------------------------------------------------
+
+// ResetDailyCountersIfNeeded resets the daily participant/curator counters
+// if a new day has started since the last reset.
 //
-// NOTE:
-// - This method does not implement any limit or anti-abuse logic yet.
-// - All PoSS rules (daily caps, per-curator limits, etc.) will be added in
-//   future steps when we introduce real PoSS messages and rewards.
-func (k Keeper) IncrementTotalSignals(ctx sdk.Context, delta uint64) uint64 {
-	current := k.GetTotalSignals(ctx)
-	newTotal := current + delta
-	k.SetTotalSignals(ctx, newTotal)
-	return newTotal
+// This is called from BeginBlock of the module and is fully automatic:
+// - no cron
+// - no external script
+// - pure on-chain logic.
+func (k Keeper) ResetDailyCountersIfNeeded(ctx sdk.Context) {
+	currentDay := k.getCurrentDay(ctx)
+	lastResetDay := k.GetLastResetDay(ctx)
+
+	// Same day → nothing to do.
+	if lastResetDay == currentDay {
+		return
+	}
+
+	// New day → clear all daily counters.
+	store := k.getStore(ctx)
+
+	// Participant daily counters
+	pStore := prefix.NewStore(store, noorsignaltypes.KeyPrefixParticipantDailyCount)
+	pIter := pStore.Iterator(nil, nil)
+	defer pIter.Close()
+
+	for ; pIter.Valid(); pIter.Next() {
+		pStore.Delete(pIter.Key())
+	}
+
+	// Curator daily counters
+	cStore := prefix.NewStore(store, noorsignaltypes.KeyPrefixCuratorDailyCount)
+	cIter := cStore.Iterator(nil, nil)
+	defer cIter.Close()
+
+	for ; cIter.Valid(); cIter.Next() {
+		cStore.Delete(cIter.Key())
+	}
+
+	// Update last reset day
+	k.setLastResetDay(ctx, currentDay)
 }

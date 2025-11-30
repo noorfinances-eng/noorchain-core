@@ -1,28 +1,20 @@
 package types
 
-// ModuleName defines the module name for x/noorsignal (PoSS).
+// Module name and basic routing keys for the PoSS (x/noorsignal) module.
 const (
-	ModuleName = "noorsignal"
-
-	// StoreKey is the primary KVStore key for the PoSS module.
-	StoreKey = ModuleName
-
-	// RouterKey is used for routing messages to this module.
-	RouterKey = ModuleName
-
-	// MemStoreKey is the in-memory store key (not used yet, but kept for future use).
-	MemStoreKey = "mem_noorsignal"
+	ModuleName   = "noorsignal"
+	StoreKey     = ModuleName
+	RouterKey    = ModuleName
+	QuerierRoute = ModuleName
 )
 
-// -----------------------------------------------------------------------------
-// Store keys
-// -----------------------------------------------------------------------------
-
-// KeyTotalSignals is the key used to store the global total number of validated
-// PoSS signals in the KVStore.
+// Keys used in the KVStore to manage daily PoSS state.
 //
-// This is a single uint64 value encoded in BigEndian.
-// It will be incremented later when PoSS messages are processed.
+// - KeyLastResetDay: stores the last day (Unix days) when daily counters were reset.
+// - KeyPrefixParticipantDailyCount: prefix for participant daily counters.
+// - KeyPrefixCuratorDailyCount: prefix for curator daily counters.
 var (
-	KeyTotalSignals = []byte{0x01}
+	KeyLastResetDay               = []byte{0x01}
+	KeyPrefixParticipantDailyCount = []byte{0x10}
+	KeyPrefixCuratorDailyCount     = []byte{0x11}
 )
