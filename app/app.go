@@ -53,9 +53,7 @@ type NoorchainApp struct {
 
 	appCodec          codec.Codec
 	interfaceRegistry codectypes.InterfaceRegistry
-
-	// ⭐ NEW: garder la TxConfig pour l’AnteHandler
-	TxConfig client.TxConfig
+	txConfig          client.TxConfig
 
 	// KV stores
 	keys map[string]*storetypes.KVStoreKey
@@ -77,7 +75,7 @@ type NoorchainApp struct {
 	mm *module.Manager
 }
 
-// NewNoorchainApp creates the base app (no PoSS / ante EVM yet).
+// NewNoorchainApp creates the base app (no PoSS yet, EVM ante en cours).
 func NewNoorchainApp(
 	logger tmlog.Logger,
 	db dbm.DB,
@@ -95,7 +93,7 @@ func NewNoorchainApp(
 		BaseApp:           bApp,
 		appCodec:          encCfg.Marshaler,
 		interfaceRegistry: encCfg.InterfaceRegistry,
-		TxConfig:          encCfg.TxConfig, // ⭐ NEW: on garde la TxConfig
+		txConfig:          encCfg.TxConfig,
 		keys:              make(map[string]*storetypes.KVStoreKey),
 		tkeys:             make(map[string]*storetypes.TransientStoreKey),
 	}
@@ -249,13 +247,13 @@ func NewNoorchainApp(
 		module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter()),
 	)
 
+	// 🔐 AnteHandler EVM / Cosmos (Ethermint)
+	app.SetupAnteHandler()
+
 	// 🔗 ABCI handlers (EVM bloc 10)
 	app.SetInitChainer(app.InitChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
-
-	// ⭐ NEW : câbler le vrai AnteHandler Ethermint (EVM + Cosmos)
-	app.SetupAnteHandler()
 
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {
