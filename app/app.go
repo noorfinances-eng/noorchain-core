@@ -1,11 +1,14 @@
 package app
 
 import (
+	"encoding/json"
 	"io"
 
 	dbm "github.com/tendermint/tm-db"
 	tmlog "github.com/tendermint/tendermint/libs/log"
+	abci "github.com/tendermint/tendermint/abci/types"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -201,9 +204,9 @@ func NewNoorchainApp(
 		app.BankKeeper,
 		app.StakingKeeper,
 		app.FeeMarketKeeper,
-		nil,  // customPrecompiles
-		nil,  // evmConstructor
-		"",   // tracer
+		nil, // customPrecompiles
+		nil, // evmConstructor
+		"",  // tracer
 		evmSubspace,
 	)
 
@@ -242,6 +245,11 @@ func NewNoorchainApp(
 		module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter()),
 	)
 
+	// 🔗 ABCI handlers (EVM bloc 10)
+	app.SetInitChainer(app.InitChainer)
+	app.SetBeginBlocker(app.BeginBlocker)
+	app.SetEndBlocker(app.EndBlocker)
+
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {
 			panic(err)
@@ -259,6 +267,31 @@ func NewApp(
 	appOpts servertypes.AppOptions,
 ) *NoorchainApp {
 	return NewNoorchainApp(logger, db, traceStore, true, appOpts)
+}
+
+// InitChainer is called on chain initialization.
+func (app *NoorchainApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
+	var genesisState map[string]json.RawMessage
+
+	if len(req.AppStateBytes) > 0 {
+		if err := json.Unmarshal(req.AppStateBytes, &genesisState); err != nil {
+			panic(err)
+		}
+	} else {
+		genesisState = make(map[string]json.RawMessage)
+	}
+
+	return app.mm.InitGenesis(ctx, app.appCodec, genesisState)
+}
+
+// BeginBlocker is called at the beginning of every block.
+func (app *NoorchainApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+	return app.mm.BeginBlock(ctx, req)
+}
+
+// EndBlocker is called at the end of every block.
+func (app *NoorchainApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
+	return app.mm.EndBlock(ctx, req)
 }
 
 // --- Encoding config minimal ---
