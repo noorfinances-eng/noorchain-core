@@ -17,7 +17,6 @@ import (
 	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
 )
 
-//
 // -----------------------------------------------------------------------------
 // AppModuleBasic
 // -----------------------------------------------------------------------------
@@ -36,18 +35,27 @@ func (AppModuleBasic) Name() string {
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {}
 
 // DefaultGenesis returns default genesis state as raw JSON.
-// On renvoie un JSON vide pour l'instant : "{}".
+// On retourne simplement un objet JSON vide.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	return json.RawMessage(`{}`)
 }
 
 // ValidateGenesis performs genesis state validation.
-// Pour le squelette, on ne valide rien encore.
+// Pour l’instant, on se contente de vérifier que le JSON est bien formé.
 func (AppModuleBasic) ValidateGenesis(
 	cdc codec.JSONCodec,
 	txCfg client.TxEncodingConfig,
 	bz json.RawMessage,
 ) error {
+	if len(bz) == 0 {
+		return nil
+	}
+
+	var raw map[string]interface{}
+	if err := json.Unmarshal(bz, &raw); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -60,24 +68,23 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 func (AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) {}
 
 // GetTxCmd returns the root tx command for the module.
-// PoSS 2 : pas encore de CLI, on renvoie nil.
+// On ne définit pas encore de commandes CLI, donc on renvoie nil.
 func (AppModuleBasic) GetTxCmd() *cobra.Command {
 	return nil
 }
 
 // GetQueryCmd returns the root query command for the module.
-// PoSS 2 : pas encore de CLI, on renvoie nil.
+// On ne définit pas encore de commandes CLI, donc on renvoie nil.
 func (AppModuleBasic) GetQueryCmd() *cobra.Command {
 	return nil
 }
 
-//
 // -----------------------------------------------------------------------------
 // AppModule
 // -----------------------------------------------------------------------------
 
 // AppModule is the full module type for x/noorsignal.
-// Pour l’instant, il ne contient que le codec (pas encore de keeper métier).
+// Pour l’instant, il ne contient que le codec (pas encore de keeper branché).
 type AppModule struct {
 	AppModuleBasic
 
@@ -93,6 +100,28 @@ func NewAppModule(cdc codec.Codec) AppModule {
 	}
 }
 
+// RegisterInvariants registers the module invariants.
+// PoSS minimal : aucune invariant à enregistrer pour le moment.
+func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
+
+// Route returns the message routing key for the module (legacy SDK).
+// PoSS v1 : pas de Msg handler legacy, on renvoie une route vide.
+func (am AppModule) Route() sdk.Route {
+	return sdk.Route{}
+}
+
+// QuerierRoute returns the module's querier route name.
+// On ne supporte pas encore le querier legacy, donc chaîne vide.
+func (am AppModule) QuerierRoute() string {
+	return ""
+}
+
+// LegacyQuerierHandler returns the legacy querier handler for the module.
+// Non utilisé avec le stack gRPC moderne → nil.
+func (am AppModule) LegacyQuerierHandler(*codec.LegacyAmino) sdk.Querier {
+	return nil
+}
+
 // RegisterServices registers module services (Msg/Query servers).
 // On les ajoutera quand on aura les proto + keepers PoSS.
 func (am AppModule) RegisterServices(cfg module.Configurator) {}
@@ -103,7 +132,8 @@ func (am AppModule) InitGenesis(
 	cdc codec.JSONCodec,
 	data json.RawMessage,
 ) []abci.ValidatorUpdate {
-	// PoSS 2 : pas de state encore, on ne fait que retourner une liste vide.
+	// PoSS minimal : on ignore le contenu pour l'instant.
+	// Plus tard, on utilisera un vrai GenesisState et un keeper.
 	return []abci.ValidatorUpdate{}
 }
 
@@ -112,7 +142,7 @@ func (am AppModule) ExportGenesis(
 	ctx sdk.Context,
 	cdc codec.JSONCodec,
 ) json.RawMessage {
-	// PoSS 2 : on renvoie un JSON vide.
+	// Pour l’instant, on exporte simplement "{}".
 	return json.RawMessage(`{}`)
 }
 
@@ -127,30 +157,8 @@ func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.Val
 	return []abci.ValidatorUpdate{}
 }
 
-// RegisterInvariants registers invariants for the module.
-// Pour l’instant, aucune invariant métier.
-func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
-
-// Route returns the message routing key for the module.
-// PoSS 2 : pas encore de Msg handler, on renvoie une route vide.
-func (am AppModule) Route() sdk.Route {
-	return sdk.Route{}
-}
-
-// QuerierRoute returns the module's querier route name.
-// PoSS 2 : aucun legacy querier, donc chaîne vide.
-func (am AppModule) QuerierRoute() string {
-	return ""
-}
-
-// LegacyQuerierHandler returns the legacy querier handler for the module.
-// PoSS 2 : aucun handler legacy, on renvoie nil.
-func (am AppModule) LegacyQuerierHandler(cdc *codec.LegacyAmino) sdk.Querier {
-	return nil
-}
-
-// ConsensusVersion returns the module consensus version.
-// On démarre simplement à 1.
+// ConsensusVersion returns the x/noorsignal module consensus version.
+// On démarre à 1 (première version du module PoSS).
 func (am AppModule) ConsensusVersion() uint64 {
 	return 1
 }
