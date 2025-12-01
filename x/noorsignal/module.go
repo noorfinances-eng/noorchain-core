@@ -34,28 +34,44 @@ func (AppModuleBasic) Name() string {
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {}
 
 // DefaultGenesis returns default genesis state as raw JSON.
+//
+// We bypass the Cosmos JSONCodec here and use encoding/json directly
+// to avoid any dependency on gogo/proto.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
-	return json.RawMessage(`{}`)
+	gs := noorsignaltypes.DefaultGenesis()
+	bz, err := json.Marshal(gs)
+	if err != nil {
+		panic(err)
+	}
+	return bz
 }
 
-// ValidateGenesis performs genesis state validation.
+// ValidateGenesis performs genesis state validation using the PoSS
+// GenesisState (TotalSignals, TotalMinted, MaxSignalsPerDay, 70/30 split).
 func (AppModuleBasic) ValidateGenesis(
 	cdc codec.JSONCodec,
 	txCfg client.TxEncodingConfig,
 	bz json.RawMessage,
 ) error {
-	// Later we will call noorsignaltypes.ValidateGenesis when we
-	// wire a full JSON genesis codec without gogo/proto.
-	return nil
+	if len(bz) == 0 {
+		// treat empty as default
+		return nil
+	}
+
+	var gs noorsignaltypes.GenesisState
+	if err := json.Unmarshal(bz, &gs); err != nil {
+		return err
+	}
+
+	return noorsignaltypes.ValidateGenesis(&gs)
 }
 
 // RegisterGRPCGatewayRoutes registers gRPC-Gateway routes.
+// No public gRPC endpoints yet for PoSS.
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {}
 
 // RegisterInterfaces registers the module's interface types.
-//
-// NOTE: on purpose, we don't register any proto Msg here to avoid
-// gogo/proto dependencies for now.
+// We will plug Msg/Query types here later (PoSS Logic + proto).
 func (AppModuleBasic) RegisterInterfaces(registry codectypes.InterfaceRegistry) {}
 
 // GetTxCmd returns the root tx command for the module.
@@ -103,33 +119,64 @@ func (am AppModule) Name() string {
 }
 
 // RegisterServices registers module services (Msg/Query servers).
-// We stay on legacy Route/Handler disabled for now (no proto Msg service).
+// For now, PoSS has no Msg or Query service registered at the app level.
 func (am AppModule) RegisterServices(cfg module.Configurator) {}
 
 // InitGenesis initializes the module genesis state.
+//
+// We decode the raw JSON into the PoSS GenesisState using encoding/json,
+// validate it with ValidateGenesis, and will later use it to initialize
+// the on-chain PoSS state.
 func (am AppModule) InitGenesis(
 	ctx sdk.Context,
 	cdc codec.JSONCodec,
 	data json.RawMessage,
 ) []abci.ValidatorUpdate {
-	// PoSS genesis wiring (using GenesisState) will be added later.
+	var gs noorsignaltypes.GenesisState
+
+	if len(data) == 0 {
+		gs = *noorsignaltypes.DefaultGenesis()
+	} else {
+		if err := json.Unmarshal(data, &gs); err != nil {
+			panic(err)
+		}
+	}
+
+	if err := noorsignaltypes.ValidateGenesis(&gs); err != nil {
+		panic(err)
+	}
+
+	// PoSS Logic: later we will use gs to initialize counters, totals, etc.
+	// For PoSS Logic 18, we keep InitGenesis structurally correct but neutral.
 	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis exports the module genesis state.
+//
+// For now, we simply export the default genesis. Later, we will read the
+// actual PoSS state (totals, params, etc.) from the keeper.
 func (am AppModule) ExportGenesis(
 	ctx sdk.Context,
 	cdc codec.JSONCodec,
 ) json.RawMessage {
-	// For now, we export an empty JSON object.
-	return json.RawMessage(`{}`)
+	gs := noorsignaltypes.DefaultGenesis()
+	bz, err := json.Marshal(gs)
+	if err != nil {
+		panic(err)
+	}
+	return bz
 }
 
 // BeginBlock is called at the beginning of every block.
 //
-// NOTE: daily resets / halving / PoSS logic will be added later.
+// In the future, this is where we will:
+// - enforce daily PoSS limits,
+// - apply halving-based adjustments,
+// - update PoSS counters progressively.
+//
+// For now, it is intentionally empty to keep the chain logic neutral.
 func (am AppModule) BeginBlock(ctx sdk.Context, _ abci.RequestBeginBlock) {
-	// no-op for now
+	// PoSS daily logic will be added later (PoSS Logic runtime).
 }
 
 // EndBlock is called at the end of every block.
@@ -145,9 +192,7 @@ func (AppModule) ConsensusVersion() uint64 {
 // RegisterInvariants registers module invariants.
 func (AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
 
-// Legacy routing: for now, we don't expose any tx route.
-// This keeps the module structurally valid without wiring MsgCreateSignal
-// (which would require proto.Message).
+// Legacy routing (kept empty, but required by interface).
 func (AppModule) Route() sdk.Route {
 	return sdk.Route{}
 }
@@ -159,5 +204,14 @@ func (AppModule) QuerierRoute() string {
 // LegacyQuerierHandler is required by module.AppModule (v0.46).
 // We don't use legacy queriers, so we simply return nil.
 func (AppModule) LegacyQuerierHandler(*codec.LegacyAmino) sdk.Querier {
+	return nil
+}
+
+// CLI — no custom tx/query commands wired at AppModule level yet.
+func (AppModule) GetTxCmd() *cobra.Command {
+	return nil
+}
+
+func (AppModule) GetQueryCmd() *cobra.Command {
 	return nil
 }
