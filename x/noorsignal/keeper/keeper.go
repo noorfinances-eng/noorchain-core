@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/store/prefix"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -11,12 +10,13 @@ import (
 
 // Keeper is the minimal keeper for the x/noorsignal (PoSS) module.
 //
-// At this stage, it handles only:
+// At this stage, it handles:
+//
 // - codec (for future state encoding/decoding),
 // - storeKey (access to the KVStore),
 // - simple daily counters for PoSS signals,
 // - a thin wrapper around the PoSS Params and reward helpers,
-// - a basic daily reset mechanism (PoSS Logic 7 style, ready for later use).
+// - a minimal handler for MsgCreateSignal (no minting yet).
 type Keeper struct {
 	// Codec used to encode/decode module state (for future use).
 	cdc codec.Codec
@@ -47,7 +47,7 @@ func (k Keeper) getStore(ctx sdk.Context) sdk.KVStore {
 }
 
 // -----------------------------------------------------------------------------
-// Daily counters (per address, per day) — current model
+// Daily counters (per address, per day)
 // -----------------------------------------------------------------------------
 
 // GetDailySignalsCount returns how many PoSS signals have already been
@@ -77,84 +77,17 @@ func (k Keeper) SetDailySignalsCount(ctx sdk.Context, address, date string, coun
 
 // IncrementDailySignalsCount increments the daily counter for (address, date)
 // and returns the new value.
+//
+// This function will be used later when processing a PoSS signal:
+// - read the current count
+// - +1
+// - store it back
+// - check against MaxSignalsPerDay
 func (k Keeper) IncrementDailySignalsCount(ctx sdk.Context, address, date string) uint32 {
 	current := k.GetDailySignalsCount(ctx, address, date)
 	next := current + 1
 	k.SetDailySignalsCount(ctx, address, date, next)
 	return next
-}
-
-// -----------------------------------------------------------------------------
-// Legacy-style daily reset helpers (PoSS Logic 7 style)
-// -----------------------------------------------------------------------------
-//
-// NOTE: avec le modèle (address, "YYYY-MM-DD"), on n’a PLUS besoin de vider
-// tous les compteurs chaque jour : la clé change de toute façon.
-// MAIS on garde ce mécanisme pour être compatible avec notre plan PoSS Logic 7
-// et avec les clés KeyLastResetDay / prefixes, au cas où on les utilise plus tard.
-
-// getCurrentDay returns the current day as an integer
-// (Unix timestamp in seconds divided by 86400).
-func (k Keeper) getCurrentDay(ctx sdk.Context) int64 {
-	return ctx.BlockTime().Unix() / 86400
-}
-
-// GetLastResetDay returns the last day (Unix days) when the daily counters were reset.
-// If it has never been set, it returns 0.
-func (k Keeper) GetLastResetDay(ctx sdk.Context) int64 {
-	store := k.getStore(ctx)
-	bz := store.Get(noorsignaltypes.KeyLastResetDay)
-	if len(bz) == 0 {
-		return 0
-	}
-
-	return int64(sdk.BigEndianToUint64(bz))
-}
-
-// setLastResetDay stores the last reset day as a uint64.
-func (k Keeper) setLastResetDay(ctx sdk.Context, day int64) {
-	store := k.getStore(ctx)
-	bz := sdk.Uint64ToBigEndian(uint64(day))
-	store.Set(noorsignaltypes.KeyLastResetDay, bz)
-}
-
-// ResetDailyCountersIfNeeded resets the legacy-style daily counters
-// if a new day has started since the last reset.
-//
-// Avec notre modèle (address, date), cette fonction est quasi "no-op"
-// (car on ne remplit pas encore les prefixes), mais elle est prête
-// pour PoSS Logic avancé et est appelée dans BeginBlock.
-func (k Keeper) ResetDailyCountersIfNeeded(ctx sdk.Context) {
-	currentDay := k.getCurrentDay(ctx)
-	lastResetDay := k.GetLastResetDay(ctx)
-
-	// Same day → nothing to do.
-	if lastResetDay == currentDay {
-		return
-	}
-
-	store := k.getStore(ctx)
-
-	// Participant daily counters (legacy prefix)
-	pStore := prefix.NewStore(store, noorsignaltypes.KeyPrefixParticipantDailyCount)
-	pIter := pStore.Iterator(nil, nil)
-	defer pIter.Close()
-
-	for ; pIter.Valid(); pIter.Next() {
-		pStore.Delete(pIter.Key())
-	}
-
-	// Curator daily counters (legacy prefix)
-	cStore := prefix.NewStore(store, noorsignaltypes.KeyPrefixCuratorDailyCount)
-	cIter := cStore.Iterator(nil, nil)
-	defer cIter.Close()
-
-	for ; cIter.Valid(); cIter.Next() {
-		cStore.Delete(cIter.Key())
-	}
-
-	// Update last reset day
-	k.setLastResetDay(ctx, currentDay)
 }
 
 // -----------------------------------------------------------------------------
@@ -173,7 +106,19 @@ func (k Keeper) GetParams(ctx sdk.Context) noorsignaltypes.Params {
 }
 
 // ComputeSignalRewardForBlock is a thin wrapper around the pure helpers
-// in types/rewards.go.
+// in types/rewards.go. It:
+//
+//   1) fetches PoSS Params (currently DefaultParams),
+//   2) uses the current block height from the context,
+//   3) calls ComputeSignalReward (base * weight -> halving -> 70/30 split).
+//
+// It DOES NOT:
+//   - check daily limits,
+//   - check balances in the PoSS reserve,
+//   - persist anything in the store.
+//
+// All those checks and state updates will be implemented in later PoSS Logic
+// steps inside the Keeper.
 func (k Keeper) ComputeSignalRewardForBlock(
 	ctx sdk.Context,
 	signalType noorsignaltypes.SignalType,
@@ -186,4 +131,33 @@ func (k Keeper) ComputeSignalRewardForBlock(
 		signalType,
 		height,
 	)
+}
+
+// -----------------------------------------------------------------------------
+// Msg handler entrypoint (PoSS Logic 18)
+// -----------------------------------------------------------------------------
+
+// HandleCreateSignal is the minimal business entrypoint for MsgCreateSignal.
+//
+// For PoSS Logic 18, it does *almost nothing* on purpose:
+// - uses ctx and msg (to avoid "unused" warnings),
+// - returns nil (no state change, no mint, no counters yet).
+//
+// This gives us a clean place to plug real PoSS logic later without touching
+// the module wiring or the handler.
+func (k Keeper) HandleCreateSignal(
+	ctx sdk.Context,
+	msg *noorsignaltypes.MsgCreateSignal,
+) error {
+	_ = ctx
+	_ = msg
+
+	// Later:
+	// - enforce daily limits (with IncrementDailySignalsCount),
+	// - compute rewards (ComputeSignalRewardForBlock),
+	// - check PoSSEnabled + PoSS reserve,
+	// - update TotalSignals / TotalMinted,
+	// - emit events,
+	// - mint/send NUR if Legal Light OK.
+	return nil
 }
