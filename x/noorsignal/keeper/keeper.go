@@ -10,11 +10,12 @@ import (
 
 // Keeper is the minimal keeper for the x/noorsignal (PoSS) module.
 //
-// At this stage, it handles only:
+// At this stage, it handles:
 // - codec (for future state encoding/decoding),
 // - storeKey (access to the KVStore),
 // - simple daily counters for PoSS signals,
-// - a thin wrapper around the PoSS Params and reward helpers.
+// - thin wrappers around the PoSS Params and reward helpers,
+// - global PoSS counters (TotalSignals / TotalMinted).
 type Keeper struct {
 	// Codec used to encode/decode module state (for future use).
 	cdc codec.Codec
@@ -42,6 +43,76 @@ func NewKeeper(
 // getStore is a tiny helper to access the PoSS KVStore from a context.
 func (k Keeper) getStore(ctx sdk.Context) sdk.KVStore {
 	return ctx.KVStore(k.storeKey)
+}
+
+// -----------------------------------------------------------------------------
+// Global PoSS counters (TotalSignals / TotalMinted)
+// -----------------------------------------------------------------------------
+//
+// NOTE:
+// - We store both as big-endian uint64 in the KVStore.
+// - This is enough for NOORCHAIN cap (299,792,458 NUR with reasonable decimals).
+// - Genesis wiring will be done later; for now, empty store = zero.
+
+// GetTotalSignals returns the global number of PoSS signals processed so far.
+func (k Keeper) GetTotalSignals(ctx sdk.Context) uint64 {
+	store := k.getStore(ctx)
+	bz := store.Get(noorsignaltypes.KeyTotalSignals)
+	if len(bz) == 0 {
+		return 0
+	}
+	return sdk.BigEndianToUint64(bz)
+}
+
+// SetTotalSignals sets the global number of PoSS signals.
+func (k Keeper) SetTotalSignals(ctx sdk.Context, value uint64) {
+	store := k.getStore(ctx)
+	store.Set(noorsignaltypes.KeyTotalSignals, sdk.Uint64ToBigEndian(value))
+}
+
+// IncrementTotalSignals increments the global PoSS signal counter by 1
+// and returns the new value.
+func (k Keeper) IncrementTotalSignals(ctx sdk.Context) uint64 {
+	current := k.GetTotalSignals(ctx)
+	next := current + 1
+	k.SetTotalSignals(ctx, next)
+	return next
+}
+
+// GetTotalMinted returns the global amount of NUR minted via PoSS (in unur).
+func (k Keeper) GetTotalMinted(ctx sdk.Context) uint64 {
+	store := k.getStore(ctx)
+	bz := store.Get(noorsignaltypes.KeyTotalMinted)
+	if len(bz) == 0 {
+		return 0
+	}
+	return sdk.BigEndianToUint64(bz)
+}
+
+// SetTotalMinted sets the global amount of NUR minted via PoSS (in unur).
+func (k Keeper) SetTotalMinted(ctx sdk.Context, value uint64) {
+	store := k.getStore(ctx)
+	store.Set(noorsignaltypes.KeyTotalMinted, sdk.Uint64ToBigEndian(value))
+}
+
+// AddToTotalMinted adds `amount` (in unur) to the global PoSS minted total
+// and returns the new value.
+func (k Keeper) AddToTotalMinted(ctx sdk.Context, amount uint64) uint64 {
+	if amount == 0 {
+		return k.GetTotalMinted(ctx)
+	}
+
+	current := k.GetTotalMinted(ctx)
+	next := current + amount
+
+	// Basic overflow protection (should never happen with NOOR cap).
+	if next < current {
+		// In case of overflow, we keep the current value and do not update.
+		return current
+	}
+
+	k.SetTotalMinted(ctx, next)
+	return next
 }
 
 // -----------------------------------------------------------------------------
