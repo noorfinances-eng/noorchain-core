@@ -10,13 +10,12 @@ import (
 
 // Keeper is the minimal keeper for the x/noorsignal (PoSS) module.
 //
-// At this stage, it handles:
-//
+// At this stage, it handles only:
 // - codec (for future state encoding/decoding),
 // - storeKey (access to the KVStore),
 // - simple daily counters for PoSS signals,
 // - a thin wrapper around the PoSS Params and reward helpers,
-// - a minimal handler for MsgCreateSignal (no minting yet).
+// - a first internal "signal pipeline" (PoSS Logic 19) without real minting.
 type Keeper struct {
 	// Codec used to encode/decode module state (for future use).
 	cdc codec.Codec
@@ -134,30 +133,55 @@ func (k Keeper) ComputeSignalRewardForBlock(
 }
 
 // -----------------------------------------------------------------------------
-// Msg handler entrypoint (PoSS Logic 18)
+// Internal signal pipeline (PoSS Logic 19 — without minting)
 // -----------------------------------------------------------------------------
 
-// HandleCreateSignal is the minimal business entrypoint for MsgCreateSignal.
+// ProcessSignalInternal is the first internal pipeline for a PoSS signal.
 //
-// For PoSS Logic 18, it does *almost nothing* on purpose:
-// - uses ctx and msg (to avoid "unused" warnings),
-// - returns nil (no state change, no mint, no counters yet).
+// It is intentionally LIMITED:
+// - it computes the raw reward (participant / curator),
+// - it increments the participant's daily counter,
+// - it returns the rewards to the caller,
+// - it does NOT:
+//   * enforce daily limits yet (MaxSignalsPerDay, MaxSignalsPerCuratorPerDay),
+//   * update TotalSignals / TotalMinted in genesis,
+//   * move any real coins in Bank.
 //
-// This gives us a clean place to plug real PoSS logic later without touching
-// the module wiring or the handler.
-func (k Keeper) HandleCreateSignal(
+// Parameters:
+// - participantAddr: bech32 NOOR account receiving the 70 % part later.
+// - curatorAddr:     bech32 NOOR curator account receiving the 30 % part later.
+//                    (currently unused, but kept for the final pipeline).
+// - signalType:      type of signal (micro-donation, participation, content, CCN...).
+// - date:            ISO date string ("YYYY-MM-DD") for the daily counter.
+//
+// This function is the safe “sandbox step” before we wire actual minting
+// and state changes in future PoSS Logic blocks.
+func (k Keeper) ProcessSignalInternal(
 	ctx sdk.Context,
-	msg *noorsignaltypes.MsgCreateSignal,
-) error {
-	_ = ctx
-	_ = msg
+	participantAddr string,
+	curatorAddr string,
+	signalType noorsignaltypes.SignalType,
+	date string,
+) (sdk.Coin, sdk.Coin, error) {
+	_ = curatorAddr // will be used later for curator daily counters & stats
 
-	// Later:
-	// - enforce daily limits (with IncrementDailySignalsCount),
-	// - compute rewards (ComputeSignalRewardForBlock),
-	// - check PoSSEnabled + PoSS reserve,
-	// - update TotalSignals / TotalMinted,
-	// - emit events,
-	// - mint/send NUR if Legal Light OK.
-	return nil
+	// 1) Compute the raw PoSS rewards for this signal at this block height.
+	participantReward, curatorReward, err := k.ComputeSignalRewardForBlock(ctx, signalType)
+	if err != nil {
+		return sdk.Coin{}, sdk.Coin{}, err
+	}
+
+	// 2) Increment participant daily counter for this date.
+	//
+	// NOTE:
+	// - We do NOT enforce MaxSignalsPerDay yet.
+	// - We do NOT touch curator counters yet.
+	k.IncrementDailySignalsCount(ctx, participantAddr, date)
+
+	// 3) Return rewards to the caller.
+	// Later, the caller will:
+	// - check limits,
+	// - check PoSS reserve,
+	// - actually credit participant & curator balances.
+	return participantReward, curatorReward, nil
 }
