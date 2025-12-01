@@ -13,15 +13,16 @@ import (
 
 // Keeper is the minimal keeper for the x/noorsignal (PoSS) module.
 //
-// At this stage, it handles only:
+// At this stage, it handles:
 // - codec (for future state encoding/decoding),
 // - storeKey (access to the KVStore),
 // - simple daily counters for PoSS signals,
 // - a thin wrapper around the PoSS Params and reward helpers,
-// - a PendingMint queue (PoSS Logic 21) that records planned rewards,
-// - and simple GenesisState load/store helpers (PoSS Logic 22).
+// - a PendingMint queue (planning only, no real mint),
+// - GenesisState load/store helpers,
+// - and a first internal "signal pipeline".
 type Keeper struct {
-	// Codec used to encode/decode module state (for future use).
+	// Codec used to encode/decode module state.
 	cdc codec.Codec
 
 	// storeKey gives access to the module KVStore.
@@ -50,14 +51,28 @@ func (k Keeper) getStore(ctx sdk.Context) sdk.KVStore {
 }
 
 // -----------------------------------------------------------------------------
-// GenesisState helpers (PoSS Logic 22)
+// GenesisState helpers (PoSS Logic 22 + 23)
 // -----------------------------------------------------------------------------
 
-// InitGenesis stores the initial PoSS genesis state in the KVStore.
-//
-// For now, this is a simple JSON blob under KeyGenesisState.
-// Later, we can split it into separate keys if needed.
-func (k Keeper) InitGenesis(ctx sdk.Context, gs noorsignaltypes.GenesisState) {
+// getGenesisState returns the current PoSS GenesisState from the store,
+// or DefaultGenesis() if nothing is stored yet.
+func (k Keeper) getGenesisState(ctx sdk.Context) noorsignaltypes.GenesisState {
+	store := k.getStore(ctx)
+	bz := store.Get(noorsignaltypes.KeyGenesisState)
+	if len(bz) == 0 {
+		return *noorsignaltypes.DefaultGenesis()
+	}
+
+	var gs noorsignaltypes.GenesisState
+	if err := json.Unmarshal(bz, &gs); err != nil {
+		panic(err)
+	}
+
+	return gs
+}
+
+// setGenesisState validates and stores the PoSS GenesisState as JSON.
+func (k Keeper) setGenesisState(ctx sdk.Context, gs noorsignaltypes.GenesisState) {
 	if err := noorsignaltypes.ValidateGenesis(&gs); err != nil {
 		panic(fmt.Errorf("invalid PoSS genesis: %w", err))
 	}
@@ -71,23 +86,19 @@ func (k Keeper) InitGenesis(ctx sdk.Context, gs noorsignaltypes.GenesisState) {
 	store.Set(noorsignaltypes.KeyGenesisState, bz)
 }
 
+// InitGenesis stores the initial PoSS genesis state in the KVStore.
+//
+// For now, this is a simple JSON blob under KeyGenesisState.
+// Later, we can split it into separate keys if needed.
+func (k Keeper) InitGenesis(ctx sdk.Context, gs noorsignaltypes.GenesisState) {
+	k.setGenesisState(ctx, gs)
+}
+
 // ExportGenesis reads the PoSS genesis-equivalent state from the KVStore.
 //
 // If nothing was stored yet, it falls back to DefaultGenesis().
 func (k Keeper) ExportGenesis(ctx sdk.Context) noorsignaltypes.GenesisState {
-	store := k.getStore(ctx)
-	bz := store.Get(noorsignaltypes.KeyGenesisState)
-	if len(bz) == 0 {
-		// Fresh chain or no PoSS state stored yet.
-		return *noorsignaltypes.DefaultGenesis()
-	}
-
-	var gs noorsignaltypes.GenesisState
-	if err := json.Unmarshal(bz, &gs); err != nil {
-		panic(err)
-	}
-
-	return gs
+	return k.getGenesisState(ctx)
 }
 
 // -----------------------------------------------------------------------------
@@ -227,7 +238,7 @@ func (k Keeper) RecordPendingMint(
 }
 
 // -----------------------------------------------------------------------------
-// Internal signal pipeline (PoSS Logic 19 + 21 — without minting)
+// Internal signal pipeline (PoSS Logic 19 + 21 + 23 — without minting)
 // -----------------------------------------------------------------------------
 
 // ProcessSignalInternal is the first internal pipeline for a PoSS signal.
@@ -236,10 +247,10 @@ func (k Keeper) RecordPendingMint(
 // - it computes the raw reward (participant / curator),
 // - it increments the participant's daily counter,
 // - it records a PendingMint entry for later processing,
+// - it increments the global Genesis totals (TotalSignals / TotalMinted),
 // - it returns the rewards to the caller,
 // - it does NOT:
 //   * enforce daily limits yet (MaxSignalsPerDay, MaxSignalsPerCuratorPerDay),
-//   * update TotalSignals / TotalMinted in genesis,
 //   * move any real coins in Bank.
 //
 // Parameters:
@@ -247,9 +258,6 @@ func (k Keeper) RecordPendingMint(
 // - curatorAddr:     bech32 NOOR curator account receiving the 30 % part later.
 // - signalType:      type of signal (micro-donation, participation, content, CCN...).
 // - date:            ISO date string ("YYYY-MM-DD") for the daily counter.
-//
-// This function is the safe “sandbox step” before we wire actual minting
-// and state changes in future PoSS Logic blocks.
 func (k Keeper) ProcessSignalInternal(
 	ctx sdk.Context,
 	participantAddr string,
@@ -282,7 +290,27 @@ func (k Keeper) ProcessSignalInternal(
 		return sdk.Coin{}, sdk.Coin{}, err
 	}
 
-	// 4) Return rewards to the caller.
+	// 4) Update global PoSS totals in GenesisState.
+	//
+	// TotalSignals: increment by 1.
+	// TotalMinted: increment by participantReward + curatorReward.
+	gs := k.getGenesisState(ctx)
+	gs.TotalSignals++
+
+	// TotalMinted is stored as a string; we convert it to Int, add rewards, and store back.
+	totalInt, ok := sdk.NewIntFromString(gs.TotalMinted)
+	if !ok {
+		return sdk.Coin{}, sdk.Coin{}, fmt.Errorf("invalid TotalMinted in PoSS genesis: %s", gs.TotalMinted)
+	}
+
+	// Sum both rewards (they can both be zero if PoSS is disabled).
+	sum := participantReward.Amount.Add(curatorReward.Amount)
+	totalInt = totalInt.Add(sum)
+
+	gs.TotalMinted = totalInt.String()
+	k.setGenesisState(ctx, gs)
+
+	// 5) Return rewards to the caller.
 	// Later, the caller will:
 	// - check limits,
 	// - check PoSS reserve,
