@@ -20,7 +20,8 @@ import (
 // - a thin wrapper around the PoSS Params and reward helpers,
 // - a PendingMint queue (planning only, no real mint),
 // - GenesisState load/store helpers,
-// - and a first internal "signal pipeline".
+// - an internal "signal pipeline" without real minting,
+// - and a high-level PoSSStats view for dashboards/CLI.
 type Keeper struct {
 	// Codec used to encode/decode module state.
 	cdc codec.Codec
@@ -99,6 +100,30 @@ func (k Keeper) InitGenesis(ctx sdk.Context, gs noorsignaltypes.GenesisState) {
 // If nothing was stored yet, it falls back to DefaultGenesis().
 func (k Keeper) ExportGenesis(ctx sdk.Context) noorsignaltypes.GenesisState {
 	return k.getGenesisState(ctx)
+}
+
+// -----------------------------------------------------------------------------
+// High-level PoSS stats view (PoSS Logic 24)
+// -----------------------------------------------------------------------------
+
+// GetGlobalStats returns a consolidated, read-only view of the PoSS
+// global state, meant for CLI and dashboards.
+//
+// It combines:
+// - GenesisState counters (TotalSignals, TotalMinted),
+// - PoSS Params (PoSSEnabled, daily limits, reserve denom).
+func (k Keeper) GetGlobalStats(ctx sdk.Context) noorsignaltypes.PoSSStats {
+	gs := k.getGenesisState(ctx)
+	params := k.GetParams(ctx)
+
+	return noorsignaltypes.PoSSStats{
+		TotalSignals:               gs.TotalSignals,
+		TotalMinted:                gs.TotalMinted,
+		PoSSEnabled:                params.PoSSEnabled,
+		MaxSignalsPerDay:           params.MaxSignalsPerDay,
+		MaxSignalsPerCuratorPerDay: params.MaxSignalsPerCuratorPerDay,
+		PoSSReserveDenom:           params.PoSSReserveDenom,
+	}
 }
 
 // -----------------------------------------------------------------------------
