@@ -15,7 +15,7 @@ import (
 // - storeKey (access to the KVStore),
 // - simple daily counters for PoSS signals,
 // - a thin wrapper around the PoSS Params and reward helpers,
-// - a first internal "signal pipeline" (PoSS Logic 19) without real minting.
+// - and a first internal "signal pipeline" (PoSS Logic 19) without real minting.
 type Keeper struct {
 	// Codec used to encode/decode module state (for future use).
 	cdc codec.Codec
