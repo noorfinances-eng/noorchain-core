@@ -1,6 +1,9 @@
 package keeper
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -15,7 +18,8 @@ import (
 // - storeKey (access to the KVStore),
 // - simple daily counters for PoSS signals,
 // - a thin wrapper around the PoSS Params and reward helpers,
-// - and a first internal "signal pipeline" (PoSS Logic 19) without real minting.
+// - a first internal "signal pipeline" (PoSS Logic 19) without real minting,
+// - and a PendingMint queue (PoSS Logic 21) that records planned rewards.
 type Keeper struct {
 	// Codec used to encode/decode module state (for future use).
 	cdc codec.Codec
@@ -133,7 +137,56 @@ func (k Keeper) ComputeSignalRewardForBlock(
 }
 
 // -----------------------------------------------------------------------------
-// Internal signal pipeline (PoSS Logic 19 — without minting)
+// Pending mint queue (PoSS Logic 21 — planning only, no real mint)
+// -----------------------------------------------------------------------------
+
+// RecordPendingMint stores a PendingMint entry in the PoSS KVStore.
+//
+// IMPORTANT:
+// - This does NOT mint any coins.
+// - This does NOT move any real balances.
+// - It is purely an internal "to be minted later" record.
+//
+// Key format (simple, debug-friendly):
+//   "pending_mint:<height>:<participant>:<timestamp_nano>"
+func (k Keeper) RecordPendingMint(
+	ctx sdk.Context,
+	participantAddr string,
+	curatorAddr string,
+	signalType noorsignaltypes.SignalType,
+	participantReward sdk.Coin,
+	curatorReward sdk.Coin,
+) error {
+	store := k.getStore(ctx)
+
+	pending := noorsignaltypes.PendingMint{
+		BlockHeight:      ctx.BlockHeight(),
+		Timestamp:        ctx.BlockTime(),
+		Participant:      participantAddr,
+		Curator:          curatorAddr,
+		SignalType:       signalType,
+		ParticipantReward: participantReward,
+		CuratorReward:     curatorReward,
+	}
+
+	bz, err := json.Marshal(pending)
+	if err != nil {
+		return err
+	}
+
+	key := []byte(fmt.Sprintf(
+		"pending_mint:%d:%s:%d",
+		ctx.BlockHeight(),
+		participantAddr,
+		ctx.BlockTime().UnixNano(),
+	))
+
+	store.Set(key, bz)
+	return nil
+}
+
+// -----------------------------------------------------------------------------
+// Internal signal pipeline (PoSS Logic 19 + 21 — without minting)
 // -----------------------------------------------------------------------------
 
 // ProcessSignalInternal is the first internal pipeline for a PoSS signal.
@@ -141,6 +194,7 @@ func (k Keeper) ComputeSignalRewardForBlock(
 // It is intentionally LIMITED:
 // - it computes the raw reward (participant / curator),
 // - it increments the participant's daily counter,
+// - it records a PendingMint entry for later processing,
 // - it returns the rewards to the caller,
 // - it does NOT:
 //   * enforce daily limits yet (MaxSignalsPerDay, MaxSignalsPerCuratorPerDay),
@@ -150,7 +204,6 @@ func (k Keeper) ComputeSignalRewardForBlock(
 // Parameters:
 // - participantAddr: bech32 NOOR account receiving the 70 % part later.
 // - curatorAddr:     bech32 NOOR curator account receiving the 30 % part later.
-//                    (currently unused, but kept for the final pipeline).
 // - signalType:      type of signal (micro-donation, participation, content, CCN...).
 // - date:            ISO date string ("YYYY-MM-DD") for the daily counter.
 //
@@ -163,8 +216,6 @@ func (k Keeper) ProcessSignalInternal(
 	signalType noorsignaltypes.SignalType,
 	date string,
 ) (sdk.Coin, sdk.Coin, error) {
-	_ = curatorAddr // will be used later for curator daily counters & stats
-
 	// 1) Compute the raw PoSS rewards for this signal at this block height.
 	participantReward, curatorReward, err := k.ComputeSignalRewardForBlock(ctx, signalType)
 	if err != nil {
@@ -178,7 +229,19 @@ func (k Keeper) ProcessSignalInternal(
 	// - We do NOT touch curator counters yet.
 	k.IncrementDailySignalsCount(ctx, participantAddr, date)
 
-	// 3) Return rewards to the caller.
+	// 3) Record a PendingMint entry (planning only).
+	if err := k.RecordPendingMint(
+		ctx,
+		participantAddr,
+		curatorAddr,
+		signalType,
+		participantReward,
+		curatorReward,
+	); err != nil {
+		return sdk.Coin{}, sdk.Coin{}, err
+	}
+
+	// 4) Return rewards to the caller.
 	// Later, the caller will:
 	// - check limits,
 	// - check PoSS reserve,
