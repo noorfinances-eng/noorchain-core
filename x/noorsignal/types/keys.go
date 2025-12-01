@@ -10,16 +10,13 @@ const (
 
 // Keys used in the KVStore to manage PoSS state.
 //
-// - KeyLastResetDay: stores the last day (Unix days) when daily counters were reset.
-// - KeyPrefixParticipantDailyCount: prefix for participant daily counters.
-// - KeyPrefixCuratorDailyCount: prefix for curator daily counters.
-// - KeyTotalSignals: global counter of all PoSS signals processed.
-// - KeyTotalMinted: global amount of NUR minted via PoSS (in unur, as uint64).
+// - KeyLastResetDay: (reserved) last day (Unix days) when daily counters were reset.
+// - KeyGenesisState: JSON-encoded GenesisState for the module.
+// - KeyPrefixParticipantDailyCount / KeyPrefixCuratorDailyCount:
+//   reserved prefixes for future per-address daily counters (if needed).
 var (
 	KeyLastResetDay                = []byte{0x01}
+	KeyGenesisState                = []byte{0x02}
 	KeyPrefixParticipantDailyCount = []byte{0x10}
 	KeyPrefixCuratorDailyCount     = []byte{0x11}
-
-	KeyTotalSignals = []byte{0x20}
-	KeyTotalMinted  = []byte{0x21}
 )

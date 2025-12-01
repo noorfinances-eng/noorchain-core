@@ -18,8 +18,8 @@ import (
 // - storeKey (access to the KVStore),
 // - simple daily counters for PoSS signals,
 // - a thin wrapper around the PoSS Params and reward helpers,
-// - a first internal "signal pipeline" (PoSS Logic 19) without real minting,
-// - and a PendingMint queue (PoSS Logic 21) that records planned rewards.
+// - a PendingMint queue (PoSS Logic 21) that records planned rewards,
+// - and simple GenesisState load/store helpers (PoSS Logic 22).
 type Keeper struct {
 	// Codec used to encode/decode module state (for future use).
 	cdc codec.Codec
@@ -47,6 +47,47 @@ func NewKeeper(
 // getStore is a tiny helper to access the PoSS KVStore from a context.
 func (k Keeper) getStore(ctx sdk.Context) sdk.KVStore {
 	return ctx.KVStore(k.storeKey)
+}
+
+// -----------------------------------------------------------------------------
+// GenesisState helpers (PoSS Logic 22)
+// -----------------------------------------------------------------------------
+
+// InitGenesis stores the initial PoSS genesis state in the KVStore.
+//
+// For now, this is a simple JSON blob under KeyGenesisState.
+// Later, we can split it into separate keys if needed.
+func (k Keeper) InitGenesis(ctx sdk.Context, gs noorsignaltypes.GenesisState) {
+	if err := noorsignaltypes.ValidateGenesis(&gs); err != nil {
+		panic(fmt.Errorf("invalid PoSS genesis: %w", err))
+	}
+
+	store := k.getStore(ctx)
+	bz, err := json.Marshal(gs)
+	if err != nil {
+		panic(err)
+	}
+
+	store.Set(noorsignaltypes.KeyGenesisState, bz)
+}
+
+// ExportGenesis reads the PoSS genesis-equivalent state from the KVStore.
+//
+// If nothing was stored yet, it falls back to DefaultGenesis().
+func (k Keeper) ExportGenesis(ctx sdk.Context) noorsignaltypes.GenesisState {
+	store := k.getStore(ctx)
+	bz := store.Get(noorsignaltypes.KeyGenesisState)
+	if len(bz) == 0 {
+		// Fresh chain or no PoSS state stored yet.
+		return *noorsignaltypes.DefaultGenesis()
+	}
+
+	var gs noorsignaltypes.GenesisState
+	if err := json.Unmarshal(bz, &gs); err != nil {
+		panic(err)
+	}
+
+	return gs
 }
 
 // -----------------------------------------------------------------------------
@@ -160,11 +201,11 @@ func (k Keeper) RecordPendingMint(
 	store := k.getStore(ctx)
 
 	pending := noorsignaltypes.PendingMint{
-		BlockHeight:      ctx.BlockHeight(),
-		Timestamp:        ctx.BlockTime(),
-		Participant:      participantAddr,
-		Curator:          curatorAddr,
-		SignalType:       signalType,
+		BlockHeight:       ctx.BlockHeight(),
+		Timestamp:         ctx.BlockTime(),
+		Participant:       participantAddr,
+		Curator:           curatorAddr,
+		SignalType:        signalType,
 		ParticipantReward: participantReward,
 		CuratorReward:     curatorReward,
 	}
