@@ -22,6 +22,7 @@ import (
 // -----------------------------------------------------------------------------
 // AppModuleBasic
 // -----------------------------------------------------------------------------
+//
 
 type AppModuleBasic struct{}
 
@@ -85,6 +86,7 @@ func (AppModuleBasic) GetQueryCmd() *cobra.Command {
 // -----------------------------------------------------------------------------
 // AppModule
 // -----------------------------------------------------------------------------
+//
 
 // AppModule is the full module type for x/noorsignal.
 type AppModule struct {
@@ -114,7 +116,7 @@ func (am AppModule) Name() string {
 }
 
 // RegisterServices registers module services (Msg/Query servers).
-// PoSS Logic: Msg/Query will be wired later (we keep this empty for now).
+// PoSS Logic: Msg/Query gRPC seront câblés plus tard (proto).
 func (am AppModule) RegisterServices(cfg module.Configurator) {}
 
 // InitGenesis initializes the module genesis state in the KVStore.
@@ -173,9 +175,11 @@ func (AppModule) ConsensusVersion() uint64 {
 // RegisterInvariants registers module invariants.
 func (AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
 
-// Legacy routing (kept empty, but required by interface).
-func (AppModule) Route() sdk.Route {
-	return sdk.Route{}
+// Legacy routing (required by interface) — ICI on câble le handler réel.
+func (am AppModule) Route() sdk.Route {
+	// Legacy path (v0.46) pour exécuter MsgCreateSignal
+	// sans avoir encore de MsgServer protobuf généré.
+	return sdk.NewRoute(noorsignaltypes.RouterKey, NewHandler(am.keeper))
 }
 
 func (AppModule) QuerierRoute() string {
