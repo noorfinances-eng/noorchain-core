@@ -188,20 +188,24 @@ func (k Keeper) SetParams(ctx sdk.Context, params noorsignaltypes.Params) {
 // GetParams retourne les Params PoSS stockés dans le ParamSubspace.
 //
 // Comportement de sécurité :
-// - si rien n'est encore stocké (denom vide), on écrit DefaultParams()
+// - si aucun param n'est encore stocké (Subspace vide), on écrit DefaultParams()
 //   dans le store, puis on les retourne,
 // - si les Params stockés sont invalides, on retourne DefaultParams()
 //   (sans panic, pour éviter de bloquer la chaîne).
 func (k Keeper) GetParams(ctx sdk.Context) noorsignaltypes.Params {
 	var params noorsignaltypes.Params
-	k.paramSpace.GetParamSet(ctx, &params)
 
-	// Premier lancement / aucun param en store : denom vide
-	if params.PoSSReserveDenom == "" {
+	// Premier lancement / aucun param en store :
+	// on teste la présence d'au moins une clé (PoSSReserveDenom).
+	if !k.paramSpace.Has(ctx, noorsignaltypes.KeyPoSSReserveDenom) {
 		params = noorsignaltypes.DefaultParams()
 		k.SetParams(ctx, params)
 		return params
 	}
+
+	// Ici on sait qu'il y a quelque chose dans le store,
+	// on peut donc appeler GetParamSet sans risque de panic "empty bytes".
+	k.paramSpace.GetParamSet(ctx, &params)
 
 	if err := params.Validate(); err != nil {
 		// En cas de problème, on revient aux defaults "safe off".
