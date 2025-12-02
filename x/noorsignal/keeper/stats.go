@@ -7,54 +7,63 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// GLOBAL PoSS STATS HELPERS
+// GLOBAL COUNTERS (PoSS Logic 27)
+// TotalSignals / TotalMinted updated progressively by the Keeper
 // -----------------------------------------------------------------------------
 
-// getTotalSignals returns the total number of PoSS signals processed
-// since genesis, stored under KeyTotalSignals.
-func (k Keeper) getTotalSignals(ctx sdk.Context) uint64 {
-	store := k.getStore(ctx)
-	return noorsignaltypes.GetUint64(store, noorsignaltypes.KeyTotalSignals)
+// GetTotalSignals returns the global PoSS signal counter stored in KV.
+func (k Keeper) GetTotalSignals(ctx sdk.Context) uint64 {
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get(noorsignaltypes.KeyTotalSignals)
+	if len(bz) == 0 {
+		return 0
+	}
+	return sdk.BigEndianToUint64(bz)
 }
 
-// setTotalSignals sets the total number of PoSS signals processed
-// since genesis.
-func (k Keeper) setTotalSignals(ctx sdk.Context, value uint64) {
-	store := k.getStore(ctx)
-	noorsignaltypes.SetUint64(store, noorsignaltypes.KeyTotalSignals, value)
+// IncreaseTotalSignals increments TotalSignals by n.
+func (k Keeper) IncreaseTotalSignals(ctx sdk.Context, n uint64) {
+	total := k.GetTotalSignals(ctx)
+	newTotal := total + n
+
+	store := ctx.KVStore(k.storeKey)
+	store.Set(noorsignaltypes.KeyTotalSignals, sdk.Uint64ToBigEndian(newTotal))
 }
 
-// incrementTotalSignals adds delta to the global PoSS signal counter.
-func (k Keeper) incrementTotalSignals(ctx sdk.Context, delta uint64) {
-	current := k.getTotalSignals(ctx)
-	k.setTotalSignals(ctx, current+delta)
+// -----------------------------------------------------------------------------
+// TOTAL MINTED (string amount in "unur")
+// -----------------------------------------------------------------------------
+
+// GetTotalMinted returns the total minted supply stored in genesis style.
+// Value is stored as a STRING inside KV, not Coin.
+func (k Keeper) GetTotalMinted(ctx sdk.Context) string {
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get(noorsignaltypes.KeyTotalMinted)
+	if len(bz) == 0 {
+		return "0"
+	}
+	return string(bz)
 }
 
-// getTotalMinted returns the total amount of NUR minted via PoSS,
-// stored as a raw string (for now) under KeyTotalMinted.
+// IncreaseTotalMinted adds a reward Coin to the global supply counter.
 //
-// The value is expected to be a decimal integer in "unur" (smallest unit),
-// but we do not parse it here yet.
-func (k Keeper) getTotalMinted(ctx sdk.Context) string {
-	store := k.getStore(ctx)
-	return noorsignaltypes.GetString(store, noorsignaltypes.KeyTotalMinted)
-}
+// Example: TotalMinted = "351"
+//          reward = 12unur
+//          => new TotalMinted = "363"
+func (k Keeper) IncreaseTotalMinted(ctx sdk.Context, coin sdk.Coin) {
+	if !coin.Amount.IsPositive() {
+		return
+	}
 
-// setTotalMinted sets the total PoSS-minted NUR as a raw string.
-func (k Keeper) setTotalMinted(ctx sdk.Context, value string) {
-	store := k.getStore(ctx)
-	noorsignaltypes.SetString(store, noorsignaltypes.KeyTotalMinted, value)
-}
+	current := k.GetTotalMinted(ctx)
+	curInt, ok := sdk.NewIntFromString(current)
+	if !ok {
+		// fallback: reset to 0 if corrupted
+		curInt = sdk.ZeroInt()
+	}
 
-// getPendingMint returns the current pending PoSS mint (not yet distributed),
-// stored as a raw string.
-func (k Keeper) getPendingMint(ctx sdk.Context) string {
-	store := k.getStore(ctx)
-	return noorsignaltypes.GetString(store, noorsignaltypes.KeyPendingMint)
-}
+	newInt := curInt.Add(coin.Amount)
 
-// setPendingMint sets the current pending PoSS mint as a raw string.
-func (k Keeper) setPendingMint(ctx sdk.Context, value string) {
-	store := k.getStore(ctx)
-	noorsignaltypes.SetString(store, noorsignaltypes.KeyPendingMint, value)
+	store := ctx.KVStore(k.storeKey)
+	store.Set(noorsignaltypes.KeyTotalMinted, []byte(newInt.String()))
 }
