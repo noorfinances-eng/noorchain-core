@@ -218,3 +218,83 @@ func TestProcessSignalInternal_UpdatesCountersAndGenesis(t *testing.T) {
 			expectedDelta.String(), actualDelta.String())
 	}
 }
+
+// TestProcessSignalInternal_RespectsMaxSignalsPerDay vérifie que lorsque
+// MaxSignalsPerDay est atteint, le pipeline refuse le signal, n'incrémente
+// plus le compteur, et ne modifie plus TotalSignals / TotalMinted.
+func TestProcessSignalInternal_RespectsMaxSignalsPerDay(t *testing.T) {
+	k, ctx := setupKeeperAndContext(t)
+
+	// Params avec PoSS activé et MaxSignalsPerDay=1
+	params := noorsignaltypes.DefaultParams()
+	params.PoSSEnabled = true
+	params.BaseReward = sdk.NewInt64Coin(noorsignaltypes.DefaultPoSSReserveDenom, 10)
+	params.MaxRewardPerDay = sdk.NewInt64Coin(noorsignaltypes.DefaultPoSSReserveDenom, 1000)
+	params.MaxSignalsPerDay = 1
+	params.MaxSignalsPerCuratorPerDay = 100
+
+	k.SetParams(ctx, params)
+
+	participant := "noor1participantlimit"
+	curator := "noor1curatorlimit"
+	date := "2025-01-02"
+
+	// Premier signal : doit passer.
+	_, _, err := k.ProcessSignalInternal(
+		ctx,
+		participant,
+		curator,
+		noorsignaltypes.SignalTypeMicroDonation,
+		date,
+	)
+	if err != nil {
+		t.Fatalf("expected first signal to pass, got error: %v", err)
+	}
+
+	countAfterFirst := k.GetDailySignalsCount(ctx, participant, date)
+	if countAfterFirst != 1 {
+		t.Fatalf("expected daily count=1 after first signal, got %d", countAfterFirst)
+	}
+
+	gsAfterFirst := k.ExportGenesis(ctx)
+
+	// Deuxième signal le même jour : doit être refusé (limite atteinte).
+	_, _, err2 := k.ProcessSignalInternal(
+		ctx,
+		participant,
+		curator,
+		noorsignaltypes.SignalTypeMicroDonation,
+		date,
+	)
+	if err2 == nil {
+		t.Fatalf("expected error when exceeding MaxSignalsPerDay, got nil")
+	}
+
+	// Le compteur ne doit pas avoir augmenté.
+	countAfterSecond := k.GetDailySignalsCount(ctx, participant, date)
+	if countAfterSecond != countAfterFirst {
+		t.Fatalf("expected daily count to remain %d after blocked signal, got %d",
+			countAfterFirst, countAfterSecond)
+	}
+
+	// Genesis ne doit pas changer non plus.
+	gsAfterSecond := k.ExportGenesis(ctx)
+	if gsAfterSecond.TotalSignals != gsAfterFirst.TotalSignals {
+		t.Fatalf("expected TotalSignals to remain %d after blocked signal, got %d",
+			gsAfterFirst.TotalSignals, gsAfterSecond.TotalSignals)
+	}
+
+	beforeInt, ok := sdk.NewIntFromString(gsAfterFirst.TotalMinted)
+	if !ok {
+		t.Fatalf("invalid TotalMinted after first signal: %s", gsAfterFirst.TotalMinted)
+	}
+	afterInt, ok := sdk.NewIntFromString(gsAfterSecond.TotalMinted)
+	if !ok {
+		t.Fatalf("invalid TotalMinted after second signal: %s", gsAfterSecond.TotalMinted)
+	}
+
+	if !afterInt.Equal(beforeInt) {
+		t.Fatalf("expected TotalMinted to remain %s after blocked signal, got %s",
+			beforeInt.String(), afterInt.String())
+	}
+}

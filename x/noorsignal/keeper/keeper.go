@@ -223,7 +223,6 @@ func (k Keeper) GetParams(ctx sdk.Context) noorsignaltypes.Params {
 //   3) calls ComputeSignalReward (base * weight -> halving -> 70/30 split).
 //
 // It DOES NOT:
-//   - check daily limits,
 //   - check balances in the PoSS reserve,
 //   - persist anything in the store.
 func (k Keeper) ComputeSignalRewardForBlock(
@@ -296,13 +295,15 @@ func (k Keeper) RecordPendingMint(
 // ProcessSignalInternal is the first internal pipeline for a PoSS signal.
 //
 // It is intentionally LIMITED:
+// - it enforces the participant's daily limit (MaxSignalsPerDay),
 // - it computes the raw reward (participant / curator),
 // - it increments the participant's daily counter,
 // - it records a PendingMint entry for later processing,
 // - it increments the global Genesis totals (TotalSignals / TotalMinted),
 // - it returns the rewards to the caller,
-// - it does NOT:
-//   * enforce daily limits yet (MaxSignalsPerDay, MaxSignalsPerCuratorPerDay),
+// - it does NOT (yet):
+//   * enforce curator-specific limits (MaxSignalsPerCuratorPerDay),
+//   * enforce MaxRewardPerDay,
 //   * move any real coins in Bank.
 func (k Keeper) ProcessSignalInternal(
 	ctx sdk.Context,
@@ -311,16 +312,30 @@ func (k Keeper) ProcessSignalInternal(
 	signalType noorsignaltypes.SignalType,
 	date string,
 ) (sdk.Coin, sdk.Coin, error) {
-	// 1) Compute the raw PoSS rewards for this signal at this block height.
+	// 0) Read PoSS params (for limits and reward config).
+	params := k.GetParams(ctx)
+
+	// 1) Enforce participant daily limit if configured.
+	if params.MaxSignalsPerDay > 0 {
+		current := k.GetDailySignalsCount(ctx, participantAddr, date)
+		if uint64(current) >= params.MaxSignalsPerDay {
+			return sdk.Coin{}, sdk.Coin{}, fmt.Errorf(
+				"PoSS: daily signal limit reached for %s on %s",
+				participantAddr, date,
+			)
+		}
+	}
+
+	// 2) Compute the raw PoSS rewards for this signal at this block height.
 	participantReward, curatorReward, err := k.ComputeSignalRewardForBlock(ctx, signalType)
 	if err != nil {
 		return sdk.Coin{}, sdk.Coin{}, err
 	}
 
-	// 2) Increment participant daily counter for this date.
+	// 3) Increment participant daily counter for this date.
 	k.IncrementDailySignalsCount(ctx, participantAddr, date)
 
-	// 3) Record a PendingMint entry (planning only).
+	// 4) Record a PendingMint entry (planning only).
 	if err := k.RecordPendingMint(
 		ctx,
 		participantAddr,
@@ -332,7 +347,7 @@ func (k Keeper) ProcessSignalInternal(
 		return sdk.Coin{}, sdk.Coin{}, err
 	}
 
-	// 4) Update global PoSS totals in GenesisState.
+	// 5) Update global PoSS totals in GenesisState.
 	gs := k.getGenesisState(ctx)
 	gs.TotalSignals++
 
@@ -349,6 +364,6 @@ func (k Keeper) ProcessSignalInternal(
 	gs.TotalMinted = totalInt.String()
 	k.setGenesisState(ctx, gs)
 
-	// 5) Return rewards to the caller.
+	// 6) Return rewards to the caller.
 	return participantReward, curatorReward, nil
 }
