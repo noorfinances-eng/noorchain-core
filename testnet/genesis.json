@@ -1,0 +1,34 @@
+{
+  "genesis_time": "2025-01-01T00:00:00Z",
+  "chain_id": "noorchain-testnet-1",
+  "initial_height": "1",
+  "app_hash": "",
+  "app_state": {
+    "auth": {
+      "accounts": []
+    },
+    "bank": {
+      "params": {
+        "default_send_enabled": true
+      },
+      "balances": [],
+      "supply": [],
+      "denom_metadata": []
+    },
+    "staking": {
+      "params": {
+        "bond_denom": "unur"
+      }
+    },
+    "evm": {},
+    "feemarket": {},
+    "params": {},
+    "noorsignal": {
+      "total_signals": "0",
+      "total_minted": "0",
+      "max_signals_per_day": "20",
+      "participant_share": "70",
+      "curator_share": "30"
+    }
+  }
+}
