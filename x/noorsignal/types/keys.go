@@ -13,10 +13,11 @@ const (
 // - KeyLastResetDay: (reserved) last day (Unix days) when daily counters were reset.
 // - KeyGenesisState: JSON-encoded GenesisState for the module.
 // - KeyPrefixParticipantDailyCount / KeyPrefixCuratorDailyCount:
-//   reserved prefixes for future per-address daily counters (if needed).
+//   reserved prefixes for per-address daily counters (old design, still kept for compatibility).
 var (
 	KeyLastResetDay                = []byte{0x01}
 	KeyGenesisState                = []byte{0x02}
+
 	KeyPrefixParticipantDailyCount = []byte{0x10}
 	KeyPrefixCuratorDailyCount     = []byte{0x11}
 )
