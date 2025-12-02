@@ -132,8 +132,7 @@ func TestSetParams_RoundTrip(t *testing.T) {
 
 // TestProcessSignalInternal_UpdatesCountersAndGenesis vérifie que
 // ProcessSignalInternal :
-// - incrémente le compteur journalier du participant,
-// - incrémente le compteur journalier du curateur,
+// - incrémente le compteur journalier,
 // - stocke un TotalSignals++,
 // - augmente TotalMinted du montant des rewards.
 func TestProcessSignalInternal_UpdatesCountersAndGenesis(t *testing.T) {
@@ -157,13 +156,9 @@ func TestProcessSignalInternal_UpdatesCountersAndGenesis(t *testing.T) {
 	date := "2025-01-01"
 
 	// Avant : compteurs et genesis.
-	initialParticipantCount := k.GetDailySignalsCount(ctx, participant, date)
-	if initialParticipantCount != 0 {
-		t.Fatalf("expected initial daily count (participant) = 0, got %d", initialParticipantCount)
-	}
-	initialCuratorCount := k.GetDailySignalsCount(ctx, curator, date)
-	if initialCuratorCount != 0 {
-		t.Fatalf("expected initial daily count (curator) = 0, got %d", initialCuratorCount)
+	initialCount := k.GetDailySignalsCount(ctx, participant, date)
+	if initialCount != 0 {
+		t.Fatalf("expected initial daily count = 0, got %d", initialCount)
 	}
 
 	gsBefore := k.ExportGenesis(ctx)
@@ -192,16 +187,10 @@ func TestProcessSignalInternal_UpdatesCountersAndGenesis(t *testing.T) {
 			participantReward.String(), curatorReward.String())
 	}
 
-	// Compteur journalier participant incrémenté.
-	newParticipantCount := k.GetDailySignalsCount(ctx, participant, date)
-	if newParticipantCount != initialParticipantCount+1 {
-		t.Fatalf("expected daily count (participant) = %d, got %d", initialParticipantCount+1, newParticipantCount)
-	}
-
-	// Compteur journalier curateur incrémenté.
-	newCuratorCount := k.GetDailySignalsCount(ctx, curator, date)
-	if newCuratorCount != initialCuratorCount+1 {
-		t.Fatalf("expected daily count (curator) = %d, got %d", initialCuratorCount+1, newCuratorCount)
+	// Compteur journalier incrémenté.
+	newCount := k.GetDailySignalsCount(ctx, participant, date)
+	if newCount != initialCount+1 {
+		t.Fatalf("expected daily count = %d, got %d", initialCount+1, newCount)
 	}
 
 	// Genesis mis à jour.
@@ -230,99 +219,26 @@ func TestProcessSignalInternal_UpdatesCountersAndGenesis(t *testing.T) {
 	}
 }
 
-// TestProcessSignalInternal_RespectsMaxSignalsPerDay vérifie que lorsque
-// MaxSignalsPerDay est atteint, le pipeline refuse le signal, n'incrémente
-// plus le compteur, et ne modifie plus TotalSignals / TotalMinted.
-func TestProcessSignalInternal_RespectsMaxSignalsPerDay(t *testing.T) {
+// TestProcessSignalInternal_RespectsMaxRewardPerDay vérifie que
+// MaxRewardPerDay bloque bien les rewards supplémentaires pour la journée,
+// tout en continuant à compter les signaux.
+func TestProcessSignalInternal_RespectsMaxRewardPerDay(t *testing.T) {
 	k, ctx := setupKeeperAndContext(t)
 
-	// Params avec PoSS activé et MaxSignalsPerDay=1 (limite participante stricte)
+	// Params simples :
+	// - PoSSEnabled = true
+	// - BaseReward = 10 unur
+	// - weights = 1 → total = 10, split 7/3
+	// - MaxRewardPerDay = 10 unur
+	//
+	// Résultat attendu :
+	// - 1er signal : participant = 7, curator = 3 → accepté (total participant=7 <= 10)
+	// - 2e signal le même jour :
+	//   current=7, +7 > 10 → reward 0/0, mais compteur de signaux ++
 	params := noorsignaltypes.DefaultParams()
 	params.PoSSEnabled = true
 	params.BaseReward = sdk.NewInt64Coin(noorsignaltypes.DefaultPoSSReserveDenom, 10)
-	params.MaxRewardPerDay = sdk.NewInt64Coin(noorsignaltypes.DefaultPoSSReserveDenom, 1000)
-	params.MaxSignalsPerDay = 1
-	params.MaxSignalsPerCuratorPerDay = 100
-
-	k.SetParams(ctx, params)
-
-	participant := "noor1participantlimit"
-	curator := "noor1curatorlimit"
-	date := "2025-01-02"
-
-	// Premier signal : doit passer.
-	_, _, err := k.ProcessSignalInternal(
-		ctx,
-		participant,
-		curator,
-		noorsignaltypes.SignalTypeMicroDonation,
-		date,
-	)
-	if err != nil {
-		t.Fatalf("expected first signal to pass, got error: %v", err)
-	}
-
-	countAfterFirst := k.GetDailySignalsCount(ctx, participant, date)
-	if countAfterFirst != 1 {
-		t.Fatalf("expected daily count (participant)=1 after first signal, got %d", countAfterFirst)
-	}
-
-	gsAfterFirst := k.ExportGenesis(ctx)
-
-	// Deuxième signal le même jour : doit être refusé (limite atteinte).
-	_, _, err2 := k.ProcessSignalInternal(
-		ctx,
-		participant,
-		curator,
-		noorsignaltypes.SignalTypeMicroDonation,
-		date,
-	)
-	if err2 == nil {
-		t.Fatalf("expected error when exceeding MaxSignalsPerDay, got nil")
-	}
-
-	// Le compteur participant ne doit pas avoir augmenté.
-	countAfterSecond := k.GetDailySignalsCount(ctx, participant, date)
-	if countAfterSecond != countAfterFirst {
-		t.Fatalf("expected daily count (participant) to remain %d after blocked signal, got %d",
-			countAfterFirst, countAfterSecond)
-	}
-
-	// Genesis ne doit pas changer non plus.
-	gsAfterSecond := k.ExportGenesis(ctx)
-	if gsAfterSecond.TotalSignals != gsAfterFirst.TotalSignals {
-		t.Fatalf("expected TotalSignals to remain %d after blocked signal, got %d",
-			gsAfterFirst.TotalSignals, gsAfterSecond.TotalSignals)
-	}
-
-	beforeInt, ok := sdk.NewIntFromString(gsAfterFirst.TotalMinted)
-	if !ok {
-		t.Fatalf("invalid TotalMinted after first signal: %s", gsAfterFirst.TotalMinted)
-	}
-	afterInt, ok := sdk.NewIntFromString(gsAfterSecond.TotalMinted)
-	if !ok {
-		t.Fatalf("invalid TotalMinted after second signal: %s", gsAfterSecond.TotalMinted)
-	}
-
-	if !afterInt.Equal(beforeInt) {
-		t.Fatalf("expected TotalMinted to remain %s after blocked signal, got %s",
-			beforeInt.String(), afterInt.String())
-	}
-}
-
-// TestProcessSignalInternal_RespectsMaxSignalsPerCuratorPerDay vérifie que
-// lorsque MaxSignalsPerCuratorPerDay est atteint, le pipeline refuse le signal,
-// sans toucher aux compteurs ni aux totaux genesis.
-func TestProcessSignalInternal_RespectsMaxSignalsPerCuratorPerDay(t *testing.T) {
-	k, ctx := setupKeeperAndContext(t)
-
-	// Params : limite strictement côté curateur.
-	params := noorsignaltypes.DefaultParams()
-	params.PoSSEnabled = true
-	params.BaseReward = sdk.NewInt64Coin(noorsignaltypes.DefaultPoSSReserveDenom, 10)
-	params.MaxRewardPerDay = sdk.NewInt64Coin(noorsignaltypes.DefaultPoSSReserveDenom, 1000)
-	params.MaxSignalsPerDay = 100                      // participant large
-	params.MaxSignalsPerCuratorPerDay = 1              // curateur strict
+	params.MaxRewardPerDay = sdk.NewInt64Coin(noorsignaltypes.DefaultPoSSReserveDenom, 10)
 	params.WeightMicroDonation = 1
 	params.WeightParticipation = 1
 	params.WeightContent = 1
@@ -330,73 +246,63 @@ func TestProcessSignalInternal_RespectsMaxSignalsPerCuratorPerDay(t *testing.T) 
 
 	k.SetParams(ctx, params)
 
-	participant := "noor1participant_curator_limit"
-	curator := "noor1curator_curator_limit"
-	date := "2025-01-03"
+	participant := "noor1participant-max"
+	curator := "noor1curator-max"
+	date := "2025-01-02"
 
-	// Premier signal : doit passer.
-	_, _, err := k.ProcessSignalInternal(
-		ctx,
-		participant,
-		curator,
-		noorsignaltypes.SignalTypeMicroDonation,
-		date,
-	)
+	// Avant : check rapide
+	if k.GetDailySignalsCount(ctx, participant, date) != 0 {
+		t.Fatalf("expected initial daily count = 0")
+	}
+
+	gsBefore := k.ExportGenesis(ctx)
+	beforeInt, ok := sdk.NewIntFromString(gsBefore.TotalMinted)
+	if !ok {
+		t.Fatalf("invalid TotalMinted before: %s", gsBefore.TotalMinted)
+	}
+
+	// 1er signal
+	r1p, r1c, err := k.ProcessSignalInternal(ctx, participant, curator, noorsignaltypes.SignalTypeMicroDonation, date)
 	if err != nil {
-		t.Fatalf("expected first signal to pass, got error: %v", err)
+		t.Fatalf("ProcessSignalInternal (first) returned error: %v", err)
 	}
-
-	participantCountFirst := k.GetDailySignalsCount(ctx, participant, date)
-	if participantCountFirst != 1 {
-		t.Fatalf("expected participant daily count=1 after first signal, got %d", participantCountFirst)
-	}
-	curatorCountFirst := k.GetDailySignalsCount(ctx, curator, date)
-	if curatorCountFirst != 1 {
-		t.Fatalf("expected curator daily count=1 after first signal, got %d", curatorCountFirst)
+	if !r1p.Amount.IsPositive() || !r1c.Amount.IsPositive() {
+		t.Fatalf("expected positive rewards on first signal, got %s / %s", r1p.String(), r1c.String())
 	}
 
 	gsAfterFirst := k.ExportGenesis(ctx)
-
-	// Deuxième signal avec même curateur : doit être refusé côté curateur.
-	_, _, err2 := k.ProcessSignalInternal(
-		ctx,
-		participant,
-		curator,
-		noorsignaltypes.SignalTypeMicroDonation,
-		date,
-	)
-	if err2 == nil {
-		t.Fatalf("expected error when exceeding MaxSignalsPerCuratorPerDay, got nil")
+	afterFirstInt, ok := sdk.NewIntFromString(gsAfterFirst.TotalMinted)
+	if !ok {
+		t.Fatalf("invalid TotalMinted after first: %s", gsAfterFirst.TotalMinted)
+	}
+	if !afterFirstInt.GT(beforeInt) {
+		t.Fatalf("expected TotalMinted to increase after first signal")
 	}
 
-	participantCountSecond := k.GetDailySignalsCount(ctx, participant, date)
-	if participantCountSecond != participantCountFirst {
-		t.Fatalf("expected participant daily count to remain %d, got %d",
-			participantCountFirst, participantCountSecond)
+	// 2e signal, même jour, même participant → devrait être cap = 0/0
+	r2p, r2c, err := k.ProcessSignalInternal(ctx, participant, curator, noorsignaltypes.SignalTypeMicroDonation, date)
+	if err != nil {
+		t.Fatalf("ProcessSignalInternal (second) returned error: %v", err)
 	}
-	curatorCountSecond := k.GetDailySignalsCount(ctx, curator, date)
-	if curatorCountSecond != curatorCountFirst {
-		t.Fatalf("expected curator daily count to remain %d, got %d",
-			curatorCountFirst, curatorCountSecond)
+	if !r2p.Amount.IsZero() || !r2c.Amount.IsZero() {
+		t.Fatalf("expected zero rewards on second signal due to MaxRewardPerDay cap, got %s / %s",
+			r2p.String(), r2c.String())
 	}
 
 	gsAfterSecond := k.ExportGenesis(ctx)
-	if gsAfterSecond.TotalSignals != gsAfterFirst.TotalSignals {
-		t.Fatalf("expected TotalSignals to remain %d after blocked curator signal, got %d",
-			gsAfterFirst.TotalSignals, gsAfterSecond.TotalSignals)
+	afterSecondInt, ok := sdk.NewIntFromString(gsAfterSecond.TotalMinted)
+	if !ok {
+		t.Fatalf("invalid TotalMinted after second: %s", gsAfterSecond.TotalMinted)
 	}
 
-	beforeInt, ok := sdk.NewIntFromString(gsAfterFirst.TotalMinted)
-	if !ok {
-		t.Fatalf("invalid TotalMinted after first signal: %s", gsAfterFirst.TotalMinted)
-	}
-	afterInt, ok := sdk.NewIntFromString(gsAfterSecond.TotalMinted)
-	if !ok {
-		t.Fatalf("invalid TotalMinted after second curator-blocked signal: %s", gsAfterSecond.TotalMinted)
+	// TotalMinted ne doit PAS augmenter entre 1er et 2e signal.
+	if !afterSecondInt.Equal(afterFirstInt) {
+		t.Fatalf("expected TotalMinted to stay constant after second signal, got %s vs %s",
+			afterFirstInt.String(), afterSecondInt.String())
 	}
 
-	if !afterInt.Equal(beforeInt) {
-		t.Fatalf("expected TotalMinted to remain %s after blocked curator signal, got %s",
-			beforeInt.String(), afterInt.String())
+	// Le compteur de signaux journaliers, lui, doit être à 2.
+	if count := k.GetDailySignalsCount(ctx, participant, date); count != 2 {
+		t.Fatalf("expected daily signals count=2, got %d", count)
 	}
 }
