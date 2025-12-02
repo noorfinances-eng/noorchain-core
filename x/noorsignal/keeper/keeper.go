@@ -17,6 +17,7 @@ import (
 // At this stage, it handles:
 // - codec (for future state encoding/decoding),
 // - storeKey (access to the KVStore),
+// - PoSS Params via x/params Subspace,
 // - simple daily counters for PoSS signals,
 // - a thin wrapper around the PoSS Params and reward helpers,
 // - a PendingMint queue (planning only, no real mint),
@@ -35,13 +36,13 @@ type Keeper struct {
 }
 
 // NewKeeper creates a new minimal PoSS Keeper.
-// We will add more dependencies later (params, hooks, links to Bank/Staking, etc.).
+// We will add more dependencies later (hooks, links to Bank/Staking, etc.).
 func NewKeeper(
 	cdc codec.Codec,
 	storeKey storetypes.StoreKey,
 	paramSpace paramstypes.Subspace,
 ) Keeper {
-	// On s'assure que le Subspace connaît la KeyTable PoSS.
+	// Ensure the Subspace has the PoSS KeyTable registered.
 	if !paramSpace.HasKeyTable() {
 		paramSpace = paramSpace.WithKeyTable(noorsignaltypes.ParamKeyTable())
 	}
@@ -99,16 +100,11 @@ func (k Keeper) setGenesisState(ctx sdk.Context, gs noorsignaltypes.GenesisState
 }
 
 // InitGenesis stores the initial PoSS genesis state in the KVStore.
-//
-// For now, this is a simple JSON blob under KeyGenesisState.
-// Later, we can split it into separate keys if needed.
 func (k Keeper) InitGenesis(ctx sdk.Context, gs noorsignaltypes.GenesisState) {
 	k.setGenesisState(ctx, gs)
 }
 
 // ExportGenesis reads the PoSS genesis-equivalent state from the KVStore.
-//
-// If nothing was stored yet, it falls back to DefaultGenesis().
 func (k Keeper) ExportGenesis(ctx sdk.Context) noorsignaltypes.GenesisState {
 	return k.getGenesisState(ctx)
 }
@@ -168,12 +164,6 @@ func (k Keeper) SetDailySignalsCount(ctx sdk.Context, address, date string, coun
 
 // IncrementDailySignalsCount increments the daily counter for (address, date)
 // and returns the new value.
-//
-// This function will be used later when processing a PoSS signal:
-// - read the current count
-// - +1
-// - store it back
-// - check against MaxSignalsPerDay
 func (k Keeper) IncrementDailySignalsCount(ctx sdk.Context, address, date string) uint32 {
 	current := k.GetDailySignalsCount(ctx, address, date)
 	next := current + 1
@@ -182,7 +172,7 @@ func (k Keeper) IncrementDailySignalsCount(ctx sdk.Context, address, date string
 }
 
 // -----------------------------------------------------------------------------
-// Params & reward helpers (PoSS Logic 11)
+// Params & reward helpers (PoSS Logic 11 + ParamSubspace)
 // -----------------------------------------------------------------------------
 
 // SetParams enregistre des Params PoSS dans le ParamSubspace.
@@ -232,9 +222,6 @@ func (k Keeper) GetParams(ctx sdk.Context) noorsignaltypes.Params {
 //   - check daily limits,
 //   - check balances in the PoSS reserve,
 //   - persist anything in the store.
-//
-// All those checks and state updates will be implemented in later PoSS Logic
-// steps inside the Keeper.
 func (k Keeper) ComputeSignalRewardForBlock(
 	ctx sdk.Context,
 	signalType noorsignaltypes.SignalType,
@@ -313,12 +300,6 @@ func (k Keeper) RecordPendingMint(
 // - it does NOT:
 //   * enforce daily limits yet (MaxSignalsPerDay, MaxSignalsPerCuratorPerDay),
 //   * move any real coins in Bank.
-//
-// Parameters:
-// - participantAddr: bech32 NOOR account receiving the 70 % part later.
-// - curatorAddr:     bech32 NOOR curator account receiving the 30 % part later.
-// - signalType:      type of signal (micro-donation, participation, content, CCN...).
-// - date:            ISO date string ("YYYY-MM-DD") for the daily counter.
 func (k Keeper) ProcessSignalInternal(
 	ctx sdk.Context,
 	participantAddr string,
@@ -333,10 +314,6 @@ func (k Keeper) ProcessSignalInternal(
 	}
 
 	// 2) Increment participant daily counter for this date.
-	//
-	// NOTE:
-	// - We do NOT enforce MaxSignalsPerDay yet.
-	// - We do NOT touch curator counters yet.
 	k.IncrementDailySignalsCount(ctx, participantAddr, date)
 
 	// 3) Record a PendingMint entry (planning only).
@@ -352,9 +329,6 @@ func (k Keeper) ProcessSignalInternal(
 	}
 
 	// 4) Update global PoSS totals in GenesisState.
-	//
-	// TotalSignals: increment by 1.
-	// TotalMinted: increment by participantReward + curatorReward.
 	gs := k.getGenesisState(ctx)
 	gs.TotalSignals++
 
@@ -372,9 +346,5 @@ func (k Keeper) ProcessSignalInternal(
 	k.setGenesisState(ctx, gs)
 
 	// 5) Return rewards to the caller.
-	// Later, the caller will:
-	// - check limits,
-	// - check PoSS reserve,
-	// - actually credit participant & curator balances.
 	return participantReward, curatorReward, nil
 }

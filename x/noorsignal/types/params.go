@@ -70,17 +70,17 @@ const (
 // -----------------------------------------------------------------------------
 
 var (
-	KeyPoSSEnabled               = []byte("PoSSEnabled")
-	KeyMaxSignalsPerDay          = []byte("MaxSignalsPerDay")
+	KeyPoSSEnabled                = []byte("PoSSEnabled")
+	KeyMaxSignalsPerDay           = []byte("MaxSignalsPerDay")
 	KeyMaxSignalsPerCuratorPerDay = []byte("MaxSignalsPerCuratorPerDay")
-	KeyMaxRewardPerDay           = []byte("MaxRewardPerDay")
-	KeyBaseReward                = []byte("BaseReward")
-	KeyWeightMicroDonation       = []byte("WeightMicroDonation")
-	KeyWeightParticipation       = []byte("WeightParticipation")
-	KeyWeightContent             = []byte("WeightContent")
-	KeyWeightCCN                 = []byte("WeightCCN")
-	KeyPoSSReserveDenom          = []byte("PoSSReserveDenom")
-	KeyHalvingPeriodBlocks       = []byte("HalvingPeriodBlocks")
+	KeyMaxRewardPerDay            = []byte("MaxRewardPerDay")
+	KeyBaseReward                 = []byte("BaseReward")
+	KeyWeightMicroDonation        = []byte("WeightMicroDonation")
+	KeyWeightParticipation        = []byte("WeightParticipation")
+	KeyWeightContent              = []byte("WeightContent")
+	KeyWeightCCN                  = []byte("WeightCCN")
+	KeyPoSSReserveDenom           = []byte("PoSSReserveDenom")
+	KeyHalvingPeriodBlocks        = []byte("HalvingPeriodBlocks")
 )
 
 // ParamKeyTable retourne la KeyTable à enregistrer dans le Subspace
