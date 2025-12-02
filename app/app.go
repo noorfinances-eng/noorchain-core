@@ -46,6 +46,7 @@ import (
 	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
 
 	// NOORSIGNAL (PoSS)
+	noorsignal "github.com/noorfinances-eng/noorchain-core/x/noorsignal"
 	noorsignalkeeper "github.com/noorfinances-eng/noorchain-core/x/noorsignal/keeper"
 	noorsignalmodule "github.com/noorfinances-eng/noorchain-core/x/noorsignal"
 	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
@@ -275,6 +276,17 @@ func NewNoorchainApp(
 	app.mm.RegisterServices(
 		module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter()),
 	)
+
+	// ------------------------------------------------------
+	// Legacy router — enable PoSS MsgCreateSignal
+	// ------------------------------------------------------
+	app.Router().
+		AddRoute(
+			sdk.NewRoute(
+				noorsignaltypes.ModuleName,
+				noorsignal.NewHandler(app.NoorSignalKeeper),
+			),
+		)
 
 	// 🔗 ABCI handlers
 	app.SetInitChainer(app.InitChainer)
