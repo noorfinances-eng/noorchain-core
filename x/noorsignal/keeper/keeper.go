@@ -41,6 +41,11 @@ func NewKeeper(
 	storeKey storetypes.StoreKey,
 	paramSpace paramstypes.Subspace,
 ) Keeper {
+	// On s'assure que le Subspace connaît la KeyTable PoSS.
+	if !paramSpace.HasKeyTable() {
+		paramSpace = paramSpace.WithKeyTable(noorsignaltypes.ParamKeyTable())
+	}
+
 	return Keeper{
 		cdc:        cdc,
 		storeKey:   storeKey,
@@ -180,28 +185,46 @@ func (k Keeper) IncrementDailySignalsCount(ctx sdk.Context, address, date string
 // Params & reward helpers (PoSS Logic 11)
 // -----------------------------------------------------------------------------
 
-// GetParams returns the current PoSS params.
+// SetParams enregistre des Params PoSS dans le ParamSubspace.
 //
-// For now, we simply return DefaultParams(), which means:
-// - PoSS is effectively configured off-chain in code,
-// - later we will plug this into x/params with a subspace
-//   and make everything adjustable by governance.
-func (k Keeper) GetParams(ctx sdk.Context) noorsignaltypes.Params {
-	// NOTE:
-	// - we currently do NOT read/write from paramSpace,
-	//   to keep PoSS fully "off" and safe.
-	// - paramSpace is wired and ready for a future step where
-	//   Params will be a proper ParamSet.
-	_ = ctx
-	_ = k.paramSpace
+// Les Params sont validés avant enregistrement.
+func (k Keeper) SetParams(ctx sdk.Context, params noorsignaltypes.Params) {
+	if err := params.Validate(); err != nil {
+		panic(fmt.Errorf("invalid PoSS params: %w", err))
+	}
+	k.paramSpace.SetParamSet(ctx, &params)
+}
 
-	return noorsignaltypes.DefaultParams()
+// GetParams retourne les Params PoSS stockés dans le ParamSubspace.
+//
+// Comportement de sécurité :
+// - si rien n'est encore stocké (denom vide), on écrit DefaultParams()
+//   dans le store, puis on les retourne,
+// - si les Params stockés sont invalides, on retourne DefaultParams()
+//   (sans panic, pour éviter de bloquer la chaîne).
+func (k Keeper) GetParams(ctx sdk.Context) noorsignaltypes.Params {
+	var params noorsignaltypes.Params
+	k.paramSpace.GetParamSet(ctx, &params)
+
+	// Premier lancement / aucun param en store : denom vide
+	if params.PoSSReserveDenom == "" {
+		params = noorsignaltypes.DefaultParams()
+		k.SetParams(ctx, params)
+		return params
+	}
+
+	if err := params.Validate(); err != nil {
+		// En cas de problème, on revient aux defaults "safe off".
+		return noorsignaltypes.DefaultParams()
+	}
+
+	return params
 }
 
 // ComputeSignalRewardForBlock is a thin wrapper around the pure helpers
 // in types/rewards.go. It:
 //
-//   1) fetches PoSS Params (currently DefaultParams),
+//   1) fetches PoSS Params (currently DefaultParams on first run),
 //   2) uses the current block height from the context,
 //   3) calls ComputeSignalReward (base * weight -> halving -> 70/30 split).
 //

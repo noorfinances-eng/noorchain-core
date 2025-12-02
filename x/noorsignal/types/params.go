@@ -4,12 +4,13 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 )
 
 // ----------------------------------------------------------
 // PoSS Params — structure et valeurs par défaut
 // ----------------------------------------------------------
-
+//
 // Champs stables décidés ensemble (PoSS Logic 4)
 //
 // - PoSSEnabled (bool): master switch pour activer/désactiver les rewards.
@@ -26,7 +27,7 @@ import (
 type Params struct {
 	PoSSEnabled bool `json:"poss_enabled" yaml:"poss_enabled"`
 
-	MaxSignalsPerDay          uint64 `json:"max_signals_per_day" yaml:"max_signals_per_day"`
+	MaxSignalsPerDay           uint64 `json:"max_signals_per_day" yaml:"max_signals_per_day"`
 	MaxSignalsPerCuratorPerDay uint64 `json:"max_signals_per_curator_per_day" yaml:"max_signals_per_curator_per_day"`
 
 	MaxRewardPerDay sdk.Coin `json:"max_reward_per_day" yaml:"max_reward_per_day"`
@@ -45,7 +46,7 @@ type Params struct {
 const (
 	DefaultPoSSEnabled = false
 
-	DefaultMaxSignalsPerDay          uint64 = 20
+	DefaultMaxSignalsPerDay           uint64 = 20
 	DefaultMaxSignalsPerCuratorPerDay uint64 = 100
 
 	// BaseReward / MaxRewardPerDay seront en "unur".
@@ -64,6 +65,53 @@ const (
 	DefaultHalvingPeriodBlocks uint64 = 0
 )
 
+// -----------------------------------------------------------------------------
+// ParamStore keys
+// -----------------------------------------------------------------------------
+
+var (
+	KeyPoSSEnabled               = []byte("PoSSEnabled")
+	KeyMaxSignalsPerDay          = []byte("MaxSignalsPerDay")
+	KeyMaxSignalsPerCuratorPerDay = []byte("MaxSignalsPerCuratorPerDay")
+	KeyMaxRewardPerDay           = []byte("MaxRewardPerDay")
+	KeyBaseReward                = []byte("BaseReward")
+	KeyWeightMicroDonation       = []byte("WeightMicroDonation")
+	KeyWeightParticipation       = []byte("WeightParticipation")
+	KeyWeightContent             = []byte("WeightContent")
+	KeyWeightCCN                 = []byte("WeightCCN")
+	KeyPoSSReserveDenom          = []byte("PoSSReserveDenom")
+	KeyHalvingPeriodBlocks       = []byte("HalvingPeriodBlocks")
+)
+
+// ParamKeyTable retourne la KeyTable à enregistrer dans le Subspace
+// (appelée une fois dans le Keeper).
+func ParamKeyTable() paramstypes.KeyTable {
+	return paramstypes.NewKeyTable().RegisterParamSet(&Params{})
+}
+
+// ParamSetPairs permet à x/params de lire/écrire les champs dans le store.
+func (p *Params) ParamSetPairs() paramstypes.ParamSetPairs {
+	return paramstypes.ParamSetPairs{
+		paramstypes.NewParamSetPair(KeyPoSSEnabled, &p.PoSSEnabled, validateNoop),
+		paramstypes.NewParamSetPair(KeyMaxSignalsPerDay, &p.MaxSignalsPerDay, validateNoop),
+		paramstypes.NewParamSetPair(KeyMaxSignalsPerCuratorPerDay, &p.MaxSignalsPerCuratorPerDay, validateNoop),
+		paramstypes.NewParamSetPair(KeyMaxRewardPerDay, &p.MaxRewardPerDay, validateNoop),
+		paramstypes.NewParamSetPair(KeyBaseReward, &p.BaseReward, validateNoop),
+		paramstypes.NewParamSetPair(KeyWeightMicroDonation, &p.WeightMicroDonation, validateNoop),
+		paramstypes.NewParamSetPair(KeyWeightParticipation, &p.WeightParticipation, validateNoop),
+		paramstypes.NewParamSetPair(KeyWeightContent, &p.WeightContent, validateNoop),
+		paramstypes.NewParamSetPair(KeyWeightCCN, &p.WeightCCN, validateNoop),
+		paramstypes.NewParamSetPair(KeyPoSSReserveDenom, &p.PoSSReserveDenom, validateNoop),
+		paramstypes.NewParamSetPair(KeyHalvingPeriodBlocks, &p.HalvingPeriodBlocks, validateNoop),
+	}
+}
+
+// validateNoop : on délègue la vraie validation à (p Params).Validate().
+// Ici, on ne bloque rien champ par champ.
+func validateNoop(i interface{}) error {
+	return nil
+}
+
 // DefaultParams retourne une config PoSS "safe off":
 // - PoSS désactivé,
 // - limites raisonnables,
@@ -72,7 +120,7 @@ func DefaultParams() Params {
 	return Params{
 		PoSSEnabled: DefaultPoSSEnabled,
 
-		MaxSignalsPerDay:          DefaultMaxSignalsPerDay,
+		MaxSignalsPerDay:           DefaultMaxSignalsPerDay,
 		MaxSignalsPerCuratorPerDay: DefaultMaxSignalsPerCuratorPerDay,
 
 		MaxRewardPerDay: sdk.NewInt64Coin(DefaultPoSSReserveDenom, DefaultMaxRewardPerDayAmount),
