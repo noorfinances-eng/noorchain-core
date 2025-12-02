@@ -7,6 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
 	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
 )
@@ -28,6 +29,9 @@ type Keeper struct {
 
 	// storeKey gives access to the module KVStore.
 	storeKey storetypes.StoreKey
+
+	// paramSpace allows PoSS Params to be stored and modified via x/params.
+	paramSpace paramstypes.Subspace
 }
 
 // NewKeeper creates a new minimal PoSS Keeper.
@@ -35,10 +39,12 @@ type Keeper struct {
 func NewKeeper(
 	cdc codec.Codec,
 	storeKey storetypes.StoreKey,
+	paramSpace paramstypes.Subspace,
 ) Keeper {
 	return Keeper{
-		cdc:      cdc,
-		storeKey: storeKey,
+		cdc:        cdc,
+		storeKey:   storeKey,
+		paramSpace: paramSpace,
 	}
 }
 
@@ -181,7 +187,14 @@ func (k Keeper) IncrementDailySignalsCount(ctx sdk.Context, address, date string
 // - later we will plug this into x/params with a subspace
 //   and make everything adjustable by governance.
 func (k Keeper) GetParams(ctx sdk.Context) noorsignaltypes.Params {
-	_ = ctx // context will be useful once we use a ParamSubspace
+	// NOTE:
+	// - we currently do NOT read/write from paramSpace,
+	//   to keep PoSS fully "off" and safe.
+	// - paramSpace is wired and ready for a future step where
+	//   Params will be a proper ParamSet.
+	_ = ctx
+	_ = k.paramSpace
+
 	return noorsignaltypes.DefaultParams()
 }
 

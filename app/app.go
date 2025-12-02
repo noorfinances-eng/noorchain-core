@@ -164,6 +164,9 @@ func NewNoorchainApp(
 	// FeeMarket subspace
 	feemarketSubspace := app.ParamsKeeper.Subspace(feemarkettypes.ModuleName)
 
+	// PoSS / NoorSignal subspace (pour les Params PoSS, plus tard)
+	noorsignalSubspace := app.ParamsKeeper.Subspace(noorsignaltypes.ModuleName)
+
 	// --- Base Cosmos keepers ---
 
 	// Accounts
@@ -229,6 +232,7 @@ func NewNoorchainApp(
 	noorSignalKeeper := noorsignalkeeper.NewKeeper(
 		app.appCodec,
 		app.keys[noorsignaltypes.StoreKey],
+		noorsignalSubspace,
 	)
 	app.NoorSignalKeeper = noorSignalKeeper
 
