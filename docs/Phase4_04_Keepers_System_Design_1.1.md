@@ -1,325 +1,325 @@
-*NOORCHAIN — Phase 4A
+# NOORCHAIN — Phase 4A  
+## Keepers System Design (Cosmos SDK + Ethermint + PoSS)  
+### Version 1.1 — Architecture Only (No Code)  
+### Last Updated: 2025-12-03  
 
-Keepers System Design (Cosmos SDK + Ethermint + PoSS)**
-Version 1.1 — Architecture only, no code
+---
 
-🔧 1. Purpose of This Document
+# 1. Purpose of This Document
 
-This document defines the entire Keeper System of NOORCHAIN 1.0:
+This document defines the complete **Keeper System Architecture** of  
+NOORCHAIN 1.0 as validated at the end of **Phase 4**.
 
-all required keepers
+It specifies:
 
-their responsibilities
+- all required keepers  
+- their responsibilities  
+- their dependencies  
+- correct instantiation order  
+- inter-keeper interactions  
+- store mappings  
+- connections to the ModuleManager  
+- integration of the PoSS Keeper  
+- requirements for Testnet and Mainnet  
 
-their dependencies
+This is the **canonical reference** for Phase 4B (PoSS Logic), Phase 4C  
+(Testnet 1.0 coding), Phase 5 (Governance), and Phase 7 (Mainnet).
 
-their interactions
+---
 
-their order of instantiation
-
-how PoSS integrates into the keeper layer
-
-how keepers connect to the ModuleManager
-
-This is the official keeper reference for Phase 4B (PoSS blueprint) and the coding of Phase 4C.
-
-🏛️ 2. What Is a Keeper?
+# 2. What Is a Keeper?
 
 In the Cosmos SDK:
 
-A Keeper is the module’s “state manager”.
-It directly reads/writes state, applies business logic, and interacts with other modules.
+**A Keeper is the state manager of a module.**
 
-Each keeper is a Go struct responsible for:
+It is responsible for:
 
-accessing KVStore
+- reading/writing KVStore  
+- validating state transitions  
+- executing module logic  
+- calling other keepers  
+- exposing MsgServer & QueryServer services  
 
-validating state transitions
+A keeper is **consensus-critical**: wrong state logic → chain halt.
 
-performing module logic
+---
 
-interacting with other keepers
+# 3. Required Keepers in NOORCHAIN
 
-exposing methods for Msg / Query services
+NOORCHAIN uses three keeper categories:
 
-🧩 3. Required Keepers in NOORCHAIN
-3.1 Cosmos SDK Keepers
+---
 
-AccountKeeper
+## 3.1 Cosmos SDK Keepers (Base Layer)
 
-BankKeeper
+### **AccountKeeper**
+- accounts, sequences, public keys  
+- foundation for all other modules  
 
-StakingKeeper
+### **BankKeeper**
+- balances, transfers, supply  
+- denomination `unur` (main NOORCHAIN token)  
 
-GovKeeper
+### **StakingKeeper**
+- validators, delegations, power updates  
+- communicates with consensus engine  
 
-These ensure the chain can:
+### **GovKeeper**
+- proposals, votes, governance parameters  
+- relies on staking voting power  
 
-authenticate accounts
+---
 
-manage balances
+## 3.2 Ethermint Keepers (EVM Layer)
 
-handle validators & delegation
+### **EVMKeeper**
+- EVM execution  
+- gas accounting  
+- stateDB compatibility with Ethereum tools  
 
-execute governance
+### **FeeMarketKeeper**
+- EIP-1559-style dynamic base fee  
+- depends entirely on EVMKeeper  
 
-3.2 Ethermint Keepers
+---
 
-EVMKeeper
+## 3.3 NOORCHAIN Custom Keeper (PoSS Layer)
 
-FeeMarketKeeper
-
-These ensure:
-
-full EVM execution
-
-Ethereum transaction compatibility
-
-dynamic base fee model (EIP-1559)
-
-3.3 Custom Keeper (NOORCHAIN)
-
-PoSSKeeper (x/noorsignal)
-
+### **PoSSKeeper** (`x/noorsignal`)
 Handles:
 
-PoSS signals
+- PoSS signal ingestion  
+- reward computation  
+- halving logic (every 8 years)  
+- 70/30 distribution  
+- anti-abuse counters  
+- PoSS parameters (via ParamsKeeper)  
+- event emission  
+- block hooks (BeginBlock / EndBlock)  
+- interaction with bank & staking  
 
-reward calculations
+PoSS does **not** depend on EVM.
 
-halving schedule
+---
 
-distribution 70/30
+# 4. Keeper Dependencies (Final & Verified)
 
-indexing
+## 4.1 Cosmos Keepers
 
-anti-abuse rules
+AccountKeeper → BankKeeper → StakingKeeper → GovKeeper
 
-block hooks (BeginBlock)
+markdown
+Copier le code
 
-Detailed blueprint in Phase 4B.
+- AccountKeeper has no dependencies (root keeper)  
+- BankKeeper needs AccountKeeper  
+- StakingKeeper needs AccountKeeper + BankKeeper  
+- GovKeeper needs StakingKeeper (voting power)  
 
-🔗 4. Keeper Dependencies
-4.1 Cosmos Keepers
-AccountKeeper
+---
 
-no dependencies
+## 4.2 Ethermint Keepers
 
-foundational keeper
-
-BankKeeper
-
+### **EVMKeeper**
 Depends on:
 
-AccountKeeper
+- AccountKeeper  
+- BankKeeper  
+- StakingKeeper  
 
-StakingKeeper
+Reason:
+- balances needed for gas charges  
+- signature/nonce validation relies on Account  
+- validator power influences EVM block-context  
 
+### **FeeMarketKeeper**
 Depends on:
 
-AccountKeeper
-BankKeeper
+- EVMKeeper  
 
-GovKeeper
+---
 
+## 4.3 PoSS Keeper
+
+### **PoSSKeeper**
 Depends on:
 
-StakingKeeper
+- AccountKeeper  
+- BankKeeper  
+- StakingKeeper  
+- ParamsKeeper (PoSS subspace)  
 
-4.2 Ethermint Keepers
-EVMKeeper
+Also requires:
 
-Depends on:
+- BeginBlock hook  
+- chain timestamp  
+- block height  
+- access to validator power (PoSS v2)  
 
-AccountKeeper
-BankKeeper
-StakingKeeper
+It does **not** depend on EVM modules.
 
+---
 
-Because :
+# 5. Keeper Instantiation Order (Strict)
 
-gas charge uses Bank
+This is **critical**.  
+A wrong order = panic at startup.
 
-sender validation uses Account
+NOORCHAIN official order:
 
-voting power is needed for EVM consensus rules
+1. **AccountKeeper**  
+2. **BankKeeper**  
+3. **StakingKeeper**  
+4. **GovKeeper**  
+5. **ParamsKeeper + all subspaces**  
+6. **EVMKeeper**  
+7. **FeeMarketKeeper**  
+8. **PoSSKeeper**
 
-FeeMarketKeeper
+This order ensures:
 
-Depends on:
+- bank has accounts  
+- staking has accounts + bank  
+- governance has staking  
+- EVM has account/bank/staking  
+- feemarket has EVM  
+- PoSS has bank + staking  
 
-EVMKeeper
+---
 
-4.3 PoSS Keeper
+# 6. Keeper Interaction Graph (Final)
 
-Depends on:
+markdown
+Copier le code
+      ┌───────────────┐
+      │ AccountKeeper │
+      └───────┬───────┘
+              │
+      ┌───────▼───────┐
+      │  BankKeeper   │
+      └───────┬───────┘
+              │
+      ┌───────▼────────┐
+      │ StakingKeeper  │
+      └───────┬────────┘
+      ┌───────▼────────┐
+      │   GovKeeper    │
+      └─────────────────┘
 
-AccountKeeper
-BankKeeper
-StakingKeeper
+      ┌───────────────────────────────┐
+      │            EVMKeeper          │
+      └───────────────────────────────┘
+             ▲     ▲        ▲
+             │     │        │
+   AccountKeeper BankKeeper StakingKeeper
 
-
-It also needs:
-
-BeginBlock hooks
-
-consensus timestamp
-
-validator power
-
-But it does not depend on EVM modules.
-
-🧱 5. Keeper Instantiation Order (strict)
-
-The correct and tested instantiation order:
-
-1. AccountKeeper
-2. BankKeeper
-3. StakingKeeper
-4. GovKeeper
-5. EVMKeeper
-6. FeeMarketKeeper
-7. PoSSKeeper
-
-
-Why this order?
-
-bank requires account
-
-staking requires bank
-
-gov requires staking
-
-evm requires account/bank/staking
-
-feemarket requires evm
-
-poss requires account/bank/staking
-
-Any deviation = chain panic or wrong execution order.
-
-🧠 6. Keeper Interaction Graph
-Graph (text-based)
-          ┌───────────────┐
-          │ AccountKeeper │
-          └───────┬───────┘
+      ┌────────────────────┐
+      │ FeeMarketKeeper   │
+      └───────────▲────────┘
                   │
-          ┌───────▼───────┐
-          │  BankKeeper   │
-          └───────┬───────┘
-                  │
-          ┌───────▼────────┐
-          │ StakingKeeper  │
-          └───────┬────────┘
-          ┌───────▼────────┐
-          │   GovKeeper    │
-          └─────────────────┘
+              EVMKeeper
 
-          ┌───────────────────────────────┐
-          │            EVMKeeper          │
-          └───────────────────────────────┘
-                 ▲     ▲        ▲
-                 │     │        │
-     AccountKeeper  BankKeeper  StakingKeeper
+      ┌────────────────────┐
+      │    PoSSKeeper     │
+      └────────────────────┘
+           ▲    ▲    ▲    ▲
+AccountKeeper BankKeeper StakingKeeper ParamsKeeper
 
-          ┌────────────────────┐
-          │ FeeMarketKeeper   │
-          └───────────▲────────┘
-                      │
-                  EVMKeeper
+yaml
+Copier le code
 
-          ┌────────────────────┐
-          │    PoSSKeeper     │
-          └────────────────────┘
-               ▲    ▲    ▲
-    AccountKeeper BankKeeper StakingKeeper
+---
 
-📦 7. Store Keys for Each Keeper
-Keeper	Store Key
-AccountKeeper	auth
-BankKeeper	bank
-StakingKeeper	staking
-GovKeeper	gov
-EVMKeeper	evm
-FeeMarketKeeper	feemarket
-PoSSKeeper	noorsignal
+# 7. Store Keys for Each Keeper
 
-All KVStores must be mounted in app.go.
+| Keeper           | Store Key   |
+|------------------|-------------|
+| AccountKeeper    | auth        |
+| BankKeeper       | bank        |
+| StakingKeeper    | staking     |
+| GovKeeper        | gov         |
+| EVMKeeper        | evm         |
+| FeeMarketKeeper  | feemarket   |
+| PoSSKeeper       | noorsignal  |
+| ParamsKeeper     | params      |
 
-🔌 8. Keeper → ModuleManager Connections
+All stores must be mounted in `app.go`.
+
+---
+
+# 8. Keeper → ModuleManager Connections
 
 Each keeper must expose:
 
-Message service (MsgServer)
+- **MsgServer** (transaction messages)  
+- **QueryServer** (gRPC queries)  
+- **InitGenesis** + **ExportGenesis**  
+- **BeginBlocker** and **EndBlocker** (when required)  
+- **Invariants** (for bank, staking, and PoSS optional)  
 
-Query service (QueryServer)
+The ModuleManager will then:
 
-Genesis handlers
+- set BeginBlock order  
+- set EndBlock order  
+- register services  
+- load genesis state  
 
-BeginBlock / EndBlock handlers
+PoSS module connects via:
 
-Invariants (optional but recommended)
+- BeginBlock hooks  
+- parameters (ParamsKeeper subspace)  
 
-ModuleManager will call:
+---
 
-SetOrderBeginBlockers
+# 9. App Constructor Integration (Blueprint)
 
-SetOrderEndBlockers
+`NewNoorchainApp()` must:
 
-SetOrderInitGenesis
+1. create **KVStoreKeys** & **TransientStoreKeys**  
+2. instantiate keepers in correct order  
+3. wire dependencies  
+4. attach hooks  
+5. initialize ModuleManager  
+6. register services  
+7. set `InitGenesis`, `ExportGenesis`  
+8. set `BeginBlocker` and `EndBlocker`  
+9. load state  
 
-SetOrderExportGenesis
+This ensures deterministic, mainnet-safe initialization.
 
-RegisterServices
+---
 
-PoSS module will plug into BeginBlock.
+# 10. Pre-Test Checklist (Before Phase 4C)
 
-🏗️ 9. App Constructor Integration (Blueprint)
+All below MUST be true before Testnet 1.0:
 
-In Phase 4C code, the keepers will be placed inside the app constructor:
+- all keepers defined  
+- all store keys mounted  
+- all dependencies mapped  
+- instantiation order validated  
+- PoSS subspace created  
+- no circular dependencies  
+- BeginBlock hooks connected  
+- PoSSKeeper reading correct params  
 
-Create store keys
+---
 
-Create each keeper (in order defined above)
+# 11. Summary Table
 
-Wire keeper dependencies
+| Keeper     | Depends On            | Store       | Purpose |
+|------------|------------------------|-------------|---------|
+| Account    | none                   | auth        | accounts, signatures |
+| Bank       | account                | bank        | balances, transfers |
+| Staking    | account, bank          | staking     | validators, delegation |
+| Gov        | staking                | gov         | proposals, voting |
+| EVM        | account, bank, staking | evm         | EVM execution |
+| FeeMarket  | evm                    | feemarket   | base fee (EIP-1559) |
+| PoSS       | account, bank, staking, params | noorsignal | social consensus |
 
-Expose keeper references on App struct
+---
 
-Provide keepers to ModuleManager
+# 12. Final Statement
 
-Install hooks (staking → poss, etc.)
-
-This document ensures implementation is consistent.
-
-🧪 10. Pre-Test Checklist (Before Phase 4C)
-
-Before writing any code:
-
-All keepers defined
-
-All dependencies mapped
-
-Execution order validated
-
-Storage structure stable
-
-PoSS dependencies final
-
-No missing lifecycle hook
-
-No circular dependency
-
-No module requiring additional keeper
-
-This blueprint must be considered final for coding.
-
-🎯 11. Summary Table
-Keeper	Depends on	Store	Purpose
-Account	none	auth	accounts, signatures
-Bank	account	bank	balances, transfers
-Staking	account, bank	staking	validators, delegation
-Gov	staking	gov	proposals, voting
-EVM	account, bank, staking	evm	EVM execution
-FeeMarket	evm	feemarket	base fee (EIP-1559)
-PoSS	account, bank, staking	noorsignal	social consensus
+This document is considered **final** and is now the reference for all  
+future development, governance, auditing, and mainnet preparation work.
