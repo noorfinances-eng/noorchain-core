@@ -1,262 +1,285 @@
-**NOORCHAIN — Phase 4A
+# NOORCHAIN — Phase 4A  
+## Final Requirements Checklist (Cosmos + Ethermint + PoSS-Ready)  
+### Version 1.1 — Non-code Specification  
+### Last Updated: 2025-12-03  
 
-Final Requirements Checklist (Cosmos + Ethermint + PoSS-Ready)**
-Version 1.1 — Non-code specification
+---
 
-🔧 1. Purpose of This Final Checklist
+# 1. Purpose of This Final Checklist
 
-This document summarizes all technical requirements that MUST be satisfied before starting:
+This document summarizes all **mandatory technical requirements** that MUST be satisfied before starting:
 
-Phase 4B (PoSS Blueprint)
+- Phase 4B (PoSS Blueprint)
+- Phase 4C (Testnet 1.0 coding & genesis)
+- full implementation in `app/app.go`, `x/noorsignal`, and Testnet configuration files
 
-Phase 4C (Testnet 1.0 coding & genesis)
+It is the **official Phase 4A completion gate**.
 
-full implementation in app/app.go, x/noorsignal, and Testnet files
+---
 
-It serves as the official Phase 4A completion gate.
+# 2. Version Requirements (Mandatory & Verified)
 
-🧩 2. Version Requirements (Mandatory)
-Component	Required Version	Verified
-Cosmos SDK	0.50.x	✔️
-CometBFT	0.37.x	✔️
-Ethermint	0.27.x	✔️
-IAVL	0.21+	✔️
-Go	1.22+	✔️
-CosmJS	0.33+	✔️
+NOORCHAIN uses **fixed and validated versions**:
 
-All versions remain fixed unless Phase 3 is updated.
+| Component      | Required Version | Status |
+|----------------|------------------|--------|
+| Cosmos SDK     | **0.46.11**      | ✔️ |
+| Ethermint       | **0.22.0**       | ✔️ |
+| CometBFT/TM     | **0.34.27** (via replace) | ✔️ |
+| IAVL            | **0.19–0.21** compatible | ✔️ |
+| Go              | **1.22+**       | ✔️ |
+| CosmJS          | **0.33+**       | ✔️ |
 
-🏛️ 3. Architecture Requirements
-✔️ Application Layers
+**Important:**  
+NOORCHAIN deliberately stays on SDK 0.46 for stability and mainnet maturity.
 
-Cosmos SDK base modules
+All versions remain **locked** unless Phase 3 documentation is amended.
 
-Ethermint EVM modules
+---
 
-Custom PoSS module
+# 3. Architecture Requirements
 
-Clean separation between layers
+### ✔️ Application Layers (All Present)
 
-✔️ App Components
+- Cosmos base modules  
+- Ethermint EVM layer  
+- NOORCHAIN custom PoSS module  
+- Strict separation of responsibilities  
 
-BaseApp
+### ✔️ App Components Verified
 
-Encoding system
+- BaseApp  
+- Encoding system  
+- Multistore  
+- Keepers  
+- ParamsKeeper + Subspaces  
+- ModuleManager  
+- BeginBlock / EndBlock handlers  
 
-Multistore
+---
 
-Keepers
+# 4. Module Requirements
 
-ModuleManager
+## 4.1 Cosmos Modules
 
-BeginBlock/EndBlock hooks
+✔️ `auth`  
+✔️ `bank`  
+✔️ `staking`  
+✔️ `gov`  
 
-🗂️ 4. Module Requirements
-4.1 Cosmos Modules
+All registered, stores mounted, and storages defined.
 
-auth
+## 4.2 Ethermint Modules
 
-bank
+✔️ `evm`  
+✔️ `feemarket`  
 
-staking
+Require:
 
-gov
-All must be fully registered and initialized.
+- correct keeper wiring  
+- correct EVM genesis parameters  
+- EIP-1559 base fee logic active  
 
-4.2 Ethermint Modules
+## 4.3 Custom Module (PoSS)
 
-evm
+Before Phase 4C:
 
-feemarket
-Both require correct keeper wiring and genesis handlers.
+- Keeper defined  
+- Store keys created  
+- Params included  
+- BeginBlock slot reserved  
+- No reward logic active (PoSSEnabled = false)  
 
-4.3 Custom Module (PoSS)
+---
 
-Must be defined in Phase 4B
+# 5. Keepers Requirements
 
-Must support BeginBlock processing
+### ✔️ Keepers Identified
 
-Must support its own KVStore
+- AccountKeeper  
+- BankKeeper  
+- StakingKeeper  
+- GovKeeper  
+- EVMKeeper  
+- FeeMarketKeeper  
+- PoSSKeeper  
+- ParamsKeeper  
 
-Must integrate with bank + staking
+### ✔️ Dependency Graph Mapped
 
-🧱 5. Keepers Requirements
-✔️ Keepers Identified
+No circular dependencies.
 
-AccountKeeper
+### ✔️ Strict Instantiation Order Validated
 
-BankKeeper
+1. AccountKeeper  
+2. BankKeeper  
+3. StakingKeeper  
+4. GovKeeper  
+5. ParamsKeeper (subspaces)  
+6. EVMKeeper  
+7. FeeMarketKeeper  
+8. PoSSKeeper  
 
-StakingKeeper
+### ✔️ Wiring Rules
 
-GovKeeper
+- `staking.SetHooks(...)`  
+- `evm.SetStakingKeeper(...)` or Ethermint equivalent  
+- `poss.SetBankKeeper(...)`  
+- `poss.SetStakingKeeper(...)`  
+- PoSS receives its own params subspace  
 
-EVMKeeper
+---
 
-FeeMarketKeeper
+# 6. Lifecycle Requirements
 
-PoSSKeeper
-
-✔️ Keeper Dependencies Mapped
-
-No circular dependencies
-
-Strict instantiation order validated
-
-✔️ Keeper Wiring Rules
-
-staking.SetHooks(…)
-
-evm.SetStakingKeeper(…)
-
-poss.SetBankKeeper / poss.SetStakingKeeper
-
-🔄 6. Lifecycle Requirements
-BeginBlock Order
+### **BeginBlock Order**
 feemarket → evm → staking → noorsignal → gov
 
-EndBlock Order
+
+### **DeliverTx Order**
+
+
+ante → routing → state writes → EVM execution
+
+
+### **EndBlock Order**
+
+
 staking → gov
 
-Genesis Order
+
+### **Genesis Order**
+
+
 auth → bank → staking → gov → evm → feemarket → noorsignal
 
-ExportGenesis Order
 
-Matches InitGenesis.
+### **ExportGenesis Order**
+Matches InitGenesis exactly.
 
-🗄️ 7. Store & State Model Requirements
-✔️ Store Keys Fixed
+All ordering constraints have been validated.
 
-auth
+---
 
-bank
+# 7. Store & State Model Requirements
 
-staking
+✔️ All store keys fixed and mounted  
+✔️ IAVL subtree layout validated  
+✔️ PoSS store defined (signals, counters, reward state)  
+✔️ anti-abuse state + epoch state included  
+✔️ EVM stateDB integrated correctly  
+✔️ ParamsKeeper subspaces created for all modules  
 
-gov
+---
 
-evm
+# 8. App Initialization Requirements
 
-feemarket
+The app constructor **must** include:
 
-noorsignal
+- encoding config  
+- BaseApp creation  
+- KVStore + TransientStore mounting  
+- all keeper instantiation (strict order)  
+- dependency wiring  
+- ModuleManager creation  
+- service registration  
+- BeginBlock & EndBlock mapping  
+- InitGenesis & ExportGenesis wiring  
+- state loading  
+- returning final App struct  
 
-✔️ State Models Defined
+All steps validated in the App Initialization Blueprint.
 
-Each module’s state model described in detail.
+---
 
-✔️ PoSS State Requirements
+# 9. External API Requirements
 
-signals
+### ✔️ gRPC routes
 
-reward state
+- cosmos auth / bank / staking / gov  
+- ethermint evm / feemarket  
+- noorsignal (Phase 4B+)  
 
-anti-abuse counters
+### ✔️ JSON-RPC routes (Ethermint)
 
-halving tracking
+- `eth_*`  
+- `web3_*`  
+- `net_*`  
+- `debug_*` (optional)  
 
-weight tables
+RPC must run without panic on empty chain.
 
-🛠️ 8. App Initialization Requirements
-Must include:
+---
 
-encoding config
+# 10. Pre-Testnet Mandatory Conditions
 
-BaseApp
+Before Phase 4C coding begins:
 
-store mounting
+### ✔️ Compilation Check
 
-keeper instantiation
 
-keeper dependency wiring
+go build ./...
 
-module manager creation
+must succeed.
 
-service registration
+No missing references, no nil keepers, no unmounted stores.
 
-block handlers
+### ✔️ Boot Check
 
-genesis config
 
-return of final App struct
+noord start
 
-All steps sequenced and validated.
+must start successfully.
 
-🌐 9. External API Requirements
-✔️ gRPC routes
+Node must:
 
-cosmos auth/bank/staking/gov
+- start BaseApp  
+- expose RPC & gRPC  
+- open WebSocket interface  
+- produce empty-block sequence (no panic)
 
-ethermint evm/feemarket
+### ✔️ Module Checks
+- ModuleManager ordering validated  
+- All keepers correctly injected  
+- All stores correctly mounted  
+- ParamsKeeper functional  
 
-noorsignal (later Phase 4B)
+### ✔️ PoSS Ready (but disabled)
+- PoSSKeeper initialized  
+- PoSS KVStore mounted  
+- PoSS params defaulted  
+- BeginBlock slot present  
+- PoSSEnabled = false  
 
-✔️ JSON-RPC routes
+---
 
-eth_*
+# 11. Completion Statement
 
-web3_*
+Phase 4A is considered **100% complete** when:
 
-debug_* (optional)
+- All 8 blueprint documents exist  
+- All requirements in this checklist are validated  
+- The application architecture is stable  
+- No missing keeper, store, module, or lifecycle component remains  
 
-Must be exposed automatically by Ethermint.
+At this moment, NOORCHAIN is officially ready to enter:
 
-🚦 10. Pre-Testnet Mandatory Conditions
+## → Phase 4B (PoSS Blueprint)  
+## → Phase 4C (Testnet 1.0 Development)
 
-Before Phase 4C coding:
+---
 
-Compilation
+# 12. Summary Table
 
-go build ./... must succeed
-
-no missing references
-
-no uninitialized module
-
-Boot
-
-noord start must run (empty chain)
-
-RPC + gRPC must start without panic
-
-Module checks
-
-ModuleManager ordering correct
-
-Keeper dependencies wired
-
-Stores correctly mounted
-
-PoSS-ready
-
-PoSS store + keeper placeholder OK
-
-BeginBlock slot reserved for PoSS logic
-
-🧩 11. Completion Statement
-
-Phase 4A is considered 100% complete when:
-
-All 8 blueprint files exist
-
-All requirements above are validated
-
-The app structure is stable
-
-No missing architectural component remains
-
-Ready to begin Phase 4B (PoSS Blueprint)
-
-🎯 12. Summary Table
-Category	Status
-Versions	✔️
-Architecture	✔️
-ModuleManager	✔️
-Keepers	✔️
-Lifecycle	✔️
-Stores	✔️
-App Init	✔️
-PoSS Requirements	✔️
-Testnet Prereqs	✔️
-Phase 4A Completed	✔️ 100%
+| Category        | Status |
+|-----------------|--------|
+| Versions        | ✔️ |
+| Architecture    | ✔️ |
+| ModuleManager   | ✔️ |
+| Keepers         | ✔️ |
+| Lifecycle       | ✔️ |
+| Stores          | ✔️ |
+| App Init        | ✔️ |
+| PoSS Ready      | ✔️ |
+| Testnet Prereqs | ✔️ |
+| Phase 4A        | **100% Complete** |
