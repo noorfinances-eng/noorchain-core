@@ -1,295 +1,333 @@
-**NOORCHAIN — Phase 4A
+# NOORCHAIN — Phase 4A  
+## Store & State Model Blueprint  
+### Version 1.1 — Architecture Only (No Code)  
+### Last Updated: 2025-12-03  
 
-Store & State Model Blueprint**
-Version 1.1 — Architecture Only (No Code)
+---
 
-🔧 1. Purpose of This Document
+# 1. Purpose of This Document
 
-This document defines the entire state model and KVStore architecture of NOORCHAIN 1.0, including:
+This document defines the **complete, authoritative state model** of  
+NOORCHAIN 1.0. It describes:
 
-store key layout
+- store key layout  
+- multistore architecture  
+- module-specific state trees  
+- IAVL structure  
+- EVM state DB behaviour  
+- PoSS state model  
+- inter-store dependencies  
+- determinism and persistence rules  
 
-underlying IAVL structure
+This is the **final reference** for implementing stores during Phase 4C,  
+for building Testnet 1.0, and for preparing Mainnet.
 
-module state models
+---
 
-interaction between state trees
+# 2. Multistore Overview (IAVL)
 
-PoSS state requirements
+NOORCHAIN’s state is managed by the Cosmos SDK **Multistore**, composed of:
 
-indexing requirements
+- **IAVL stores** (persistent key/value state)  
+- **Transient stores** (ephemeral during block execution)  
+- **Memory stores** (in-memory for parameters and caches)  
 
-persistence rules
+The Multistore root holds all module KVStores under separate store keys,  
+ensuring deterministic Merkle proofs and consensus safety.
 
-This is the authoritative reference for implementing stores during Phase 4C.
+---
 
-🗂️ 2. Multistore Overview (IAVL)
+# 3. Store Key Map
 
-NOORCHAIN uses the Cosmos SDK Multistore, built on:
+| Store Key   | Module         | Keeper           |
+|-------------|----------------|------------------|
+| `auth`      | auth           | AccountKeeper    |
+| `bank`      | bank           | BankKeeper       |
+| `staking`   | staking        | StakingKeeper    |
+| `gov`       | gov            | GovKeeper        |
+| `evm`       | evm            | EVMKeeper        |
+| `feemarket` | feemarket      | FeeMarketKeeper  |
+| `noorsignal`| x/noorsignal   | PoSSKeeper       |
+| `params`    | params         | ParamsKeeper     |
 
-IAVL Merkle Trees for persistent KV stores
+All are mounted as **IAVL-backed KVStores**, except:
 
-Memory stores for temporary data
+- params: memory + kv + transient components  
+- evm: uses its own EVM stateDB internally  
 
-Transient stores for ephemeral block data
+---
 
-The root store contains all module KVStores mounted under unique store keys.
+# 4. Module State Models (Detailed)
 
-🗄️ 3. Store Key Map
-Store Key	Module
-auth	AccountKeeper
-bank	BankKeeper
-staking	StakingKeeper
-gov	GovKeeper
-evm	EVMKeeper
-feemarket	FeeMarketKeeper
-noorsignal	PoSSKeeper
+This section describes the complete internal state structure of each module.
 
-Each is associated with an IAVL-backed KV store.
+---
 
-🧱 4. Module State Models
-
-Below is the complete description of every module’s internal state.
-
-4.1 auth Module State
-
-Stores:
-
-account numbers
-
-public keys
-
-account sequences
-
-base account data
-
-Required for:
-
-signature verification
-
-sequence (nonce) handling
-
-EVM compatibility
-
-4.2 bank Module State
+## 4.1 auth Module State
 
 Stores:
 
-balances (address → coins)
+- base accounts  
+- sequences  
+- account numbers  
+- public keys  
 
-supply
+Used for:
 
-denomination metadata
+- signature verification  
+- nonce/sequence checks  
+- Ethereum tx sender validation  
 
-Bank state is heavily used by:
+---
 
-staking
-
-evm gas accounting
-
-poss reward distribution
-
-4.3 staking Module State
-
-Stores:
-
-validators
-
-delegations
-
-unbonding delegations
-
-redelegations
-
-staking params
-
-Also provides:
-
-validator power mapping
-
-slashing information (future use)
-
-This state is critical for PoSS.
-
-4.4 gov Module State
+## 4.2 bank Module State
 
 Stores:
 
-proposals
+- balances (`address → coins`)  
+- supply (per denomination)  
+- denom metadata (`unur` main token)  
 
-deposits
+Used by:
 
-votes
+- staking (bonding / unbonding)  
+- evm (gas deduction)  
+- poss (reward distribution from PoSS reserve)  
 
-tally results
+---
 
-governance params
-
-PoSS does not directly modify governance, but governance depends on staking.
-
-4.5 evm Module State
-
-Stores:
-
-EVM state DB
-
-contract storage
-
-logs
-
-nonce
-
-code hash
-
-block bloom filters
-
-This is a large subtree inside the multistore.
-
-4.6 feemarket Module State
+## 4.3 staking Module State
 
 Stores:
 
-base fee
+- validators  
+- delegations  
+- unbonding delegations  
+- redelegations  
+- validator power  
+- staking parameters  
+- slashing metadata  
 
-block gas metrics
+Used by:
 
-EIP-1559 dynamics
+- consensus (validator set)  
+- governance (voting power)  
+- PoSS (validator power relevance for future curation logic)  
 
-Critical for:
+---
 
-EVM execution
-
-block validity
-
-gas pricing
-
-4.7 noorsignal (PoSS) Module State
-
-This is a custom state tree for NOORCHAIN.
+## 4.4 gov Module State
 
 Stores:
 
-1. Signal registry
+- proposals  
+- deposits  
+- votes  
+- tally results  
+- governance parameters  
 
-All PoSS signals:
+Governance depends on staking for voting power.
 
-signal_id → {
-  sender_address,
-  curator_address,
-  signal_type,
-  timestamp,
-  weight,
-  block_height
+PoSS never writes to or modifies governance state.
+
+---
+
+## 4.5 evm Module State
+
+This module uses its own **EVM stateDB**, embedded in the `evm` store.
+
+Stores:
+
+- contract code  
+- contract storage  
+- nonces  
+- logs  
+- receipts  
+- bloom filters  
+- EVM block metadata  
+
+This state is large and append-heavy.
+
+Only the EVM module writes here.
+
+---
+
+## 4.6 feemarket Module State
+
+Stores:
+
+- base fee (EIP-1559)  
+- block gas usage metrics  
+- fee market parameters  
+
+Used by:
+
+- evm (block pricing logic)  
+- antehandler (gas validation)  
+
+---
+
+## 4.7 noorsignal (PoSS) Module State
+
+The PoSS store is a custom state tree containing:
+
+### 1. Signal Registry
+
+Key: `signal_id` →  
+{
+sender_address,
+curator_address,
+signal_type,
+timestamp,
+weight,
+block_height
 }
 
-2. Reward state
+### 2. Reward State
 
-Tracked values:
+Stores:
 
-current reward epoch
+- current reward epoch  
+- halving index  
+- last reward block  
+- reward multipliers  
+- PoSS base reward  
 
-reward indexes
+### 3. Anti-Abuse State
 
-last reward block
+Stores:
 
-halving cycle data
+- daily counters (per participant)  
+- daily curator validations  
+- rate-limit data  
+- last signal timestamps  
 
-3. Anti-abuse state
+### 4. PoSS Parameters
 
-Stores per-account counters:
+- daily max signals  
+- curator max validations  
+- weights per signal  
+- halving schedule  
+- PoSSEnabled flag  
+- immutable 70/30 split  
 
-daily signal count
+### 5. Statistics
 
-last participation timestamp
+- total signals  
+- total minted from PoSS reserve  
+- per-curator stats  
 
-rate-limit data
+---
 
-4. PoSS parameters
+# 5. Inter-Store Interactions
 
-max daily signals
+The following interactions are consensus-critical:
 
-reward weights
+---
 
-halving schedule
+## PoSS ↔ staking
 
-70/30 split
+- validator power needed for reward governance (future PoSS v2)  
+- block height & timestamps for halving  
 
-5. Statistics (optional)
+---
 
-total signals
+## PoSS ↔ bank
 
-total PoSS rewards minted (from reserve)
+- reward distribution (when PoSS enabled)  
+- PoSS Reserve transfers  
+- balance checks  
 
-curator-level stats
+---
 
-🔗 5. Inter-Store Interactions
-PoSS ↔ staking
+## EVM ↔ bank
 
-validator power needed for reward weighting
+- gas deduction  
+- payer balance verification  
 
-block height used for halving windows
+---
 
-PoSS ↔ bank
+## staking ↔ gov
 
-distributes NUR from PoSS reserve
+- governance voting power = validator power  
+- proposal finalization depends on staking state  
 
-checks balances
+---
 
-writes reward transfers
+## bank ↔ auth
 
-EVM ↔ bank
+- balances tied to account objects  
 
-gas deduction
+---
 
-intrinsic gas cost
+# 6. State Consistency Requirements
 
-tx sender checks
+These rules guarantee deterministic and safe execution:
 
-staking ↔ gov
+---
 
-governance voting power derived from validator power
+### 6.1 Deterministic Writes
 
-bank ↔ auth
+- BeginBlock and EndBlock must write in a fixed order.  
+- Only staking and governance may write in EndBlock.  
+- PoSS must *never* mutate state in EndBlock.  
 
-balances linked to account structures
+---
 
-🧠 6. State Consistency Requirements
+### 6.2 DeliverTx Restrictions
 
-NOORCHAIN enforces:
+- PoSS **must not** write heavy state or perform reward distribution in DeliverTx.  
+- EVM tx must use atomic commit / revert.  
 
-deterministic writes in BeginBlock/EndBlock
+---
 
-no circular dependencies
+### 6.3 No Circular Dependencies
 
-no state modification in EndBlock (except staking/gov)
+- EVM must not depend on PoSS  
+- PoSS must not depend on EVM  
+- staking must not call PoSS during validator updates  
 
-PoSS NEVER writes inside DeliverTx
+---
 
-only inside BeginBlock
+### 6.4 PoSS Disabled by Default
 
-ensures consistency and predictable reward flow
+At genesis:
 
-🏗️ 7. State Persistence Guarantees
+PoSSEnabled = false
 
-Each commit:
+---
 
-IAVL stores commit and return hashes
+# 7. State Persistence Guarantees
 
-root hash is passed to CometBFT
+### On every commit:
 
-Ethereum state DB commits separately
+1. **IAVL Multistore commit**  
+   - deterministic Merkle root  
+   - sent to CometBFT as next block app hash  
 
-PoSS state must commit after EVM state
+2. **EVM state commit**  
+   - flush contract state  
+   - store logs  
+   - compute bloom filter  
 
+3. **PoSS state commit**  
+   - commit counters  
+   - commit halving indices  
+   - commit reward metadata  
+
+**Commit ordering:**
+
+IAVL commit → EVM commit → PoSS commit
 This ensures:
 
-consistent app hash
+- EVM state is consistent  
+- PoSS indexing is consistent  
+- no mismatches between app hash and EVM receipts  
 
-correct EVM bloom filters
+---
 
-correct PoSS indexing
+# 8. Store Architecture Diagram
 
-🌍 8. Store Architecture Diagram
 root (IAVL)
 │
 ├── auth
@@ -300,30 +338,35 @@ root (IAVL)
 ├── feemarket
 └── noorsignal
 
+yaml
+Copier le code
 
-Each module store is a subtree of the IAVL Merkle root.
+Each module defines an isolated subtree under the Merkle root.
 
-📌 9. Summary Table
-Module	Stores	Critical For
-auth	accounts	signatures, sequences
-bank	balances, supply	staking, evm, poss
-staking	validators, delegations	governance, poss
-gov	proposals, votes	governance
-evm	stateDB, logs	EVM compatibility
-feemarket	base fee	gas pricing
-noorsignal	signals, rewards, anti-abuse	PoSS social consensus
-🎯 10. Final Notes
+---
 
-This blueprint ensures:
+# 9. Summary Table
 
-stable data model
+| Module      | Stores                       | Critical For |
+|-------------|------------------------------|--------------|
+| auth        | accounts                     | signatures, sequences |
+| bank        | balances, supply             | staking, evm, poss |
+| staking     | validators, delegations      | consensus, gov, poss |
+| gov         | proposals, votes             | governance |
+| evm         | stateDB, logs, receipts      | EVM compatibility |
+| feemarket   | base fee, gas metrics        | gas pricing |
+| noorsignal  | signals, rewards, anti-abuse | PoSS engine |
 
-deterministic operations
+---
 
-clean integration of EVM + PoSS
+# 10. Final Notes
 
-predictable reward distribution
+This blueprint guarantees:
 
-safe Testnet 1.0 initialization
+- deterministic state evolution  
+- clean integration of EVM + PoSS  
+- stable data model for Testnet 1.0  
+- correct PoSS reward accounting  
+- predictable Mainnet behaviour  
 
-No change to this architecture is allowed without updating Phase 3.
+Any change to this architecture MUST be reflected in the Phase 3 documentation and revalidated in audit.
