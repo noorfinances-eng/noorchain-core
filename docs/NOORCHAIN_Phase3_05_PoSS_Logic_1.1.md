@@ -1,48 +1,63 @@
-# NOORCHAIN — PoSS Logic (End-to-End) v1.1
+# NOORCHAIN — PoSS Logic (End-to-End) v1.1  
+Phase 3.05 — Target Behaviour Specification  
+Last Updated: 2025-12-03
 
-This document describes the *end-to-end* behaviour of the PoSS (Proof of Signal Social) engine in NOORCHAIN 1.0, from the moment a signal is emitted to the final reward distribution.
+This document describes the **end-to-end behaviour** of the PoSS (Proof of Signal Social) engine in NOORCHAIN 1.0, from the moment a signal is emitted to the final reward distribution.
 
-It is a **Phase 3 (Docs)** specification:
-- No actual minting logic is live yet.
-- All behaviours described here will be implemented in Phase 4 (Implementation) and refined by governance.
+It is a **Phase 3 (Documentation) specification**:
+
+- No live minting or balance transfers are active yet.
+- PoSS is currently **structurally integrated but economically disabled**.
+- All behaviours described here are the target model for Mainnet.
+- The implementation has been prepared during Phase 4 and will be activated later by governance.
+
+This file complements:
+
+- `NOORCHAIN_Phase3_04_PoSS_FullSpecification_1.1.md`
+- all PoSS-related Phase 3 & Phase 4 documents.
 
 ---
 
-## 1. High-level flow of a PoSS signal
+## 1. High-level lifecycle of a PoSS signal
 
-When PoSS is fully implemented, each signal will follow this logical pipeline:
+When PoSS is fully enabled, each signal will follow this logical pipeline:
 
 1. **User emits a signal**  
-   - Signal types (at least):  
+   - Supported signal types (as per PoSS Full Specification):  
      - `MICRO_DONATION`  
-     - `PARTICIPATION` (QR / event)  
-     - `CONTENT` (curated content)  
-     - `CCN` (Curated Community Network / social propagation)
+     - `PARTICIPATION` (QR / event / activity)  
+     - `CONTENT` (certified content)  
+     - `CCN` (Certified Content Noorchain – high-value content)
 
 2. **Curator validates the signal**  
    - A Curator (Bronze / Silver / Gold) receives or reviews the signal.  
-   - The Curator confirms that the signal is legitimate (no spam, no abuse).
+   - The Curator confirms that the signal is legitimate (no spam, no abuse, consistent with rules).  
 
 3. **PoSS module receives a PoSS message**  
-   - In Phase 4, this will be a real `Msg` handled by `x/noorsignal`.  
-   - The message will include at least:
-     - participant address
-     - curator address
-     - signal type
-     - optional metadata (amount, reference, etc.)
+   - In the live chain, this is a `MsgCreateSignal` (or equivalent) handled by `x/noorsignal`.  
+   - The message always includes at least:
+     - participant address  
+     - curator address  
+     - signal type  
+     - optional metadata (amount, reference, context, hashes…)
 
 4. **Daily anti-abuse checks**  
-   - The Keeper will:
-     - read the **participant daily counter** (signals today),
-     - read the **curator daily counter** (validations today),
-     - compare them to:
+   - The PoSS Keeper:
+     - reads the **participant daily counter** (signals today),
+     - reads the **curator daily counter** (validations today),
+     - compares both to:
        - `MaxSignalsPerDay`
        - `MaxSignalsPerCuratorPerDay`
-     - if limits are exceeded:
-       - **the signal is recorded but no reward is paid** (or the tx is rejected, depending on the final policy).
+   - If limits are exceeded:
+     - the default target policy is:
+       - the signal **may be recorded** for history,
+       - but **no reward is paid** beyond the daily limits.
+     - Alternatively, governance may choose a stricter policy:
+       - reject the transaction when limits are exceeded.
+   - The infrastructure (counters + params) is already designed to support both policies.
 
 5. **Reward computation**  
-   - The Keeper reads the PoSS params:
+   - The Keeper reads PoSS parameters:
      - `BaseReward` (in `unur`)
      - weights:
        - `WeightMicroDonation`
@@ -51,107 +66,335 @@ When PoSS is fully implemented, each signal will follow this logical pipeline:
        - `WeightCCN`
      - halving schedule via `HalvingPeriodBlocks`
      - PoSS reserve denom: `PoSSReserveDenom = "unur"`
-   - The Keeper calls the pure helper:
-     - `ComputeSignalReward(params, signalType, blockHeight)`
+   - The Keeper calls a pure helper function, such as:  
+     `ComputeSignalReward(params, signalType, blockHeight)`
    - This function:
      - applies the **signal weight**,
-     - applies the **halving factor** (every 8 years in block time),
-     - applies the **70 % / 30 % split**:
-       - 70 % → participant
-       - 30 % → curator.
+     - applies the **halving factor** (every 8 years, approximated in blocks),
+     - computes a raw reward,
+     - applies the **70% / 30% structural split**:
+       - 70% → participant
+       - 30% → curator.
 
-6. **Final checks & minting (future Phase 4)**  
-   - The Keeper will:
-     - check that the PoSS reserve is sufficient (if we implement a hard reserve),
-     - update:
+6. **Final checks & minting (target behaviour)**  
+   When PoSS is effectively enabled:
+
+   - The Keeper:
+     - checks that PoSS is enabled: `PoSSEnabled == true`,
+     - ensures that global totals (`TotalMinted`) stay **within the supply cap**,
+     - optionally checks that the dedicated PoSS Reserve is sufficient (if implemented as a hard pool),
+     - updates:
        - `TotalSignals`
        - `TotalMinted`
-     - mint or transfer the computed NUR:
+       - per-address reward history (if configured).
+   - Then, the Keeper:
+     - mints or transfers the computed NUR:
        - to the participant address,
        - to the curator address.
-   - All state changes will be **fully auditable** in the store and in events.
+   - All state changes are **fully auditable** through:
+     - the store content,
+     - associated events.
 
 7. **Events & transparency**  
-   - Each successful PoSS operation will emit events:
-     - `"noorsignal_signal_created"` with:
-       - participant
-       - curator
-       - signal type
-       - raw reward
-       - halving era
-     - These events will be visible in explorers and indexers.
+   - Each successful PoSS operation emits events, such as:
+     - `"noorsignal_signal_created"`
+     - `"noorsignal_signal_validated"`
+     - `"noorsignal_reward_distributed"`
+   - Typical attributes include:
+     - participant
+     - curator
+     - signal type
+     - raw reward
+     - halving era / epoch info
+   - These events are visible to:
+     - explorers,
+     - indexers,
+     - dashboards,
+     - governance tools.
 
 ---
 
 ## 2. Daily limits behaviour
 
-Even though PoSS limits are not hard-coded yet, the *intended* behaviour is:
+Daily limits are a central component of PoSS Logic and anti-abuse.
 
-- **Participant:** cannot emit more than `MaxSignalsPerDay` eligible signals per day.
-  - After the limit is reached:
-    - additional signals are either rejected or accepted with **zero reward**.
-- **Curator:** cannot validate more than `MaxSignalsPerCuratorPerDay` rewarded signals per day.
-  - Beyond that, the curator can still see signals, but:
-    - they will not receive new PoSS rewards.
+### 2.1 Participant limits
 
-The exact policy (reject vs. accept-without-reward) will be finalised in a later PoSS Logic step, but the infrastructure (counters, params) is already prepared.
+- A participant **cannot receive more than `MaxSignalsPerDay` rewarded signals per day**.
+- After the limit is reached:
+  - target behaviour:
+    - signals can still be emitted and recorded for history / statistics,
+    - but **they generate zero PoSS rewards** for that day.
+  - alternative stricter behaviour (if governance decides):
+    - signals beyond the limit are rejected at the message level.
 
----
+### 2.2 Curator limits
 
-## 3. Halving and long-term issuance
+- A curator **cannot validate more than `MaxSignalsPerCuratorPerDay` rewarded signals per day**.
+- After the limit is reached:
+  - the curator may still validate signals as a social/ethical action,
+  - but:
+    - **they do not receive additional PoSS rewards** beyond the limit.
 
-PoSS Logic keeps the **fixed cap** of `299,792,458 NUR` intact.
+### 2.3 Reset and accounting
 
-- The PoSS module does **not** change the total cap.
-- It only controls the *tempo* of social mining via:
-  - `BaseReward`
-  - signal weights
-  - `HalvingPeriodBlocks`
-  - daily limits (`MaxSignalsPerDay`, `MaxSignalsPerCuratorPerDay`)
-  - and `PoSSEnabled`.
+- Daily counters are keyed by:
+  - address, and  
+  - day (via block time or a derived epoch index).
+- At each new epoch (1 day), counters are reset or replaced by new entries.
 
-Every halving period:
-- the **effective reward per signal** is reduced,
-- the system becomes more conservative,
-- but the 70/30 split always remains the same.
-
----
-
-## 4. Invariants and safety rules
-
-The following rules MUST always hold in implementation:
-
-1. `PoSSReserveDenom` is always `"unur"`.
-2. PoSS **never mints above the global cap** defined at genesis.
-3. Daily counters are correctly reset and enforced:
-   - participant per day,
-   - curator per day.
-4. The **reward split is structurally fixed**:
-   - `ParticipantShare = 70`
-   - `CuratorShare = 30`
-5. Parameters (BaseReward, limits, halving) are:
-   - adjustable by governance,
-   - transparent and documented,
-   - never used to promise any “yield” or “APR”.
+The exact reject vs. accept-without-reward policy remains configurable, but **the storage and logic for both options are already anticipated**.
 
 ---
 
-## 5. Current implementation status (end of PoSS Logic 15)
+## 3. Halving and long-term issuance logic
 
-As of the end of PoSS Logic 15:
+PoSS Logic is constrained by a **fixed global cap** of `299,792,458 NUR`.
 
-- `x/noorsignal/types` already defines:
-  - `GenesisState` + `DefaultGenesis` + `ValidateGenesis`
-  - `Params` + `DefaultParams` + `Validate`
-  - daily counter helpers and keys
-  - pure reward helpers with 70/30 split and halving input
-- `x/noorsignal/keeper` already defines:
-  - a minimal `Keeper` with:
-    - KVStore access,
-    - per-address, per-day counters,
-    - a `GetParams(ctx)` (currently returns `DefaultParams()`),
-    - `ComputeSignalRewardForBlock(...)` as a thin wrapper on helpers.
-- The **actual PoSS transaction type** and **state updates** (TotalSignals, TotalMinted, balances) are **not yet implemented**.
-- PoSS remains **disabled by default** (`PoSSEnabled = false`).
+- PoSS does **not** create inflation.  
+- All rewards are derived from a pre-allocated **PoSS Reserve** (80% of total supply).
 
-This document defines the target behaviour so that Phase 4 can implement it step by step without ambiguity.
+The PoSS engine only controls the **tempo** of distribution via:
+
+- `BaseReward`
+- signal weights
+- `HalvingPeriodBlocks` (approx. 8 years)
+- daily limits:
+  - `MaxSignalsPerDay`
+  - `MaxSignalsPerCuratorPerDay`
+- the global switch: `PoSSEnabled`.
+
+### 3.1 Halving behaviour
+
+Every halving period (~8 years):
+
+- the effective reward per signal decreases,
+- the PoSS Reserve emission pace slows down,
+- but the **70/30 split remains untouched**.
+
+Pseudo-formula for a given block height:
+
+```text
+era              = floor(blockHeight / HalvingPeriodBlocks)
+effectiveReward  = BaseReward / (2 ^ era)
+This effectiveReward is then modulated by:
+
+the signal type weight,
+
+possible global daily caps.
+
+4. Invariants and safety rules
+
+The following invariants must always hold in the final implementation:
+
+Denomination
+
+PoSSReserveDenom is always "unur" (the base NUR unit).
+
+Supply cap preservation
+
+PoSS never mints above the global cap set at genesis:
+
+TotalSupply <= 299,792,458 NUR at all times.
+
+Daily counters
+
+Participant daily signals and curator daily validations must be:
+
+correctly updated,
+
+correctly reset or rotated at the epoch boundary,
+
+consistently enforced.
+
+Structural reward split
+
+Reward split is hard-anchored:
+
+ParticipantShare = 70
+
+CuratorShare = 30
+
+This split must not be modifiable by governance.
+
+Governance and parameters
+
+BaseReward, daily limits, and halving intervals are:
+
+set at genesis (Phase 3/4),
+
+adjustable via on-chain governance,
+
+fully transparent.
+
+They must never be used to advertise or guarantee:
+
+fixed yield,
+
+APR,
+
+ROI,
+
+or any financial performance.
+
+Legal Light CH compliance
+
+PoSS must remain compatible with the Swiss Legal Light framework:
+
+no promise of financial return,
+
+reward distribution based on social signals, not investment,
+
+transparent and capped supply,
+
+no custody of third-party funds inside PoSS.
+
+5. Current implementation status (end of PoSS Logic 15 / Phase 4)
+
+At the end of Phase 4 (Implementation core completed), the PoSS engine has the following status:
+
+5.1 Types and genesis
+
+The package x/noorsignal/types defines:
+
+GenesisState + DefaultGenesis + ValidateGenesis
+
+Params + DefaultParams + Validate
+
+keys and helpers for:
+
+daily counters,
+
+global totals (TotalSignals, TotalMinted),
+
+pure reward helpers implementing:
+
+base reward input,
+
+signal weight,
+
+halving factor,
+
+70/30 structural split.
+
+5.2 Keeper and core logic
+
+The package x/noorsignal/keeper defines:
+
+a real Keeper with:
+
+access to the KV store,
+
+per-address, per-day counters,
+
+GetParams(ctx) and parameter accessors,
+
+internal helpers for computing block-level rewards
+(e.g. ComputeSignalRewardForBlock(...) as a thin wrapper on pure helpers),
+
+the ability to record signals and counters in the store,
+
+a PoSSEnabled parameter (currently false by default).
+
+5.3 Messages and module integration
+
+A MsgCreateSignal (or equivalent) exists with its MsgServer implementation.
+
+Signals can already be submitted and counted in the Testnet-style environment.
+
+The module x/noorsignal is:
+
+wired in app/app.go,
+
+part of ModuleManager,
+
+included in:
+
+InitGenesis,
+
+ExportGenesis,
+
+BeginBlock / EndBlock logic as needed.
+
+5.4 What is not active yet
+
+No real minting or bank transfers are executed from PoSS:
+
+PoSSEnabled = false in default parameters,
+
+reward calculations are theoretical and can be inspected in logs / queries,
+
+no actual NUR distribution occurs from PoSS in the current Testnet state.
+
+The final wiring between:
+
+PoSS reward helpers and
+
+Bank / Mint modules
+will be switched on only after governance and legal validation.
+
+6. Target activation path (from Phase 5 onward)
+
+To move from the current “counting only” state to a fully active PoSS, the following steps are expected:
+
+Legal & Governance validation (Phase 5)
+
+Confirm that reward levels remain symbolic and non-financial.
+
+Validate Legal Light CH classification.
+
+Freeze structural invariants (cap, 70/30, 8-year halving).
+
+Genesis parameter finalization (Phase 6 / Genesis Pack)
+
+Set:
+
+initial BaseReward,
+
+MaxSignalsPerDay,
+
+MaxSignalsPerCuratorPerDay,
+
+HalvingPeriodBlocks,
+
+PoSSEnabled = false at genesis.
+
+Document all values in the Genesis Pack.
+
+Testnet 1.0 PoSS dry-run (Phase 7–8)
+
+Enable PoSS counting only (no minting).
+
+Observe volumes and patterns.
+
+Adjust parameters via governance if needed.
+
+Governance activation vote
+
+When the network is ready:
+
+a governance proposal can switch PoSSEnabled from false to true,
+
+and connect PoSS rewards to real NUR movements (within the cap).
+
+7. Summary
+
+This document captures the end-to-end, target PoSS Logic for NOORCHAIN 1.0:
+
+exact signal lifecycle,
+
+daily anti-abuse behaviour,
+
+halving and long-term emission logic,
+
+structural safety invariants,
+
+current implementation status (Phase 4 completed),
+
+and the path toward safe, compliant activation.
+
+It is the bridge document between:
+
+conceptual specification (Phase3_04_PoSS_FullSpecification) and
+
+real implementation (Phase 4, Testnet, Mainnet).
