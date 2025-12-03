@@ -1,231 +1,291 @@
-**NOORCHAIN — Phase 4A
 
-Block Lifecycle Specification (Cosmos SDK + Ethermint + PoSS)**
-Version 1.1 — Architecture Only, No Code
+All module interactions must follow a strict order to ensure:
 
-🔧 1. Purpose of This Document
+- determinism  
+- consensus correctness  
+- EVM state stability  
+- PoSS reward correctness  
+- governance consistency  
 
-This document defines the full, detailed block lifecycle of the NOORCHAIN application, including:
+---
 
-BeginBlock logic
+# 3. BeginBlock Lifecycle (Authoritative Order)
 
-DeliverTx logic
+### **BeginBlock MUST execute in this exact sequence:**
 
-EndBlock logic
+1. **FeeMarket**  
+2. **EVM**  
+3. **Staking**  
+4. **PoSS (noorsignal)**  
+5. **Governance**
 
-Commit cycle
+This order is consensus-critical.
 
-EVM integration points
+---
 
-PoSS integration points
+## 3.1 FeeMarket BeginBlock
 
-Ordering constraints
+The FeeMarket module:
 
-This file ensures deterministic block execution during Phase 4C coding.
+- updates the EIP-1559 base fee  
+- applies gas dynamics for the upcoming block  
+- ensures proper pricing for EVM execution  
 
-🧩 2. Block Lifecycle Overview
+---
 
-Each block follows this order:
+## 3.2 EVM BeginBlock
 
-BeginBlock → DeliverTx → EndBlock → Commit
+The EVM module:
 
+- prepares the EVM block context  
+- resets EVM logs  
+- initializes block-level variables:  
+  - base fee  
+  - coinbase  
+  - block time  
+  - block height  
 
-Inside this flow, Cosmos modules, Ethermint modules and PoSS must run at very precise points.
+This must *always* occur before processing any Ethereum tx.
 
-🏁 3. BeginBlock Lifecycle (Critical Order)
-BeginBlock Execution Order
-1. FeeMarket
-2. EVM
-3. Staking
-4. PoSS (noorsignal)
-5. Governance
+---
 
-3.1 FeeMarket BeginBlock
+## 3.3 Staking BeginBlock
 
-updates the dynamic base fee (EIP-1559 style)
+The Staking module:
 
-adjusts global gas prices
+- processes validator updates  
+- recomputes voting power  
+- handles unjailing events  
+- handles slashing-related state  
 
-3.2 EVM BeginBlock
+Staking must always run before PoSS, because PoSS depends on:
 
-prepares EVM block context
+- validator power  
+- accurate chain timestamp  
 
-resets logs
+---
 
-sets block time, base fee, coinbase
+## 3.4 PoSS BeginBlock
 
-3.3 Staking BeginBlock
+The PoSS module (x/noorsignal):
 
-processes validator updates
+- reads PoSS parameters from ParamsKeeper  
+- checks whether PoSS is enabled  
+- evaluates halving epoch  
+- updates daily counters  
+- prepares state for reward computation  
+- (future) processes pending signals  
+- (future) applies the 70/30 reward distribution  
 
-recomputes voting power
+PoSS may not modify validator sets or gas rules.
 
-handles slashing/unjailing events
+---
 
-3.4 PoSS BeginBlock
+## 3.5 Governance BeginBlock
 
-Uses up-to-date validator power to:
+The Governance module:
 
-read aggregated signals (later Phase 4B)
+- checks active proposals  
+- advances voting periods  
+- closes proposals when conditions are met  
 
-compute PoSS rewards
+Governance must always run **after** PoSS.
 
-apply 70/30 distribution model
+---
 
-check for halving epochs
+# 4. DeliverTx Lifecycle
 
-record PoSS block index
+Every transaction is processed through the following deterministic pipeline:
 
-3.5 Governance BeginBlock
+---
 
-checks proposal status
+## 4.1 AnteHandler
 
-handles voting periods
+The AnteHandler performs:
 
-🚀 4. DeliverTx Lifecycle
+- signature verification  
+- account sequence checks  
+- account number validation  
+- gas payer balance checks  
+- EVM-specific validation (for `MsgEthereumTx`)  
 
-For each transaction:
+If the AnteHandler fails → the transaction fails before message execution.
 
-4.1 AnteHandler
+---
 
-signature checks
+## 4.2 Message Routing
 
-account sequence and number
+The Router dispatches each message to the correct module:
 
-account balance for gas
+- Cosmos SDK messages  
+- Staking & Governance messages  
+- PoSS messages (`MsgCreateSignal`, etc.)  
+- Ethereum transactions (`MsgEthereumTx`)  
 
-EVM-specific validation (if eth tx)
+---
 
-4.2 Message Routing
+## 4.3 State Transitions
 
-Routes msg types:
+Modules perform:
 
-cosmos SDK messages
+- KVStore writes  
+- event emission  
+- reward distribution (when PoSS is enabled)  
+- EVM bytecode execution  
+- logs and receipts generation  
 
-MsgEthereumTx (EVM)
+Gas is fully tracked throughout this stage.
 
-PoSS custom messages
+---
 
-staking & governance msgs
+## 4.4 EVM-Specific Execution
 
-4.3 State Transitions
+For `MsgEthereumTx`:
 
-KVStore writes
+- execution occurs inside the EVM stateDB  
+- state only commits if the tx is successful  
+- errors trigger a full EVM revert  
+- logs, receipts, and bloom filters are produced  
 
-event emission
+EVM execution must be 100% deterministic across all nodes.
 
-gas accounting
+---
 
-4.4 Special case: Ethereum transactions
+# 5. EndBlock Lifecycle
 
-executed in the EVM
+EndBlock must run in the following strict order:
 
-logs stored
+1. **Staking**  
+2. **Governance**
 
-receipts generated
+---
 
-failures revert state via EVM state DB
+## 5.1 Staking EndBlock
 
-🧱 5. EndBlock Lifecycle
-5.1 Staking EndBlock
+Staking:
 
-finalize validator updates
+- finalizes validator updates  
+- outputs a new validator set diff  
+- provides updates to CometBFT  
 
-produce new validator set
+This is the only place where validator updates are committed.
 
-prepare diffs for CometBFT consensus
+---
 
-5.2 Governance EndBlock
+## 5.2 Governance EndBlock
 
-finalize proposals whose voting ended
+Governance:
 
-apply proposal results
+- finalizes proposals whose voting has ended  
+- applies accepted changes  
+- rejects or marks failed proposals  
 
-Ordering:
+Governance must run after staking to ensure valid voting power calculations.
 
+---
+
+# 6. Commit Phase
+
+The Commit phase finalizes the block.
+
+---
+
+## 6.1 State Commitment
+
+The multistore:
+
+- commits all module states via IAVL  
+- produces the new app hash  
+- anchors this hash for the next block  
+
+This is the consensus root of the chain.
+
+---
+
+## 6.2 EVM State Commit
+
+EVM performs:
+
+- stateDB flush  
+- log indexing  
+- bloom filter generation  
+- transaction receipt persistence  
+
+This must occur **before** PoSS commit.
+
+---
+
+## 6.3 PoSS Commit
+
+PoSS:
+
+- commits daily counters  
+- commits halving epoch index  
+- commits reward metadata  
+- prepares internal caches for next block  
+
+PoSS commit must occur **after** EVM commit.
+
+---
+
+# 7. Lifecycle Diagram
+            ▼
+    ┌──────────────────┐
+    │   BeginBlock     │
+    └──────────────────┘
+feemarket → evm → staking → poss → gov
+▼
+┌──────────────────┐
+│ DeliverTx │
+└──────────────────┘
+ante → routing → state writes
+▼
+┌──────────────────┐
+│ EndBlock │
+└──────────────────┘
 staking → gov
+▼
+┌──────────────────┐
+│ Commit │
+└──────────────────┘
+state commit → evm commit → poss commit
 
-🔄 6. Commit Phase
-6.1 State Commitment
+---
 
-Multistore commits via IAVL
+# 8. Determinism Constraints
 
-produces new app hash
+These rules are **mandatory** for consensus safety:
 
-stored for next block
+- FeeMarket must run **before** EVM  
+- Staking must run **before** PoSS  
+- PoSS must run **before** Governance  
+- EVM must commit **before** PoSS commit  
+- PoSS must **never** run in EndBlock  
+- EndBlock must contain only staking → governance  
+- No module may modify validator sets except staking  
 
-6.2 EVM State Commit
+Breaking these rules leads to:
 
-flush EVM state DB
+- reward inconsistencies  
+- EVM mismatches  
+- invalid validator power  
+- non-deterministic state transitions  
+- governance state corruption  
 
-write bloom filter
+---
 
-index logs
-
-6.3 PoSS Commit
-
-(later Phase 4B)
-
-commit epoch counters
-
-commit reward update indexes
-
-🌐 7. Lifecycle Diagram
-                ▼
-        ┌──────────────────┐
-        │   BeginBlock     │
-        └──────────────────┘
-   feemarket → evm → staking → poss → gov
-                ▼
-        ┌──────────────────┐
-        │    DeliverTx     │
-        └──────────────────┘
-        ante → msg → state writes
-                ▼
-        ┌──────────────────┐
-        │    EndBlock      │
-        └──────────────────┘
-         staking → gov
-                ▼
-        ┌──────────────────┐
-        │     Commit       │
-        └──────────────────┘
- state commit → evm commit → poss commit
-
-🧠 8. Determinism Constraints
-
-The following rules are mandatory:
-
-fee market must run before EVM
-
-staking must run before PoSS
-
-PoSS must run before governance
-
-EVM must commit before PoSS can finalize
-
-EndBlock must only finalize staking & governance
-
-PoSS must NEVER run during EndBlock (only BeginBlock)
-
-These rules prevent:
-
-reward inconsistencies
-
-EVM mismatch
-
-invalid validator power
-
-governance misalignment
-
-🎯 9. Summary
+# 9. Summary
 
 NOORCHAIN’s block lifecycle is:
 
-Phase	Order
-BeginBlock	feemarket → evm → staking → poss → gov
-DeliverTx	ante → msg → state
-EndBlock	staking → gov
-Commit	state → evm → poss
+| Phase       | Order |
+|-------------|-------|
+| **BeginBlock** | feemarket → evm → staking → poss → gov |
+| **DeliverTx**  | ante → routing → state writes |
+| **EndBlock**   | staking → gov |
+| **Commit**     | state commit → evm commit → poss commit |
 
-This document is the authoritative reference for block execution during coding.
+This document is the **canonical reference** for block execution.  
+All coding in Phase 4C and all audits in Phase 5–7 must follow it.
+
+
