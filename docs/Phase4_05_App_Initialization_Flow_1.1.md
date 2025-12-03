@@ -1,293 +1,355 @@
-**NOORCHAIN — Phase 4A
+# NOORCHAIN — Phase 4A  
+## App Initialization Flow (Cosmos SDK + Ethermint + PoSS)  
+### Version 1.1 — Architecture Only (No Code)  
+### Last Updated: 2025-12-03  
 
-App Initialization Flow (Cosmos SDK + Ethermint + PoSS)**
-Version 1.1 — Architecture Only (No Code)
+---
 
-🔧 1. Purpose of This Document
+## 1. Purpose of This Document
 
-This document defines the complete initialization flow of the NOORCHAIN application.
+This document defines the complete **initialization flow** of the NOORCHAIN 1.0 application.
 
 It describes:
 
-how the blockchain app is constructed
+- how the blockchain app is constructed  
+- in which order components must be instantiated  
+- how modules hook into the lifecycle  
+- how the app transitions from “empty” to “running chain”  
+- how PoSS fits into the init process  
 
-in which order components must be instantiated
+This is the **reference** for building the real constructor in `app/app.go` during Phase 4C (implementation & testnet).
 
-how modules hook into the lifecycle
+---
 
-how the app transitions from “empty” to “running chain”
+## 2. Initialization Flow Overview
 
-how PoSS fits into the init process
+Initialization occurs in three main phases:
 
-This is the reference for building the real constructor in app/app.go during Phase 4C.
+1. **Application Construction**  
+2. **ModuleManager Wiring**  
+3. **Genesis Initialization**
 
-🏗️ 2. Initialization Flow Overview
+Each phase must be executed in the **correct order** to avoid:
 
-Initialization occurs in three phases:
+- unstable state  
+- missing stores  
+- EVM or PoSS panics at runtime  
 
-Application Construction
+---
 
-ModuleManager Wiring
+## 3. Phase 1 — Application Construction
 
-Genesis Initialization
+The app constructor must perform the following steps in order:
 
-Each phase must be executed in the correct order to avoid unstable state, missing stores, or EVM panic.
+---
 
-🧱 3. Phase 1 — Application Construction
-
-The app constructor must perform the following steps:
-
-Step 1 — Build Encoding Config
+### Step 1 — Build Encoding Config
 
 Construct:
 
-Interface Registry
+- Interface Registry  
+- Amino (legacy) codec  
+- Protobuf codec  
+- TxConfig  
+- JSON marshaler  
 
-Amino (legacy) codec
+**Purpose:**  
+Enable message processing, signing, decoding, and transaction routing.
 
-Proto codec
+---
 
-TxConfig
+### Step 2 — Create BaseApp
 
-JSON marshaler
+Build `BaseApp` with:
 
-Purpose:
-→ Enable message processing, signing, decoding, transaction routing.
+- app name  
+- logger  
+- database handle  
+- TxDecoder / TxEncoder  
+- interface registry  
 
-Step 2 — Create BaseApp
+**Purpose:**  
+Provide the core ABCI engine for NOORCHAIN.
 
-Build BaseApp with:
+---
 
-app name
+### Step 3 — Define Store Keys
 
-logger
+Define `KVStoreKey` / `TransientStoreKey` for:
 
-database
+- `auth`  
+- `bank`  
+- `staking`  
+- `gov`  
+- `evm`  
+- `feemarket`  
+- `noorsignal`  
+- `params`  
 
-TxDecoder / TxEncoder
+**Purpose:**  
+Prepare all module stores to mount persistent chain state.
 
-interface registry
+---
 
-Purpose:
-→ Core ABCI engine.
+### Step 4 — Mount Stores
 
-Step 3 — Define Store Keys
+Use `MountKVStore`, `MountTransientStore`, etc. for:
 
-For:
+- all module KV stores  
+- transient stores (where required, e.g. feemarket transient store)  
 
-auth
+**Purpose:**  
+Ensure all module states are persisted and accessible by the keepers.
 
-bank
+---
 
-staking
+### Step 5 — Create Keepers (Strict Order)
 
-gov
+Instantiate keepers in this **strict order** (aligned with the Keeper System Design):
 
-evm
+1. **AccountKeeper**  
+2. **BankKeeper**  
+3. **StakingKeeper**  
+4. **GovKeeper**  
+5. **ParamsKeeper** (with subspaces for all modules)  
+6. **EVMKeeper**  
+7. **FeeMarketKeeper**  
+8. **PoSSKeeper** (`x/noorsignal`)  
 
-feemarket
+**Purpose:**  
+Establish all state managers with correct dependency order.
 
-noorsignal
+---
 
-Purpose:
-→ Prepare KVStores to mount persistent chain state.
+### Step 6 — Wire Keeper Dependencies
 
-Step 4 — Mount Stores
+Connect keepers and hooks, for example:
 
-Using MountKVStore and others.
+- `staking.SetHooks(...)`  
+- `evm.SetStakingKeeper(...)` (or equivalent Ethermint wiring)  
+- `poss.SetStakingKeeper(...)`  
+- `poss.SetBankKeeper(...)`  
+- PoSS keeper gets its params subspace via `ParamsKeeper`  
 
-Purpose:
-→ State persistence.
+**Purpose:**  
+Ensure proper inter-module communication and PoSS access to balances, staking, and parameters.
 
-Step 5 — Create Keepers
+---
 
-In strict order:
+### Step 7 — Configure ModuleManager
 
-1. AccountKeeper
-2. BankKeeper
-3. StakingKeeper
-4. GovKeeper
-5. EVMKeeper
-6. FeeMarketKeeper
-7. PoSSKeeper
+Create and configure the `ModuleManager`:
 
+- register all modules (auth, bank, staking, gov, evm, feemarket, noorsignal)  
+- set **BeginBlock** order  
+- set **EndBlock** order  
+- set **InitGenesis** order  
+- set **ExportGenesis** order  
 
-Purpose:
-→ Establish all state managers.
+**Purpose:**  
+Guarantee deterministic and predictable execution.
 
-Step 6 — Wire Keeper Dependencies
+---
 
-Examples:
+### Step 8 — Register Services
 
-staking.SetHooks()
+Register:
 
-evm.SetStakingKeeper()
+- **Msg services** (transaction handlers)  
+- **Query services** (gRPC queries)  
 
-poss.SetStakingKeeper()
+for:
 
-poss.SetBankKeeper()
+- `auth`  
+- `bank`  
+- `staking`  
+- `gov`  
+- `evm`  
+- `feemarket`  
+- `noorsignal`  
 
-Purpose:
-→ Proper module interconnection.
+**Purpose:**  
+Expose the chain functionality over RPC / gRPC.
 
-Step 7 — Configure ModuleManager
+---
 
-Provides:
+### Step 9 — Register BeginBlocker
 
-begin-block order
+Define **BeginBlocker** order, for example:
 
-end-block order
+1. `feemarket`  
+2. `evm`  
+3. `staking`  
+4. `noorsignal` (PoSS)  
+5. `gov`  
 
-InitGenesis order
+**Purpose:**  
 
-ExportGenesis order
+- update base fee (feemarket)  
+- prepare EVM block context  
+- apply staking updates  
+- process PoSS signals & rewards (when enabled)  
+- update governance state  
 
-Purpose:
-→ Deterministic execution.
+---
 
-Step 8 — Register Services
+### Step 10 — Register EndBlocker
 
-Message services and query services for:
+Define **EndBlocker** order, for example:
 
-auth
+1. `staking`  
+2. `gov`  
 
-bank
+**Purpose:**  
 
-staking
+- finalize validator set updates  
+- finalize governance calculations & proposal results  
 
-gov
+---
 
-evm
+### Step 11 — Register InitGenesis / ExportGenesis
 
-feemarket
+Define **InitGenesis** order (example):
 
-noorsignal
+1. `auth`  
+2. `bank`  
+3. `staking`  
+4. `gov`  
+5. `evm`  
+6. `feemarket`  
+7. `noorsignal`  
 
-Purpose:
-→ Expose RPC & gRPC functionality.
+Each module:
 
-Step 9 — Register BeginBlocker
+- reads its own genesis state  
+- validates it  
+- initializes internal store state  
 
-Order:
+**Purpose:**  
+Ensure deterministic, reproducible genesis state creation.
 
-feemarket → evm → staking → noorsignal → gov
+---
 
+### Step 12 — Load Latest Version
 
-Purpose:
-→ Correct block lifecycle execution.
+`BaseApp` loads the **latest application state**:
 
-Step 10 — Register EndBlocker
+- from disk (if restarting an existing chain)  
+- from genesis (if `height == 0`)  
 
-Order:
+**Purpose:**  
+Prepare the node to run from the correct state.
 
-staking → gov
+---
 
+### Step 13 — Expose App Structure
 
-Purpose:
-→ Finalize validator set & governance.
+The constructor returns the final `App` struct containing:
 
-Step 11 — Register InitGenesis / ExportGenesis
+- `BaseApp`  
+- keepers  
+- codecs and interface registry  
+- store keys  
+- ModuleManager  
+- router / service infrastructure  
 
-Modules must initialize in this order:
+**Purpose:**  
+Provide a complete, ready-to-run NOORCHAIN application instance.
 
-auth → bank → staking → gov → evm → feemarket → noorsignal
+---
 
+## 4. Phase 2 — Runtime Initialization
 
-Purpose:
-→ Deterministic genesis.
+After the application has been constructed:
 
-Step 12 — Load Latest Version
+1. The node starts via `noord start`.  
+2. If chain height is `0`, `InitChain` is called:  
+   - `InitGenesis` is executed in the order defined above.  
+   - initial validator set is created.  
+3. The chain moves to **block height 1**.  
 
-BaseApp loads the application state from disk (or genesis).
+Then the standard block lifecycle starts and repeats:
 
-Purpose:
-→ Prepare the node to run.
+- **BeginBlock**  
+- **DeliverTx**  
+- **EndBlock**  
+- **Commit**  
 
-Step 13 — Expose App Structure
+PoSS integration (when enabled) happens mainly in:
 
-Return the final App struct with:
+- **BeginBlock** (processing signals & rewards)  
+- transaction handlers (PoSS messages in `DeliverTx`).  
 
-keepers
+---
 
-codec
+## 5. Phase 3 — Genesis Initialization (Detailed)
 
-BaseApp
+This section describes the roles of the main modules at genesis time.
 
-stores
+---
 
-Mmgr reference
+### 5.1 Auth Genesis
 
-interface registry
+- Create base accounts (e.g. 5 genesis wallets for: Foundation, Founder, Stimulus, Pre-sale, PoSS Reserve).  
+- Assign account numbers and sequences.  
 
-router
+---
 
-Purpose:
-→ Complete application ready to start.
+### 5.2 Bank Genesis
 
-🔌 4. Phase 2 — Runtime Initialization
+- Assign initial balances according to the **5 / 5 / 5 / 5 / 80** economic model (in `unur`).  
+- Validate that total supply is consistent.  
 
-After construction:
+---
 
-Node starts via noord start
+### 5.3 Staking Genesis
 
-BaseApp calls InitChain if height 0
+- Set staking parameters.  
+- Optionally configure initial validator(s) or leave for later testnet configuration.  
 
-Modules execute InitGenesis
+---
 
-Validator set committed
+### 5.4 Gov Genesis
 
-Chain moves to block height 1
+- Set governance parameters:  
+  - voting period  
+  - deposit requirements  
+  - quorum, threshold, veto rules  
 
-Then block lifecycle begins:
+---
 
-BeginBlock → DeliverTx → EndBlock → Commit
+### 5.5 EVM Genesis
 
-🌍 5. Phase 3 — Genesis Initialization (More Detail)
-Auth Genesis
+- Set EVM chain ID.  
+- Configure base EVM parameters (gas, block config, etc.).  
+- Initialize EVM state (if any pre-deployed contracts).  
 
-Create base accounts (5 genesis wallets)
+---
 
-Apply account numbers
+### 5.6 FeeMarket Genesis
 
-Bank Genesis
+- Set initial parameters for the fee market module.  
+- Initial base fee is generally `0` at genesis.  
 
-Assign initial balances (5/5/5/5/80)
+---
 
-Validate supply
+### 5.7 PoSS Genesis (`x/noorsignal`)
 
-Staking Genesis
+- Initialize PoSS state store.  
+- Set `PoSSEnabled = false` at genesis (PoSS disabled by default).  
+- Set initial PoSS parameters:  
+  - daily limits  
+  - base reward  
+  - weights  
+  - halving settings  
+- Ensure `HalvingEpoch = 0` at chain start.  
+- Set counters and totals to zero (`TotalSignals = 0`, `TotalMinted = 0`).  
 
-Set params
+---
 
-Set initial validator (or delegations later in Testnet 1.0)
+## 6. Initialization Timeline Diagram
 
-Gov Genesis
-
-Set voting params
-
-Set deposit params
-
-EVM Genesis
-
-Set chain ID
-
-Configure base EVM parameters
-
-Deploy fee market params
-
-FeeMarket Genesis
-
-Set initial base fee (usually 0)
-
-PoSS Genesis
-
-Initialize PoSS state store
-
-Set halving epoch 0
-
-Set initial reward indexes
-
-🚦 6. Initialization Timeline Diagram
+```text
 ┌────────────────────────────────┐
 │      1. Encoding Config        │
 └───────────────┬────────────────┘
@@ -335,12 +397,16 @@ Set initial reward indexes
 ┌────────────────────────────────┐
 │   13. App Ready to Start       │
 └────────────────────────────────┘
+7. Summary
+This App Initialization Flow is now the canonical reference for:
 
-🎯 7. Summary
+Phase 4C (implementation in app/app.go)
 
-This initialization flow is now the canonical reference for Phase 4C implementation.
+Phase 5 (legal & governance validation)
 
-It ensures:
+Phase 7 (Mainnet 1.0 preparation)
+
+It guarantees:
 
 deterministic chain startup
 
@@ -348,8 +414,9 @@ correct module dependency wiring
 
 stable EVM operation
 
-stable PoSS integration
+safe PoSS integration (initially disabled)
 
-correct block lifecycle
+a clean, auditable initialization path for auditors and partners
 
-Nothing should be added or removed unless explicitly validated in Phase 3 specifications.
+Nothing should be added or removed without updating this document
+and validating changes against Phase 3 specifications.
