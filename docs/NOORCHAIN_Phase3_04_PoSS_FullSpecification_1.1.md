@@ -1,428 +1,343 @@
-NOORCHAIN 1.0 — Phase 3.04
-Proof of Signal Social (PoSS) — Full System Specification
-Version 1.1 — Official Document
+# NOORCHAIN 1.0  
+## Phase 3.04 — PoSS Full Specification  
+### Version 1.1  
+### Last Updated: 2025-12-03  
 
-Purpose of this document
-This document fully specifies the Proof of Signal Social (PoSS) consensus-economic mechanism of NOORCHAIN.
-It defines all logic, all parameters, all components, all flows, without code, to serve as:
+---
 
-the reference for implementing the PoSS module (x/noorsignal)
+# 0. Purpose of this Document
 
-the basis for Testnet genesis parameters
+This document defines the **complete, authoritative specification** of  
+NOORCHAIN’s Proof of Signal Social (PoSS) mechanism.
 
-the source of truth for documentation and audits
+It serves as the:
 
-the validation blueprint for reward calculations.
+- reference for implementing the PoSS module (`x/noorsignal`)
+- foundation for Testnet and Mainnet genesis parameters
+- normative source for audits and governance reviews
+- canonical specification for reward logic, halving, and anti-abuse rules
+- public documentation used in Whitepapers and Phase 6 Genesis Pack
 
-1. Overview of PoSS
+No code is included.  
+This is a **conceptual and functional specification**.
 
-PoSS (Proof of Signal Social) is NOORCHAIN’s native social-consensus mining mechanism, based on:
+---
 
-human-validated signals
+# 1. PoSS Overview
 
-curator oversight
+PoSS (Proof of Signal Social) is NOORCHAIN’s **human-centric, non-financial  
+reward mechanism** designed to recognize and incentivize verified positive  
+social actions.
 
-transparent on-chain scoring
+PoSS is built on the following principles:
 
-fixed supply (299,792,458 NUR)
+- **human-validated signals**
+- **curator verification (Bronze / Silver / Gold)**
+- **fully transparent on-chain scoring**
+- **fixed total supply (299,792,458 NUR)**
+- **halving every 8 years**
+- **zero inflation (pre-allocated PoSS Reserve)**
+- **70% / 30% reward split**
+- **Legal Light CH compliance (non-financial, capped, symbolic)**
 
-8-year halving
+PoSS is **not** a mining system:  
+it is a *distribution model* for a pre-existing pool of tokens.
 
-zero inflation (pre-allocated reward pool)
+---
 
-70% rewards to participants, 30% to curators
+# 2. Core Concepts
 
-PoSS replaces energy-based mining and solves the “real-world contribution” problem.
+## 2.1 Signal
+A signal is the on-chain representation of a positive, verifiable social action.  
+It is emitted by a participant and later validated by a curator.
 
-It aligns with NOORCHAIN’s vision:
-ethical, human-centric, Swiss-compliant, socially anchored, and economically sustainable.
+## 2.2 Participant
+Any user who emits a PoSS signal.
 
-2. Core Concepts
-2.1. Signal
+## 2.3 Curator
+A verified human or organization responsible for validating signals.  
+Curators are assigned a tier:
 
-A signal is an on-chain representation of a positive, validated social action.
+- **Bronze**
+- **Silver**
+- **Gold**
 
-2.2. Participant
+Tiers affect **permissions and trust level**, not reward amount.
 
-The user who emits the signal.
+## 2.4 PoSS Reserve (80% of supply)
+A fixed, pre-allocated pool of NUR used for PoSS rewards.  
+This reserve is immutable and defined at genesis.
 
-2.3. Curator
-
-A verified human or organization who validates the signal.
-Curators have three tiers:
-
-Bronze
-
-Silver
-
-Gold
-
-Higher tiers have:
-
-higher visibility
-
-higher validation authority
-
-stricter requirements
-
-2.4. PoSS Reward Pool
-
-A fixed pre-allocated pool of NUR used to reward signals.
-Defined in Genesis (Phase3_05):
-
-80% of total supply = PoSS Mintable Reserve
-
-2.5. Reward Split
-
+## 2.5 Reward Split (Immutable)
 Every validated signal distributes:
 
-70% → participant
+- **70%** → Participant  
+- **30%** → Curator  
 
-30% → curator
-(as permanently agreed and stored in memory)
+This rule is considered **structural** and cannot be altered by governance.
 
-2.6. Epoch
+## 2.6 Epoch (1 day)
+The minimal window used for:
 
-The time window used to:
+- computing daily limits  
+- aggregating network weights  
+- tracking reward distribution  
+- resetting counters  
+- applying halving progression  
 
-aggregate stats
+---
 
-check daily limits
+# 3. Signal Types (4 Categories)
 
-apply halving progression
+PoSS supports four official types of signals, representing verified  
+positive contributions.
 
-process PoSS module maintenance
+| Type | Description | Examples |
+|------|-------------|----------|
+| **1. Micro-donation** | Small financial or symbolic gesture | 1 CHF to NGO, micro-tip |
+| **2. Verified Participation** | Presence or contribution to community | volunteering, event participation |
+| **3. Certified Content** | Curator-approved positive content | educational posts, social impact content |
+| **4. CCN (Content Collaboration Noorchain)** | High-value educational/social content | CCN Studio, long-form content |
 
-Default: 1 day.
+---
 
-3. Types of Signals
+# 4. Weight System
 
-NOORCHAIN supports four official signal categories, each with a different weight.
+Each signal type has a predefined weight impacting reward distribution:
 
-3.1. Micro-donation Signal
+| Signal Type | Weight |
+|-------------|--------|
+| Micro-donation | **x1** |
+| Participation | **x2** |
+| Certified Content | **x3** |
+| CCN Signal | **x5** |
 
-A small donation or micro-action validated by a curator.
-Examples: 1 CHF donation to an NGO, 1 NUR micro-tip, etc.
+Total weight for the day determines the relative reward share.
 
-3.2. Verified Participation
+---
 
-Confirmed presence or contribution to a real-world activity.
-Examples:
+# 5. Anti-Abuse Measures
 
-volunteering
+PoSS integrates strict safeguards:
 
-community event
+## 5.1 Daily Limits
+- `DailyMaxSignals` per participant (default: **10**)
+- Curators: `CuratorMaxValidations` (default: **50**)
 
-social participation
+## 5.2 Duplicate Prevention
+Signals include a hash.  
+Duplicate hashes are rejected.
 
-3.3. Certified Content
+## 5.3 Tier-based Controls
+Higher curator tiers = more validations allowed, not more rewards.
 
-Publication of positive or original content validated by curators.
-Examples:
+## 5.4 Sybil Resistance
+Rate limits + curator gating drastically reduce Sybil risk.
 
-educational posts
+## 5.5 Economic & Behavioural Protections
+Prevents:
+- circular validation  
+- self-curation  
+- mass spam  
+- NGO over-validation  
+- bot activity  
 
-constructive online content
+---
 
-CCN (Certified Content Noorchain)
+# 6. Reward Mechanism
 
-3.4. CCN Signal (Content Collaboration Noorchain)
-
-High-value social or educational content certified by a curator.
-
-4. Signal Weight System
-
-Each signal has a weight determining its reward impact.
-
-Weight Scale (public):
-Signal Type	Weight
-Micro-donation	x1
-Participation	x2
-Certified Content	x3
-CCN Signal	x5
-
-Higher weight = larger share of the epoch reward bucket.
-
-5. Anti-Abuse & Limits
-
-PoSS includes strong anti-abuse rules:
-
-5.1. Daily Limits
-
-Each participant can emit N signals/day.
-Recommended default:
-
-DailyMaxSignals = 10
-
-5.2. Rate Limits
-
-Curators cannot validate more than:
-
-CuratorMaxValidations = 50/day
-
-5.3. Duplicate Prevention
-
-No repeated validation of identical signals.
-Hashes stored in module state.
-
-5.4. Tier-based Curator Controls
-
-Higher tiers = higher validation capacity, not higher rewards.
-
-5.5. Economic Protections
-
-The system prevents:
-
-wash signaling
-
-circular curator-participant loops
-
-self-curation
-
-mass spam by NGOs or bots
-
-Sybil identity attacks
-
-6. Reward Mechanism
-
-PoSS uses deterministic, fully public rules.
-
-6.1. Reward Formula
+Rewards are deterministic and can be reproduced for audit.
 
 Let:
 
-W = weight of the signal
+- `W` = signal weight  
+- `W_total_day` = total weights emitted in the epoch  
+- `R_day` = epoch reward budget (after halving)
 
-R_day = daily reward budget for the network
+Then:
 
-R_signal = (W / totalWeightsOfDay) * R_day
-
+R_signal = (W / W_total_day) * R_day
 ParticipantReward = R_signal * 0.70
-
 CuratorReward = R_signal * 0.30
 
-Rewards come from the PoSS Reserve.
 
-6.2. Daily Reward Budget
+Rewards are emitted from the **PoSS Reserve Address**.
 
-Daily rewards follow halving cycles (Section 8).
-Example (illustrative):
+---
 
-R_day = BaseReward / (2 ^ HalvingEpoch)
+# 7. Module Parameters (ParamsKeeper)
 
-6.3. Distribution Method
+All PoSS parameters are on-chain and governance-adjustable (except immutable rules).
 
-Rewards are distributed instantly:
+### 7.1 Global Parameters
 
-Participant → direct transfer
+| Parameter | Description |
+|----------|-------------|
+| `DailyMaxSignals` | Max signals per participant per day |
+| `CuratorMaxValidations` | Max validations per curator per day |
+| `WeightMicroDonation` | 1 |
+| `WeightParticipation` | 2 |
+| `WeightCertifiedContent` | 3 |
+| `WeightCCN` | 5 |
+| `ParticipantRatio` | 0.70 |
+| `CuratorRatio` | 0.30 |
+| `EpochDuration` | 24h |
+| `HalvingBlocks` | Blocks in 8 years |
+| `ReservePoolAddress` | PoSS Reserve |
+| `StimulusPoolAddress` | Early adoption pool |
 
-Curator → direct transfer
+### Immutable parameters:
+- 70/30 split  
+- fixed supply  
+- 80% PoSS reserve  
+- 8-year halving
 
-Sender: PoSS Reserve Address
-Defined in Phase3_05.
+---
 
-7. PoSS Module Parameters
+# 8. Halving Mechanism
 
-All parameters are stored in ParamsKeeper.
-
-7.1. Global Parameters
-Parameter	Description
-DailyMaxSignals	max signals/day per user
-CuratorMaxValidations	max validations/day per curator
-WeightMicroDonation	1
-WeightParticipation	2
-WeightCertifiedContent	3
-WeightCCN	5
-ParticipantRatio	0.70
-CuratorRatio	0.30
-EpochDuration	24h
-HalvingBlocks	derived from 8-year cycle
-ReservePoolAddress	core reward wallet
-StimulusPoolAddress	incentive pool for early adoption
-8. Halving Mechanism
-
-Halving occurs every 8 years.
+Halving reduces `R_day` every **8 years**.
 
 Formula:
+Reward = BaseReward / (2 ^ (Years / 8))
 
-Reward = InitialReward / 2^(Years / 8)
 
+Effects:
+- predictable long-term emission  
+- sustainable PoSS Reserve usage  
+- ~30–40 years of potential PoSS activity  
 
-Halving applies to:
+No inflation is ever introduced.
 
-daily reward budget
+---
 
-long-term emission curve from the PoSS Reserve
+# 9. Event System
 
-NOORCHAIN uses no inflation: all emission is from pre-minted reserve.
+PoSS emits transparent events:
 
-9. Event System
+## 9.1 EventSignalEmitted
+- sender  
+- type  
+- weight  
+- timestamp  
 
-PoSS emits the following events for transparency:
+## 9.2 EventSignalValidated
+- curator  
+- participant  
+- hash  
+- timestamp  
 
-9.1. EventSignalEmitted
+## 9.3 EventRewardDistributed
+- participant reward  
+- curator reward  
+- total weight  
+- reserve remaining  
 
-sender
+## 9.4 EventAdminParamsUpdated
+- old params  
+- new params  
+- admin address  
 
-signal type
+---
 
-weight
-
-timestamp
-
-9.2. EventSignalValidated
-
-curator
-
-participant
-
-signal hash
-
-timestamp
-
-9.3. EventRewardDistributed
-
-participant reward
-
-curator reward
-
-total weight
-
-reserve address
-
-new reserve balance
-
-9.4. EventAdminParamsUpdated
-
-old parameters
-
-new parameters
-
-admin address
-
-All events are queryable by explorers and dashboards.
-
-10. Queries (gRPC + REST)
+# 10. Queries (gRPC + REST)
 
 PoSS exposes:
 
-10.1. QuerySignals(address)
+- `QuerySignals(address)`  
+- `QueryCurator(address)`  
+- `QueryParams()`  
+- `QueryStats()`  
+- `QueryRewardHistory(address)`  
 
-List all signals for a participant.
+Useful for explorers and analytics.
 
-10.2. QueryCurator(address)
+---
 
-Get curator tier & stats.
+# 11. Transaction Lifecycle (Full Flow)
 
-10.3. QueryParams()
+### Step 1 — Participant emits signal  
+`MsgEmitSignal`
 
-Current PoSS parameters.
+### Step 2 — Curator validates signal  
+`MsgValidateSignal`
 
-10.4. QueryStats()
+### Step 3 — Anti-abuse checks  
+Daily limits, duplicate hash, curator tier
 
-Network-wide PoSS data (daily weights, totals, halving epoch…).
+### Step 4 — Reward computation  
+Based on weight × halving × daily budget
 
-10.5. QueryRewardHistory(address)
+### Step 5 — Reward distribution  
+70% to participant  
+30% to curator
 
-Rewards earned by any participant or curator.
+### Step 6 — Event emission  
+Ensures traceability
 
-11. PoSS Flow (Full Transactional Lifecycle)
-Step 1 — Participant emits signal
+---
 
-MsgEmitSignal
-Stored with metadata + weight.
+# 12. Administrative Logic
 
-Step 2 — Curator validates
+Only authorized admin addresses may:
 
-MsgValidateSignal
-Linked to the participant.
+- update PoSS parameters  
+- update curator tiers  
+- modify daily limits  
+- manage Stimulus Pool (within boundaries)
 
-Step 3 — Anti-abuse checks
+Admin addresses must be defined in **genesis**.
 
-Daily limits, duplicate detection, hash validation.
+---
 
-Step 4 — Reward computation
+# 13. Module State (Conceptual)
 
-Based on weight, ratios, halving epoch.
+The PoSS module stores:
 
-Step 5 — Reward distribution
+- signals (with metadata)  
+- hashes (for duplicate detection)  
+- curator tiers and status  
+- daily counters per address  
+- reward history  
+- PoSS parameters  
+- reference to reserve balance (via bank module)  
 
-70% participant
-30% curator
+No external data sources or oracles are required.
 
-Step 6 — Events emitted
+---
 
-Used for explorers & analytics.
+# 14. Security Model
 
-12. Admin Logic
+PoSS ensures:
 
-Only designated admin addresses can:
+- deterministic reward calculation  
+- no privileged minting  
+- no oracle risk  
+- Sybil resistance  
+- immutable structural rules  
+- predictable emission curve  
+- strict governance boundaries  
+- no custody of user funds  
 
-update PoSS parameters
+---
 
-update curator tiers
+# 15. Summary (Header)
 
-modify daily limits
+**NOORCHAIN — PoSS Full Specification (Phase3_04, v1.1)**  
+Defines:
 
-manage Stimulus Pool (early adoption incentives)
+- all signal types & weights  
+- curator structure  
+- reward formula  
+- anti-abuse mechanisms  
+- halving (8 years)  
+- PoSS parameters  
+- full transactional lifecycle  
+- events & queries  
+- administrative logic  
+- security model  
+- compliance alignment  
 
-Admin addresses are defined in Genesis.
+This is the canonical reference for implementation, testnet, and audits.
 
-13. Module State (Conceptual)
 
-PoSS stores:
-
-signals
-
-signal hashes
-
-curator status
-
-daily counters
-
-reward history
-
-parameters
-
-reserve pool balance (read-only reference to bank module)
-
-14. Security Model
-
-PoSS includes:
-
-strict per-address rate limiting
-
-no self-validation
-
-tier-based gating
-
-hash-based signal uniqueness
-
-reserve-controlled reward issuance
-
-deterministic calculation for auditability
-
-no oracle or external data dependency
-
-15. Summary for header
-
-NOORCHAIN — PoSS Full Specification (Phase3_04, v1.1)
-Defines the entire Proof of Signal Social mechanism:
-
-Signal types & weights
-
-Curator system
-
-Reward 70/30 split
-
-Halving every 8 years
-
-Anti-abuse rules
-
-Module parameters
-
-Queries & events
-
-Transaction lifecycle
-
-This document is the canonical reference for implementing NOORCHAIN’s x/noorsignal module and for building Testnet 1.0.
