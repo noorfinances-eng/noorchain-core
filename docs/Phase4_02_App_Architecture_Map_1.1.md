@@ -1,294 +1,351 @@
-**NOORCHAIN — Phase 4A
+# NOORCHAIN — Phase 4A  
+## App Architecture Map (Cosmos SDK + Ethermint + PoSS)  
+### Version 1.1 — Final Structural Overview  
+### Last Updated: 2025-12-03  
 
-App Architecture Map (Cosmos SDK + Ethermint + PoSS)**
-Version 1.1 — Structural Overview (no code)
+This document defines the **final, authoritative architecture map** of the  
+NOORCHAIN Core Application as implemented at the end of **Phase 4**.
 
-🔧 1. Purpose of This Document
+It is fully aligned with:
 
-This document provides a clean and visual architecture map of the NOORCHAIN Core Application.
+- Cosmos SDK v0.46.11  
+- Ethermint v0.22.0  
+- CometBFT/Tendermint v0.34.27 (with replace directive)  
+- NOORCHAIN custom module `x/noorsignal` (PoSS)  
+- The final Keeper structure validated in Phase 4  
+- The Testnet 1.0 application architecture  
+
+No code is included.
+
+---
+
+# 1. Purpose of This Document
+
+This file acts as the **structural reference** for:
+
+- Phase 4B (PoSS Logic Integration)  
+- Phase 4C (Testnet 1.0 assembly)  
+- Phase 5 (Governance & Legal Architecture)  
+- Phase 6 (Genesis Pack, Website)  
+- Phase 7 (Mainnet Preparation)  
 
 It defines:
 
-application layers
+- all application layers  
+- keeper relationships  
+- store layout  
+- module dependencies  
+- block lifecycle  
+- genesis lifecycle  
+- complete app constructor structure  
 
-module composition
+---
 
-keeper structure
+# 2. Application Layer Overview
 
-store layout
+NOORCHAIN is composed of **three major layers**:
 
-dependency graph
+---
 
-app lifecycle overview
+## 2.1 Cosmos SDK Layer (Base Layer)
 
-No code is included.
-This file is the structural reference for Phase 4B (PoSS blueprint) and Phase 4C (Testnet 1.0).
+This layer provides the essential blockchain primitives.
 
-🏛️ 2. Application Layers Overview
+### Modules included:
+- **auth** — accounts, signatures, sequence numbers  
+- **bank** — balances, transfers, supply  
+- **staking** — validators, delegations, power updates  
+- **gov** — governance proposals, votes, tallying  
+- **params** — parameter subspaces (implicit in SDK v0.46.x)
 
-NOORCHAIN is composed of three major layers:
+### Purpose:
+> Maintain chain security, state integrity, validator set, governance, and fundamental on-chain logic.
 
-2.1 Cosmos SDK Layer (Base Layer)
+---
 
-This layer provides the fundamental blockchain mechanics.
+## 2.2 Ethermint Layer (EVM Layer)
 
-Modules used:
+Provides full Ethereum EVM compatibility on top of Cosmos.
 
-auth – accounts & signatures
+### Modules included:
+- **evm** — EVM execution, stateDB, gas rules  
+- **feemarket** — dynamic base fee (EIP-1559 style)
 
-bank – balances & token transfers
+### Purpose:
+> Allow EVM smart contracts, Ethereum tooling, RPC compatibility, and wallets (e.g. MetaMask).
 
-staking – validators, delegation system
+---
 
-gov – governance & proposals
+## 2.3 Custom Layer — NOORCHAIN PoSS (x/noorsignal)
 
-params – configuration subsystem (implicit in SDK 0.50.x)
+A custom module implementing the Proof of Signal Social system.
 
-Purpose:
-→ Handle state integrity, consensus-critical logic, and chain governance.
+### Responsibilities:
+- signal ingestion  
+- reward computation  
+- 70/30 split  
+- halving logic  
+- counters and anti-abuse  
+- event emission  
+- PoSS parameters management  
+- integration with BeginBlock / EndBlock  
 
-2.2 Ethermint Layer (EVM Layer)
+### Purpose:
+> Provide NOORCHAIN’s unique **Social Consensus + Reward Layer**.
 
-Provides full Ethereum compatibility inside Cosmos.
+---
 
-Modules used:
+# 3. App Composition Structure
 
-evm – EVM execution, state DB, logs, gas rules
+The NOORCHAIN application is composed of five core components:
 
-feemarket – dynamic base fee (EIP-1559-like model)
+---
 
-Purpose:
-→ Allow smart contracts, dApps, wallets like MetaMask, Ethereum RPC, etc.
+## 3.1 BaseApp
 
-2.3 Custom Layer (NOORCHAIN-Specific)
-x/noorsignal (PoSS module)
+Responsible for:
 
-Defined in Phase 4B :
+- ABCI interface  
+- transaction execution  
+- message routing  
+- block lifecycle  
+- mempool logic  
+- state commitments  
 
-PoSS signal ingestion
+---
 
-reward calculation engine
+## 3.2 Encoding System
 
-halving schedule (every 8 years)
+The app uses:
 
-70/30 participant/curator split
+- Interface Registry (for type URLs)  
+- Protobuf Codec (primary codec)  
+- Amino (legacy support for signatures when required)  
+- Tx signing modes  
+- gRPC types  
 
-hooks into block lifecycle
+---
 
-PoSS state store (KVStore)
+## 3.3 Store System
 
-Purpose:
-→ Implement NOORCHAIN’s unique Social Consensus & Reward Layer.
+Each module receives its own:
 
-🗂️ 3. App Composition Structure
+- **KVStore**  
+- **Transient store** (if required)  
+- **Memory store** (mostly params)
 
-The full app is composed around five core components:
+### Store keys mounted in BaseApp:
+auth
+bank
+staking
+gov
+evm
+feemarket
+noorsignal
+params
 
-3.1 BaseApp (Cosmos)
+---
 
-The engine executing:
+## 3.4 Keepers
 
-transactions
+Keepers are responsible for:
 
-messages
+- maintaining module state  
+- reading/writing to KV stores  
+- verifying invariants  
+- interacting with other modules  
 
-ABCI calls
+NOORCHAIN employs the following keepers:
 
-block lifecycle (BeginBlock / EndBlock)
+- **AccountKeeper**  
+- **BankKeeper**  
+- **StakingKeeper**  
+- **GovKeeper**  
+- **EVMKeeper**  
+- **FeeMarketKeeper**  
+- **ParamsKeeper** (with subspaces)  
+- **PoSSKeeper** (`x/noorsignal`)
 
-3.2 Encoding System
+---
 
-Includes:
+## 3.5 ModuleManager
 
-interface registry
+The ModuleManager:
 
-amino codec (legacy)
+- registers all modules  
+- configures BeginBlock / EndBlock order  
+- defines InitGenesis & ExportGenesis order  
+- binds services  
+- exposes gRPC and REST endpoints  
 
-protobuf codec (primary)
+Modules included:
 
-signing modes
+- `auth`, `bank`, `staking`, `gov`, `evm`, `feemarket`, `noorsignal`  
 
-3.3 Store System
+---
 
-Each module gets a:
+# 4. Keeper Dependency Graph (Final)
 
-KVStore
+This graph represents how keepers depend on each other.
 
-Transient store (if needed)
+---
 
-Memory store (for params)
-
-Store keys include:
-auth, bank, staking, gov, evm, feemarket, noorsignal
-
-3.4 Keepers
-
-Go structs responsible for:
-
-reading/writing state
-
-executing module logic
-
-interacting with other keepers
-
-3.5 ModuleManager
-
-Registers:
-
-modules
-
-services
-
-genesis init
-
-begin/end block order
-
-🧩 4. Keeper Dependency Graph
-4.1 Cosmos Keepers
+## 4.1 Cosmos Keepers (base layer)
 AccountKeeper → BankKeeper → StakingKeeper → GovKeeper
+The FeeMarketKeeper requires access to EVM’s internal gas accounting.
 
+---
 
-Bank requires Account.
-Staking requires Account + Bank.
-Gov requires Staking.
+## 4.3 PoSS Keeper (Custom)
 
-4.2 Ethermint Keepers
-EVMKeeper → AccountKeeper, BankKeeper, StakingKeeper
-FeeMarketKeeper → EVMKeeper
-
-4.3 PoSS Keeper (Custom)
 PoSSKeeper → AccountKeeper
-            → BankKeeper
-            → StakingKeeper
-            → (hooks) BeginBlock, EndBlock
+→ BankKeeper
+→ StakingKeeper
+→ ParamsKeeper (PoSS subspace)
+→ Hooks (BeginBlock + EndBlock)
 
+yaml
+Copier le code
 
-The PoSS module depends on staking and bank to access balances and validator power.
+The PoSS module does *not* depend on EVM, but needs:
 
-🗃️ 5. Store Layout Map
-RootStore (IAVL)
-root  
+- bank for reward movement (future activation)  
+- staking for validator power (future curation logic)  
+- params for PoSS settings  
+- hooks to perform daily resets and halving evaluation  
+
+---
+
+# 5. Store Layout Map
+
+A final snapshot of all stores mounted at app init:
+
+RootStore (IAVL Merkle Tree)
 │
-├── auth        (KVStore)
-├── bank        (KVStore)
-├── staking     (KVStore)
-├── gov         (KVStore)
-├── evm         (KVStore)
-├── feemarket   (KVStore)
-└── noorsignal  (KVStore)
+├── auth (KVStore)
+├── bank (KVStore)
+├── staking (KVStore)
+├── gov (KVStore)
+├── evm (KVStore)
+├── feemarket (KVStore)
+├── noorsignal (KVStore)
+└── params (KV + Transient)
 
+markdown
+Copier le code
 
-All stores are mounted into BaseApp at app initialization.
+All mounted stores use deterministic prefixes and follow Cosmos SDK conventions.
 
-🔄 6. Block Lifecycle Map
-6.1 BeginBlock sequence
-1. FeeMarket module updates base fee
-2. EVM module prepares EVM block context
-3. Staking module runs validator updates
-4. PoSS module processes signals / rewards (Phase 4B)
-5. Governance tallies ongoing proposals
+---
 
-6.2 DeliverTx sequence
-1. AnteHandler (signature verification, fees)
-2. Msg routing to module
-3. State transitions
-4. Gas accounting
+# 6. Block Lifecycle (Final Phase 4 Model)
 
-6.3 EndBlock sequence
-1. Staking updates (validator set)
-2. Gov updates
+### 6.1 BeginBlock
+Order is carefully chosen:
 
-6.4 Commit
+1. FeeMarket → updates EIP-1559 base fee  
+2. EVM → prepares block context  
+3. Staking → validator updates (consensus-critical)  
+4. PoSS → future: signal counters, halving epoch tracking  
+5. Gov → proposal tallies and time updates  
 
-State root committed via IAVL.
+### 6.2 DeliverTx sequence
+1. AnteHandler (signature verification, fee deduction)  
+2. Msg routing  
+3. Module logic  
+4. Gas metering  
+5. State transitions  
 
-🌍 7. Genesis Lifecycle Map
+### 6.3 EndBlock
+1. Staking validator set updates  
+2. Gov proposal status updates  
+3. Future: PoSS daily aggregation hooks  
 
-At genesis:
+### 6.4 Commit
+State root committed (IAVL).  
+Next block begins.
 
-Accounts created
+---
 
-Balances credited
+# 7. Genesis Lifecycle
 
-Staking params set
+At genesis initialization:
 
-Gov params set
+- accounts created  
+- balances applied  
+- staking params initialized  
+- gov params set  
+- EVM chain configuration loaded  
+- feemarket params initialized  
+- PoSS params loaded (PoSSEnabled = false by default)  
+- PoSS counters set to zero  
+- initial validator set computed  
+- chain starts at height 1  
 
-EVM genesis loaded
+---
 
-FeeMarket genesis loaded
+# 8. Inter-Module Interaction Summary
 
-PoSS placeholder initialized
+### auth ↔ bank  
+- accounts  
+- balances  
+- signature semantics  
 
-Validator set generated
+### bank ↔ staking  
+- delegation shares  
+- locked funds  
+- reward pools  
 
-Chain starts at height 1
+### staking ↔ gov  
+- voting power  
+- validator-based governance  
 
-🧠 8. Inter-module Interaction Summary
-auth ↔ bank
+### evm ↔ feemarket  
+- gas price calculation  
+- EIP-1559 base fee  
 
-account numbers
+### noorsignal ↔ bank / staking  
+- future PoSS reward distribution  
+- signal validation economics  
+- validator-power-dependent curation (Phase 5+)  
 
-balances
+---
 
-signatures
+# 9. App Constructor — Final Map (as implemented in Phase 4)
 
-bank ↔ staking
+The `NewNoorchainApp()` constructor performs:
 
-delegation shares
+1. Build app encoding config  
+2. Instantiate BaseApp  
+3. Define KVStoreKeys and TransientStoreKeys  
+4. Instantiate:
+   - AccountKeeper  
+   - BankKeeper  
+   - StakingKeeper  
+   - GovKeeper  
+   - ParamsKeeper (with subspaces for each module)  
+   - EVMKeeper  
+   - FeeMarketKeeper  
+   - PoSSKeeper  
+5. Configure keeper dependencies  
+6. Create ModuleManager  
+7. Register:
+   - services  
+   - `InitGenesis`  
+   - `ExportGenesis`  
+8. Register `BeginBlocker` and `EndBlocker`  
+9. Load latest application state  
 
-token transfers locked/unlocked
+The full constructor guarantees deterministic app assembly.
 
-staking ↔ gov
+---
 
-voting power
+# 10. Summary Table (Final)
 
-proposal weights
-
-evm ↔ feemarket
-
-block gas cost calculation
-
-EIP-1559 dynamic base fee
-
-noorsignal ↔ staking
-
-PoSS reward distribution depends on validator power
-
-potential slashing conditions (later)
-
-🎯 9. App Constructor Map (app.go)
-
-The constructor (later implemented in code) must:
-
-Build encoding config
-
-Create BaseApp
-
-Define store keys
-
-Instantiate all keepers
-
-Set keeper relationships
-
-Create ModuleManager
-
-Register services
-
-Register BeginBlock/EndBlock
-
-Set InitGenesis/ExportGenesis functions
-
-Load latest state
-
-Return application instance
-
-This map ensures deterministic construction.
-
-📌 10. Summary Table
-Layer	Component	Purpose
-Cosmos Base	auth/bank/staking/gov	Core blockchain logic
-EVM Layer	evm/feemarket	Ethereum compatibility
-Custom Layer	noorsignal	PoSS social consensus
-App System	BaseApp, Keepers, Stores	Infrastructure
-Runtime	BeginBlock/EndBlock	Chain lifecycle
+| Layer        | Component                     | Purpose |
+|--------------|-------------------------------|---------|
+| Cosmos Base  | auth/bank/staking/gov/params  | Core blockchain logic |
+| EVM Layer    | evm/feemarket                 | Ethereum compatibility + gas economy |
+| Custom Layer | noorsignal                    | PoSS social consensus engine |
+| App System   | BaseApp, Keepers, Stores      | Runtime infrastructure |
+| Runtime      | BeginBlock/EndBlock           | Consensus lifecycle |
