@@ -1,276 +1,282 @@
 NOORCHAIN 1.0 — Phase 3.03
-Ethermint Architecture (EVM Integration) — Version 1.1
+Ethermint Architecture (EVM Integration)
+Version 1.1 — English
+Purpose of this Document
 
-Purpose of this document
-Provide the full technical specification of the Ethermint (EVM) architecture inside NOORCHAIN.
-This document defines what the EVM layer is, how it integrates with Cosmos SDK, how EVM transactions work, how JSON-RPC works, and how gas/fees behave.
+This document provides the complete technical specification of the Ethermint (EVM) architecture inside NOORCHAIN.
+It defines:
 
-NOORCHAIN is an EVM-enabled Cosmos chain; this document formalizes the EVM component before any code is written.
+what the EVM layer is,
 
-1. Purpose of Ethermint in NOORCHAIN
+how Ethermint integrates with the Cosmos SDK,
+
+how Ethereum transactions behave inside NOORCHAIN,
+
+how gas and fees operate (EIP-1559),
+
+how JSON-RPC exposes NOORCHAIN as an EVM-compatible chain.
+
+This document is the official reference for EVM integration before implementation begins in Phase 4.
+
+1. Role of Ethermint in NOORCHAIN
 
 NOORCHAIN integrates Ethermint to provide:
 
 full EVM compatibility
 
-deployment and execution of smart contracts
+smart contract deployment & execution
 
-compatibility with MetaMask and all EVM wallets
+MetaMask + EVM wallet compatibility
 
-Web3 RPC endpoints
+Web3 JSON-RPC endpoints
 
-EIP-1559-style fee market
+EIP-1559 fee market support
 
-Ethereum-style account & storage model
+Ethereum account & storage model
 
-Ethermint enables NOORCHAIN to function both as a Cosmos chain AND an EVM chain, simultaneously.
+Ethermint enables NOORCHAIN to function simultaneously as:
+
+a Cosmos SDK chain
+
+an EVM chain
 
 2. High-Level Architecture (Cosmos ↔ Ethermint)
 
-Ethermint is implemented as two Cosmos SDK modules:
+Ethermint is implemented through two Cosmos SDK modules:
 
-evm module
+2.1 evm module
 
-handles Ethereum transaction execution
+Executes Ethereum transactions
 
-manages EVM accounts, nonces, storage, and bytecode
+Manages EVM accounts, nonces, and balances
 
-provides EVM events & logs
+Stores smart contract bytecode and storage
 
-integrates with the Cosmos state store via keepers
+Emits EVM events/logs
 
-feemarket module
+Integrates directly with Cosmos stores via EVMKeeper
 
-implements EIP-1559 dynamic gas pricing
+2.2 feemarket module
 
-manages base fee, tip, priority fees
+Implements EIP-1559:
 
-ensures predictable gas behavior across blocks
+Dynamic base fee per block
 
-These modules live entirely inside the Cosmos SDK application.
+Priority fees (tips) to validators
 
-High-level flow:
+Maximum fee constraints
 
-Cosmos Node (NOORCHAIN)
-→ CometBFT Consensus
-→ BaseApp (Cosmos SDK)
-→ evm module
-→ EVM execution
-→ Cosmos state storage
+Predictable fee behavior across blocks
 
-Ethermint does not replace Cosmos; it extends it.
+Data Flow
+CometBFT Consensus  
+→ Cosmos BaseApp  
+→ evm module  
+→ EVM Execution  
+→ Cosmos State Stores
+
+
+Ethermint extends Cosmos SDK without replacing it.
 
 3. EVM Account Model in NOORCHAIN
-3.1. Dual Account System
+3.1 Dual-Account Structure
 
-NOORCHAIN supports:
+NOORCHAIN supports two parallel account systems:
 
-Cosmos accounts (bech32, e.g., noor1...)
+Cosmos accounts (bech32: noor1…)
 
-EVM accounts (0x addresses, Ethereum-style)
+Ethereum accounts (0x-prefixed addresses)
 
-Both represent the same underlying state, but with different views.
+Both are representations of the same underlying actor.
 
-3.2. Mapping Rules
+3.2 Mapping Rules
 
-A Cosmos account can have an associated EVM account with:
+Every Cosmos account may have a corresponding EVM account with:
 
-Ethereum nonce
+EVM nonce
 
-EVM balance (mirrors BankKeeper)
+Contract code (if contract)
 
-Contract bytecode
+Storage root
 
-Contract storage
+EVM balance (mirrors Cosmos bank balance)
 
-The mapping is deterministic and stored through:
+Handled via:
 
-AccountKeeper (Cosmos)
+AccountKeeper
 
-EVMKeeper (Ethermint)
+EVMKeeper
 
-3.3. Native Token
+3.3 Native Token
 
-The native token is:
+The unified token across Cosmos and EVM is:
 
 denom: unur
+
 display: NUR
+
 decimals: 18
 
-
-It is used for:
-
-Cosmos fees
+Used for:
 
 EVM gas
 
-contract execution costs
+Cosmos fees
 
-4. Ethereum Transaction Lifecycle inside NOORCHAIN
+Smart contract execution
 
-EVM transactions follow the Ethereum transaction model, but run inside Cosmos.
+4. Ethereum Transaction Lifecycle in NOORCHAIN
+4.1 EVM Tx Pipeline
 
-4.1. EVM Tx Pipeline (simplified)
+Node receives a signed Ethereum-style tx
 
-The node receives an Ethereum-style signed transaction.
-
-The AnteHandler (EVM path) validates:
+AnteHandler (Ethermint) validates:
 
 signature (ECDSA secp256k1)
 
 nonce
 
-gas limit
+gas limits
 
-gas price or EIP-1559 fields
+fee fields (legacy or EIP-1559)
 
 account balance
 
-Transaction enters mempool if valid.
+If valid → added to mempool
 
-During block execution (DeliverTx):
+During block execution → EVM executes opcodes
 
-VM executes opcode-by-opcode
-
-state changes applied to EVM storage
-
-logs and events generated
+State updated in Cosmos KV stores
 
 Gas fees deducted in unur
 
-Receipt generated & exposed via JSON-RPC
+Receipt produced (Ethereum format)
 
-4.2. Supported Ethereum Transaction Types
+Exposed via JSON-RPC
+
+4.2 Supported Ethereum Tx Types
 
 Ethermint supports:
 
-Legacy gasPrice transactions
+Legacy (gasPrice)
 
-EIP-1559 dynamic fee transactions
+EIP-1559 transactions
 
 EIP-2930 access list transactions
 
-4.3. Nonce Management
+4.3 Nonce Management
 
-Each EVM account maintains:
-
-evm_nonce (separate from cosmos sequence)
-
-
-This ensures strict Ethereum compatibility.
+Each EVM account keeps its own evm_nonce, separate from Cosmos sequence.
 
 5. EVM Execution Environment
-5.1. Components
+Components
 
-The Ethermint EVM environment includes:
+Ethermint provides:
 
 Opcode interpreter
 
 Precompiled contracts
 
-EVM state database
+State database
 
-JIT optimizations (optional)
+Memory management & expansion costs
 
-Log & event emitter
+Log emitter
 
-5.2. Smart Contract Support
+(Optional) JIT optimizations
 
-Fully compatible with:
+Smart Contract Support
+
+Compatible with:
 
 Solidity
 
 Vyper
 
+Hardhat / Foundry / Remix
+
 EVM bytecode
 
 ABI encoding
 
-Ethereum tooling (Hardhat, Foundry, Remix, etc.)
+Gas Accounting
 
-5.3. Gas Accounting
+Gas follows Ethereum rules:
 
-Gas is charged in unur.
+opcode cost table
 
-Gas rules follow Ethereum logic:
+memory expansion
 
-Opcode cost table
+storage read/write charges
 
-Memory expansion costs
+EIP-1559 base + priority fee
 
-Storage read/write costs
+Always paid in unur.
 
-Base fee + priority fee (EIP-1559)
+6. Fee Market Module (EIP-1559)
+6.1 Base Concepts
 
-6. feemarket Module (EIP-1559)
+BaseFee (dynamic)
 
-The feemarket module implements Ethereum's fee market:
-
-6.1. Key Concepts
-
-Base Fee (dynamic per block)
-
-Priority Fee (tip to validator)
+PriorityFee (tip)
 
 MaxFeePerGas
 
 MaxPriorityFeePerGas
 
-6.2. Base Fee Adjustment
+6.2 Base Fee Adjustment
 
-Base fee adjusts depending on gas usage of previous blocks.
+Automatically adjusted per block based on gas usage.
 
-6.3. Cosmos Integration
+6.3 Cosmos Integration
 
-Base fee affects:
+Affects:
 
-antehandler checks
+AnteHandler validation
 
-EVMKeeper execution logic
+EVM execution costs
 
-reward distribution (tip → validator)
+Validator rewards (priority fees)
 
-6.4. Gas Denom
+6.4 Gas Denomination
 
-Always paid in:
+All EVM gas is paid in:
 
 unur
 
 7. JSON-RPC Endpoints (Web3 Compatibility)
 
-Ethermint exposes standard Ethereum RPC endpoints, enabling:
+Ethermint exposes full Ethereum RPC API:
 
-MetaMask
+7.1 Supported Namespaces
 
-Ledger
-
-Web3.js / Ethers.js
-
-Foundry
-
-Hardhat
-
-Third-party explorers
-
-7.1. Supported JSON-RPC APIs
-
-The main namespaces include:
-
-eth_* (full Ethereum API)
+eth_*
 
 web3_*
 
 net_*
 
-debug_* (optional)
-
 txpool_*
+
+debug_* (optional)
 
 personal_* (optional)
 
-7.2. Block & Receipt Format
+This enables:
 
-Responses follow Ethereum structures:
+MetaMask
+
+Ledger
+
+WalletConnect
+
+Foundry & Hardhat
+
+Block explorers
+
+7.2 Response Format
+
+Ethereum-compatible:
 
 block hashes
 
@@ -282,130 +288,116 @@ bloom filters
 
 gas fields
 
-7.3. EVM Node Identity
+7.3 Node Identity
 
-NOORCHAIN will identify itself via:
+Example RPC identification:
 
 client: "Noorchain-Ethermint"
 protocolVersion: evmos-compatible
-networkVersion: chainid (set in Phase3_05)
+networkVersion: <chain_id>
 
-8. Differences Between Cosmos Transactions and EVM Transactions
-8.1. Cosmos Transactions
-
-protobuf messages
-
-multiple msgs in a single tx
-
-signed via Cosmos secp256k1
-
-processed through Cosmos antehandler
-
-stored in ABCI format
-
-8.2. EVM Transactions
-
-RLP encoded
-
-single action per tx
-
-Ethereum-style signature
-
-gasPrice or EIP-1559 fields
-
-executed in evm module
-
-8.3. Key Distinctions
+8. Cosmos Tx vs EVM Tx
 Aspect	Cosmos Tx	EVM Tx
 Format	Protobuf	RLP
-Signature	Cosmos mode	Ethereum mode
-Multi-Msgs	Yes	No
-Gas Model	Cosmos	Ethereum/EIP-1559
-Execution	Module handler	EVM VM
-9. State Storage Layout (Cosmos ↔ EVM)
+Signature	Cosmos secp256k1	Ethereum ECDSA
+Multi-msg	Yes	No
+Gas model	Cosmos	Ethereum / EIP-1559
+Execution	Module handler	EVM bytecode VM
+9. State Storage Model
 
-Ethermint stores Ethereum state inside Cosmos SDK stores.
+Ethermint stores EVM state inside Cosmos stores.
 
-9.1. EVM Storage Components
+EVM Storage Includes:
 
-Account → balance, code hash, storage root
+Account balance / nonce
 
-Storage → key-value pairs
+Code hash
 
-Nonce → per EVM account
+Contract bytecode
 
-Bytecode → stored separately
+Storage key-value pairs
 
-Logs → block-level logs
+Logs
 
-9.2. Merkle Path
+Merkle Proof Support
 
-Ethermint maintains Ethereum-compatible Merkle proofs, enabling:
-
-contract verification
+Ethermint maintains Ethereum-compatible Merkle proof structure for:
 
 RPC proof queries
 
-interoperability with Ethereum tools
+Light client verification
+
+Explorer compatibility
 
 10. Consensus Integration (CometBFT)
 
-Ethermint execution occurs during:
+CometBFT handles:
+
+transaction ordering
+
+block finalization
+
+networking
+
+hashing state results
+
+EVM execution happens during:
 
 DeliverTx
 
-BeginBlock / EndBlock (minor logic)
+Minor handling in BeginBlock/EndBlock
 
-Consensus does NOT execute EVM; it only:
-
-orders transactions
-
-hashes application state
-
-finalizes blocks
+Consensus does not execute the EVM itself.
 
 11. Security Model of the EVM Layer
-11.1. DoS Protection
+11.1 DoS Protection
 
-gasLimit per block
+Block gas limit
 
-maxTxGas
+Per-tx max gas
 
-mempool checks
+AnteHandler checks
 
-11.2. Replay Protection
+Mempool validation
 
-chainID enforced
+11.2 Replay Protection
+
+chainID enforcement
 
 strict nonce rules
 
-11.3. Deterministic Execution
+11.3 Deterministic Execution
 
-All nodes must produce identical:
+All nodes must return identical:
 
 logs
 
 receipts
 
-storage state
+storage changes
 
-12. Summary (for top-of-file header)
+12. Summary (Header Version)
 
-NOORCHAIN 1.0 — Phase3_03 — Ethermint Architecture (EVM)
-This document defines the full Ethermint integration:
+NOORCHAIN 1.0 — Phase 3.03 — Ethermint Architecture
 
-evm + feemarket modules
+This document defines:
 
-EVM account model
+EVM + FeeMarket module integration
 
-Ethereum transaction lifecycle
+Dual-account model
 
-gas & fees (EIP-1559)
+Ethereum-style transaction lifecycle
 
 JSON-RPC compatibility
 
-execution environment
+Gas/fees (EIP-1559)
 
-interaction with Cosmos stores and keepers
+Execution environment
 
-It is the reference document for implementing the EVM layer before Testnet 1.0.
+Cosmos ↔ EVM store interaction
+
+CometBFT integration
+
+Security model
+
+This is the authoritative reference for implementing EVM support before Testnet 1.0.
