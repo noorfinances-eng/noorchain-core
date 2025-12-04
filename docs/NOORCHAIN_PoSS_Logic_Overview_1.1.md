@@ -1,60 +1,60 @@
-# NOORCHAIN — PoSS Logic Overview (1–25)
+NOORCHAIN — PoSS Logic Overview (1–25)
 
-Version: 1.1  
-Module: `x/noorsignal` (PoSS — Proof of Signal Social)
+Version: 1.1
+Module: x/noorsignal (PoSS — Proof of Signal Social)
 
-This document summarizes the current state of the PoSS logic in NOORCHAIN
-after PoSS Logic steps 1 to 25. It is meant for developers, auditors and
-product/BD people who need a clear, high-level understanding of what is
-already implemented in the core and what is still intentionally missing.
+This document summarizes the current state of the PoSS logic in NOORCHAIN after PoSS Logic steps 1 to 25.
+It is meant for developers, auditors and product/BD people who need a clear, high-level understanding of what is already implemented in the core and what is still intentionally missing.
 
----
+1. Scope of the PoSS Module (x/noorsignal)
 
-## 1. Scope of the PoSS Module (x/noorsignal)
+The x/noorsignal module is responsible for:
 
-The `x/noorsignal` module is responsible for:
+Tracking social signals (Proof of Light) as PoSS signals.
 
-- Tracking social signals (Proof of Light) as **PoSS signals**.
-- Enforcing daily social limits (later).
-- Computing rewards based on:
-  - a **BaseReward** (in `unur`),
-  - **per-signal-type weights**,
-  - **halving** over time,
-  - a **structural 70/30 split** between participant and curator.
-- Recording **pending mints** (planned rewards) without touching real balances.
-- Maintaining global PoSS counters:
-  - `TotalSignals`
-  - `TotalMinted` (planned PoSS minting in `unur`).
-- Exposing a **read-only global stats view** (`PoSSStats`) for dashboards, CLI
-  and monitoring tools.
+Enforcing daily social limits (later).
 
-The module is intentionally **conservative** at this stage:
+Computing rewards based on:
+
+a BaseReward (in unur),
+
+per-signal-type weights,
+
+halving over time,
+
+a structural 70/30 split between participant and curator.
+
+Recording pending mints (planned rewards) without touching real balances.
+
+Maintaining global PoSS counters:
+
+TotalSignals
+
+TotalMinted (planned PoSS minting in unur).
+
+Exposing a read-only global stats view (PoSSStats) for dashboards, CLI and monitoring tools.
+
+The module is intentionally conservative at this stage:
 no real minting, no bank movements, no governance wiring yet.
 
----
+2. Core Data Structures
+2.1. GenesisState
 
-## 2. Core Data Structures
+File: x/noorsignal/types/genesis.go
 
-### 2.1 GenesisState
+Structure:
 
-`x/noorsignal/types/genesis.go`
+TotalSignals (uint64) — counts how many PoSS signals have been processed since genesis.
 
-```go
-type GenesisState struct {
-    TotalSignals     uint64 `json:"total_signals" yaml:"total_signals"`
-    TotalMinted      string `json:"total_minted" yaml:"total_minted"`
-    MaxSignalsPerDay uint32 `json:"max_signals_per_day" yaml:"max_signals_per_day"`
+TotalMinted (string) — tracks the planned PoSS issuance in unur.
 
-    ParticipantShare uint32 `json:"participant_share" yaml:"participant_share"`
-    CuratorShare     uint32 `json:"curator_share" yaml:"curator_share"`
-}
+MaxSignalsPerDay (uint32) — first anti-abuse guardrail (per address).
+
+ParticipantShare (uint32) — fixed to 70.
+
+CuratorShare (uint32) — fixed to 30.
+
 Key decisions:
-
-TotalSignals counts how many PoSS signals have been processed since genesis.
-
-TotalMinted tracks the planned PoSS issuance in unur (as a string).
-
-MaxSignalsPerDay is a first anti-abuse guardrail (per address).
 
 The 70/30 split is structural and must always sum to 100:
 
@@ -65,29 +65,35 @@ CuratorShare = 30
 The genesis is serialized as plain JSON in the PoSS KVStore
 (no protobuf, no gogo/proto dependency).
 
-2.2 Params (PoSS behaviour)
-x/noorsignal/types/params.go
+2.2. Params (PoSS behaviour)
 
-go
-Copier le code
-type Params struct {
-    PoSSEnabled bool `json:"poss_enabled" yaml:"poss_enabled"`
+File: x/noorsignal/types/params.go
 
-    MaxSignalsPerDay           uint64 `json:"max_signals_per_day" yaml:"max_signals_per_day"`
-    MaxSignalsPerCuratorPerDay uint64 `json:"max_signals_per_curator_per_day" yaml:"max_signals_per_curator_per_day"`
+Structure:
 
-    MaxRewardPerDay sdk.Coin `json:"max_reward_per_day" yaml:"max_reward_per_day"`
-    BaseReward      sdk.Coin `json:"base_reward" yaml:"base_reward"`
+PoSSEnabled (bool)
 
-    WeightMicroDonation uint32 `json:"weight_micro_donation" yaml:"weight_micro_donation"`
-    WeightParticipation uint32 `json:"weight_participation" yaml:"weight_participation"`
-    WeightContent       uint32 `json:"weight_content" yaml:"weight_content"`
-    WeightCCN           uint32 `json:"weight_ccn" yaml:"weight_ccn"`
+MaxSignalsPerDay (uint64)
 
-    PoSSReserveDenom    string `json:"poss_reserve_denom" yaml:"poss_reserve_denom"`
-    HalvingPeriodBlocks uint64 `json:"halving_period_blocks" yaml:"halving_period_blocks"`
-}
-At this stage:
+MaxSignalsPerCuratorPerDay (uint64)
+
+MaxRewardPerDay (sdk.Coin)
+
+BaseReward (sdk.Coin)
+
+WeightMicroDonation (uint32)
+
+WeightParticipation (uint32)
+
+WeightContent (uint32)
+
+WeightCCN (uint32)
+
+PoSSReserveDenom (string)
+
+HalvingPeriodBlocks (uint64)
+
+Current behaviour:
 
 DefaultParams() returns a “safe off” configuration:
 
@@ -97,54 +103,45 @@ conservative daily limits
 
 rewards defined in unur but effectively disabled
 
-The halving is configured structurally (parameter exists) but
-the exact HalvingPeriodBlocks is still a placeholder.
+The halving is configured structurally (parameter exists) but the exact HalvingPeriodBlocks is still a placeholder.
 
-Later, these params will be stored in a real ParamSubspace and controlled
-by on-chain governance.
+Later, these params will be stored in a real ParamSubspace and controlled by on-chain governance.
 
-2.3 Rewards helpers
-x/noorsignal/types/rewards.go
+2.3. Rewards helpers
+
+File: x/noorsignal/types/rewards.go
 
 The PoSS reward pipeline (pure functions) is:
 
-Base reward:
+Base reward
+base = ComputeBaseReward(params, signalType)
+→ BaseReward * weight(signal_type)
 
-go
-Copier le code
-base := ComputeBaseReward(params, signalType)
-= BaseReward * weight(signal_type)
+Halving
+halved = ApplyHalving(params, height, base)
+→ divide by 2 every HalvingPeriodBlocks (never below 0).
 
-Halving:
+70/30 split
+participant, curator, err = SplitReward70_30(halved)
 
-go
-Copier le code
-halved := ApplyHalving(params, height, base)
-= divide by 2 every HalvingPeriodBlocks (never below 0).
+High-level helper
+participant, curator, err = ComputeSignalReward(params, signalType, height)
 
-70/30 split:
+Rules:
 
-go
-Copier le code
-participant, curator, err := SplitReward70_30(halved)
-High-level helper:
+If PoSSEnabled == false, ComputeSignalReward returns zero rewards with the correct denom (no surprise minting).
 
-go
-Copier le code
-participant, curator, err := ComputeSignalReward(params, signalType, height)
-If PoSSEnabled == false, ComputeSignalReward returns zero rewards
-with the correct denom (no surprise minting).
+When PoSSEnabled == true, the pipeline is: base reward → halving → 70/30.
 
-2.4 Daily counters
-Daily counters are per address, per date:
+2.4. Daily counters
 
-Types:
+Daily counters are per address, per date.
 
-DailyCounter (documented in types/daily_counter.go)
+Types and helpers:
 
-Keys:
+DailyCounter — documented in types/daily_counter.go.
 
-DailyCounterKey(address, date) (documented in types/daily_counter_key.go)
+Keys — DailyCounterKey(address, date) in types/daily_counter_key.go.
 
 Keeper functions:
 
@@ -154,39 +151,34 @@ SetDailySignalsCount(ctx, address, date, count)
 
 IncrementDailySignalsCount(ctx, address, date)
 
-They are updated inside the internal signal pipeline but
-daily limits are not yet enforced. This will be part of a later step.
+They are updated inside the internal signal pipeline, but daily limits are not yet enforced. This will be part of a later step.
 
 3. Pending Mint Queue (planning only)
-x/noorsignal/types/pending_mint.go (name may differ depending on repo)
 
-The idea:
+File: x/noorsignal/types/pending_mint.go (exact name may differ depending on repo)
+
+Concept:
 
 Every processed PoSS signal creates a PendingMint entry in the PoSS store.
 
-This entry contains:
+Each entry contains:
 
-participant / curator addresses,
+participant and curator addresses,
 
 signal type,
 
 planned rewards (participant + curator),
 
-block height & timestamp.
+block height and timestamp.
 
-The keeper exposes:
+Keeper helper:
 
-go
-Copier le code
-func (k Keeper) RecordPendingMint(
-    ctx sdk.Context,
-    participantAddr string,
-    curatorAddr string,
-    signalType SignalType,
-    participantReward sdk.Coin,
-    curatorReward sdk.Coin,
-) error
-Important: this does not mint coins.
+Keeper.RecordPendingMint(ctx, participantAddr, curatorAddr, signalType, participantReward, curatorReward)
+
+Important:
+
+This does not mint coins.
+
 It is a planning mechanism for a later minting phase, which can:
 
 run in a separate handler,
@@ -198,19 +190,13 @@ be rate-limited,
 respect Legal Light constraints.
 
 4. Internal Signal Pipeline (without real minting)
-x/noorsignal/keeper/keeper.go
 
-The internal, non-public pipeline is:
+File: x/noorsignal/keeper/keeper.go
 
-go
-Copier le code
-func (k Keeper) ProcessSignalInternal(
-    ctx sdk.Context,
-    participantAddr string,
-    curatorAddr string,
-    signalType noorsignaltypes.SignalType,
-    date string,
-) (sdk.Coin, sdk.Coin, error)
+Internal, non-public pipeline:
+
+Keeper.ProcessSignalInternal(ctx, participantAddr, curatorAddr, signalType, date) (participantReward, curatorReward, error)
+
 Steps:
 
 Compute rewards (base → halving → 70/30).
@@ -227,84 +213,91 @@ TotalMinted += participantReward + curatorReward
 
 Return the two reward coins to the caller.
 
-It does not:
+What it does not do yet:
 
-enforce daily limits yet,
+enforce daily limits,
 
 enforce curator limits,
 
 move any Bank balances.
 
-This is the “sandbox pipeline” to keep PoSS deterministic and auditable
-before turning real money on.
+This is the “sandbox pipeline” to keep PoSS deterministic and auditable before turning real money on.
 
 5. Global PoSS Stats (PoSSStats)
-PoSS Logic 24 introduced a simple, consolidated view:
 
-x/noorsignal/types/stats.go
+PoSS Logic step 24 introduced a simple, consolidated view.
 
-go
-Copier le code
-type PoSSStats struct {
-    TotalSignals               uint64 `json:"total_signals" yaml:"total_signals"`
-    TotalMinted                string `json:"total_minted" yaml:"total_minted"`
-    PoSSEnabled                bool   `json:"poss_enabled" yaml:"poss_enabled"`
-    MaxSignalsPerDay           uint64 `json:"max_signals_per_day" yaml:"max_signals_per_day"`
-    MaxSignalsPerCuratorPerDay uint64 `json:"max_signals_per_curator_per_day" yaml:"max_signals_per_curator_per_day"`
-    PoSSReserveDenom           string `json:"poss_reserve_denom" yaml:"poss_reserve_denom"`
-}
+File: x/noorsignal/types/stats.go
+
+Structure PoSSStats:
+
+TotalSignals (uint64)
+
+TotalMinted (string)
+
+PoSSEnabled (bool)
+
+MaxSignalsPerDay (uint64)
+
+MaxSignalsPerCuratorPerDay (uint64)
+
+PoSSReserveDenom (string)
+
 Keeper helper:
 
-go
-Copier le code
-func (k Keeper) GetGlobalStats(ctx sdk.Context) noorsignaltypes.PoSSStats
-This function:
+Keeper.GetGlobalStats(ctx) PoSSStats
 
-reads GenesisState from the KVStore,
+Behaviour:
 
-reads PoSS Params (currently via DefaultParams()),
+Reads GenesisState from the KVStore.
 
-builds a single read-only snapshot.
+Reads PoSS Params (currently via DefaultParams()).
+
+Builds a single read-only snapshot.
 
 5.1 Example JSON output (future query)
+
 In a future noord query poss stats, a typical JSON payload could look like:
 
-json
-Copier le code
-{
-  "total_signals": 12345,
-  "total_minted": "987654321",
-  "poss_enabled": true,
-  "max_signals_per_day": 20,
-  "max_signals_per_curator_per_day": 100,
-  "poss_reserve_denom": "unur"
-}
+total_signals: 12345
+
+total_minted: "987654321"
+
+poss_enabled: true
+
+max_signals_per_day: 20
+
+max_signals_per_curator_per_day: 100
+
+poss_reserve_denom: "unur"
+
 Interpretation:
 
-12345 PoSS signals processed since genesis.
+12 345 PoSS signals processed since genesis.
 
-987654321 unur planned to be minted through PoSS (70/30 split included).
+987 654 321 unur planned to be minted through PoSS (70/30 split included).
 
 PoSS rewards are currently enabled.
 
-Each participant can emit up to 20 signals/day.
+Each participant can emit up to 20 signals per day.
 
-Each curator can validate up to 100 signals/day.
+Each curator can validate up to 100 signals per day.
 
 Rewards and reserves are denominated in unur.
 
-6. What is Missing on Purpose (Post-Logic-25 Roadmap)
-NOT implemented yet (by design):
+6. What Is Missing on Purpose (Post-Logic-25 Roadmap)
+
+The following parts are not implemented yet, by design:
 
 Real minting of unur or movement of balances in x/bank.
 
 Full enforcement of:
 
-MaxSignalsPerDay
+MaxSignalsPerDay,
 
-MaxSignalsPerCuratorPerDay
+MaxSignalsPerCuratorPerDay,
 
-MaxRewardPerDay
+MaxRewardPerDay.
 
 Governance wiring for PoSS params (ParamSubspace + x/gov).
 
@@ -318,8 +311,12 @@ noord query poss stats
 
 Web dashboard integration.
 
-These pieces will be introduced in later PoSS Logic steps and in
-Phase 4 (Implementation) / Phase 6 (Genesis Pack & Communication),
+These pieces will be introduced in later PoSS Logic steps and in:
+
+Phase 4 (Implementation),
+
+Phase 6 (Genesis Pack & Communication),
+
 with a strong focus on:
 
 Legal Light CH compliance,
@@ -327,4 +324,3 @@ Legal Light CH compliance,
 full transparency for curators and participants,
 
 deterministic and auditable behaviour.
-
