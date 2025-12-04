@@ -1,15 +1,13 @@
 export default function HomePage() {
   return (
-    <main className="px-8 py-16">
+    <main className="container py-16">
       {/* Hero Section */}
       <section className="max-w-3xl">
-        <h1 className="text-5xl font-bold mb-4">
-          NOORCHAIN
-        </h1>
+        <h1 className="text-5xl font-bold mb-4">NOORCHAIN</h1>
 
         <p className="text-xl text-gray-700 mb-6">
-          A Social Signal Blockchain powered by PoSS and built for transparent,
-          ethical digital value.
+          A Social Signal Blockchain powered by PoSS, enabling transparent and
+          ethical participation without financial speculation.
         </p>
 
         <div className="flex gap-4">
