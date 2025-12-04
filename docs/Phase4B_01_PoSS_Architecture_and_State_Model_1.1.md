@@ -1,9 +1,9 @@
-**NOORCHAIN — Phase 4B
+NOORCHAIN — Phase 4B
 
-PoSS Architecture & State Model (x/noorsignal)**
+PoSS Architecture & State Model (x/noorsignal)
 Version 1.1 — Architecture Only, No Code
 
-🔧 1. Purpose of This Document
+1. Purpose of This Document
 
 This document defines the full architecture of the NOORCHAIN Proof of Signal Social (PoSS) module, including:
 
@@ -23,9 +23,9 @@ validation rules
 
 interaction with Cosmos/EVM layers
 
-This specification is the official reference to implement x/noorsignal during Phase 4C.
+This specification is the official reference for implementing x/noorsignal during Phase 4C.
 
-🌞 2. Overview of PoSS (Phase 3 Definition)
+2. Overview of PoSS (Phase 3 Definition)
 
 PoSS is NOORCHAIN’s social consensus mechanism, based on:
 
@@ -41,87 +41,86 @@ halving every 8 years
 
 fixed maximum supply: 299,792,458 NUR
 
-no inflation: rewards come from PoSS Reserve (Genesis 80%)
+no inflation: rewards come from the PoSS Reserve (Genesis 80%)
 
 Key principle:
+PoSS logic executes in BeginBlock, not DeliverTx, ensuring deterministic reward calculation and consensus safety.
 
-PoSS is processed in BeginBlock, not DeliverTx.
-
-This ensures deterministic rewards and fixed consensus behavior.
-
-🧩 3. Module Goals
+3. Module Goals
 
 The PoSS module provides:
 
-A registry for all signals
+a registry for all signals
 
-A reward engine
+a reward engine
 
-A halving schedule
+a halving schedule
 
-Anti-abuse controls
+anti-abuse controls
 
-Curator validation structure
+curator validation structure
 
-A secure distribution from PoSS Reserve
+secure distribution from PoSS Reserve
 
-A query interface for dApps
+a query interface for dApps
 
-Pub/sub events for explorers
+pub/sub events for explorers
 
-Deterministic BeginBlock execution
+deterministic behaviour via BeginBlock execution
 
-🏛️ 4. PoSS Module Structure
-4.1 Files
+4. PoSS Module Structure
+4.1. Files
 
-The module will contain:
+The module includes the following structure:
 
-x/noorsignal/
-│
-├── keeper/
-│   ├── keeper.go
-│   ├── msg_server.go
-│   ├── query_server.go
-│   ├── grpc_query.go
-│   └── reward_engine.go
-│
-├── types/
-│   ├── keys.go
-│   ├── types.go
-│   ├── signals.go
-│   ├── rewards.go
-│   ├── halving.go
-│   ├── params.go
-│   ├── events.go
-│   ├── msg.go
-│   └── query.go
-│
-├── module.go
-└── genesis.go
+x/noorsignal
+• keeper/
+– keeper.go
+– msg_server.go
+– query_server.go
+– grpc_query.go
+– reward_engine.go
 
+• types/
+– keys.go
+– types.go
+– signals.go
+– rewards.go
+– halving.go
+– params.go
+– events.go
+– msg.go
+– query.go
 
-(This file lists structure only. Implementation will come in Phase 4C.)
+• module.go
+• genesis.go
 
-🧱 5. PoSS Store Model
+This file defines structure only. Implementation will be added in Phase 4C.
 
-The PoSS module uses a dedicated KVStore:
+5. PoSS Store Model
 
-Store Key: "noorsignal"
+PoSS uses a dedicated KVStore with the store key "noorsignal".
 
-5.1 Data Stored in KVStore
+5.1. Data Stored in the KVStore
 A. Signal Registry
-signal_id → {
-  sender,
-  curator,
-  signal_type,
-  timestamp,
-  block_height,
-  weight,
-  metadata (optional)
-}
 
+Each signal entry contains:
 
-Signal types (Phase 3 definition):
+sender
+
+curator
+
+signal type
+
+timestamp
+
+block height
+
+weight
+
+optional metadata
+
+Signal types (from Phase 3):
 
 micro-don
 
@@ -131,40 +130,39 @@ certified content
 
 CCN broadcast
 
-Weights: 0.5× → 5× (defined in params)
+Weights range from 0.5× to 5× (defined in params).
 
 B. Reward State
 
-Stores global PoSS reward metadata:
+Global reward-related metadata:
 
-last_reward_block
+last reward block
 
-current_epoch
+current epoch
 
-current_halving_cycle
+current halving cycle
 
-reward_index
+reward index
 
-accumulated signal units (per block)
+accumulated signal units per block
 
-latest_state_hash (optional)
+optional state hash
 
 C. Anti-Abuse State
 
 Per-address counters:
 
-address → {
-  daily_signal_count,
-  last_signal_timestamp,
-  rate_limit_flags
-}
+daily signal count
 
+last signal timestamp
+
+rate-limit flags
 
 Limits come from Phase 3 rules.
 
 D. PoSS Parameters
 
-Stored once in genesis:
+Stored once at genesis:
 
 max signals/day
 
@@ -178,30 +176,30 @@ reward scaling factors
 
 E. Statistics (Optional)
 
-Track global stats:
+Used by explorers and dashboards:
 
-total_signals
+total signals
 
-total_rewards_distributed
+total rewards distributed
 
-curator-level stats
+curator-level statistics
 
-(Useful for explorers, not consensus-critical.)
+Not consensus-critical.
 
-🔗 6. Keeper Architecture
-PoSSKeeper responsibilities
+6. Keeper Architecture
+Responsibilities
 
-The keeper:
+The PoSSKeeper:
 
-reads signal registry
+reads the signal registry
 
 validates new signals
 
 checks curator permissions
 
-computes weighted signals
+computes weighted signal units
 
-determines per-block PoSS reward
+determines per-block PoSS rewards
 
 executes reward distribution
 
@@ -213,19 +211,23 @@ exposes Msg servers
 
 exposes Query servers
 
-emits events
+emits module events
 
 Dependencies
-PoSSKeeper → AccountKeeper
-           → BankKeeper
-           → StakingKeeper
 
+PoSSKeeper requires access to:
 
-No dependency on Ethermint.
+AccountKeeper
 
-🚦 7. Signal Validation Rules (Phase 3)
+BankKeeper
 
-Every signal must pass:
+StakingKeeper
+
+It has no dependency on Ethermint.
+
+7. Signal Validation Rules (Phase 3)
+
+Each signal must satisfy:
 
 A. Structural Validation
 
@@ -239,142 +241,140 @@ valid signature
 
 B. Curator Validation
 
-curator must be a registered curator
+curator must be registered
 
-curator must have level: Bronze / Silver / Gold
+must have a valid level (Bronze / Silver / Gold)
 
-curator must not exceed validation limits
+must not exceed validation limits
 
-C. Anti-Abuse
+C. Anti-Abuse Rules
 
 maximum daily signals
 
-minimum block spacing
+minimum spacing between signals
 
-curator/sender can't be the same
+curator and sender cannot be the same
 
-no repeated signals from same sender in same block
+no repeated signal from the same sender within the same block
 
 D. Economic Validation
 
-PoSS Reserve must have enough NUR
+PoSS Reserve must contain enough NUR
 
-weight must be valid
+the applied weight must be valid
 
-🔥 8. Reward Engine Architecture
+8. Reward Engine Architecture
 
-Rewards occur per block inside BeginBlock, not per transaction.
+Rewards are computed per block inside BeginBlock.
 
-8.1 Reward Inputs
+8.1. Reward Inputs
 
-number of valid signals in previous block
+number of valid signals in the previous block
 
-weights of signals
+weights of each signal
 
 validator power (staking)
 
 current halving cycle
 
-8.2 Reward Output
+8.2. Reward Output
 
-Per block:
+Per-block reward formula:
 
 reward_total = f(weighted_signal_units, halving_factor)
-
 
 Distribution:
 
 70% → participant
+
 30% → curator
 
-8.3 Halving Mechanism
+8.3. Halving Mechanism
 
-Every 8 years (in block height):
+Every 8 years (converted to block height):
 
-reward = reward / 2
+PoSS reward is divided by 2
 
-
-PoSSKeeper stores:
+PoSSKeeper maintains:
 
 last halving height
 
 next halving height
 
-remaining blocks
+blocks remaining
 
-Halving is applied at block boundary.
+Halving is applied at block boundaries.
 
-🔄 9. PoSS in Block Lifecycle
+9. PoSS in the Block Lifecycle
 BeginBlock
 
-PoSS begins its main logic:
+PoSS main logic:
 
-load all signals from previous block
+load last block's signals
 
 compute reward units
 
 compute halving factor
 
-send rewards from PoSS Reserve
+distribute rewards from PoSS Reserve
 
 update PoSS state
 
-clear last block buffer
+clear previous block buffer
 
 emit PoSS events
 
 DeliverTx
 
-Only records signal submission.
-
-No rewards, no state changes, no economics happen here.
+Only records signal submissions.
+No economic effects happen here.
 
 EndBlock
 
-PoSS does nothing here → deterministic.
+PoSS performs no actions.
 
 Commit
 
-PoSS commits KVStore updates.
+KVStore updates are committed.
 
-🧠 10. PoSS Queries (for apps & explorers)
+10. PoSS Queries (for apps & explorers)
 
-Queries needed:
+Required queries:
 
-list signals
+list of signals
 
 signal by ID
 
-curator stats
+curator statistics
 
-participant stats
+participant statistics
 
-reward stats
+reward statistics
 
-halving info
+halving information
 
 module parameters
 
-Necessary for the NOORCHAIN Explorer & NOOR Apps.
+These are essential for the NOORCHAIN Explorer and NOOR Apps.
 
-🎯 11. Summary
+11. Summary
 
 The PoSS module requires:
 
-a KVStore (noorsignal)
+a dedicated KVStore (noorsignal)
 
-a PoSSKeeper with staking, bank, account dependencies
+a PoSSKeeper with account, bank and staking dependencies
 
-a reward engine running exclusively in BeginBlock
+a reward engine executed exclusively in BeginBlock
 
-signal registry + anti-abuse system
+a full signal registry with anti-abuse controls
 
-halving mechanism every 8 years
+a halving mechanism every 8 years
 
-strict adherence to Phase 3 rules
+strict compliance with Phase 3 specifications
 
-no circular dependencies
+deterministic, auditable behaviour
 
-purely deterministic behavior
+zero circular dependencies
 
-This document is the canonical specification for Phase 4C module implementation.
+This document is the canonical specification to implement the PoSS module in Phase 4C.
