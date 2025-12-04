@@ -1,201 +1,284 @@
-This document defines the complete specification for the PoSS transaction message:
+NOORCHAIN 1.0 — Phase 3.06
+PoSS Message Specification — MsgCreateSignal
+Version 1.1 — Final Interface
+Last Updated: 2025-12-03
+1. Purpose of the Message
 
-MsgCreateSignal
+MsgCreateSignal is the unique transaction type used to create a PoSS signal on-chain.
 
+It represents a verified positive social action, produced by:
 
-This message will be implemented later in Phase 4 but its interface and behaviour are final.
+a participant (noor1… address)
 
-1. Purpose of the message
+validated by a curator (noor1… address)
 
-MsgCreateSignal is the only message used to create a PoSS signal on-chain.
+belonging to one of the four official PoSS categories
 
-It represents:
+optionally referencing external metadata (QR, hash, link…)
 
-a social action by a participant (noor1…)
+It is the core input to NOORCHAIN’s social mining engine.
 
-validated by a curator (noor1…)
+MsgCreateSignal is the only entry point to the PoSS reward pipeline.
 
-of a specific signal type
-
-which may produce PoSS rewards according to:
-
-weights,
-
-halving era,
-
-daily limits,
-
-PoSSEnabled.
-
-This message is the backbone of NOORCHAIN’s social mining.
-
-2. Message structure (final)
-message MsgCreateSignal {
-    string participant = 1;   // noor1...
-    string curator     = 2;   // noor1...
-    uint32 signal_type = 3;   // enum: MICRO_DONATION / PARTICIPATION / CONTENT / CCN
-    string reference   = 4;   // optional metadata (hash, QR, link, ID...)
+2. Message Structure (Final Interface)
+MsgCreateSignal {
+    participant   string   // noor1...
+    curator       string   // noor1...
+    signal_type   uint32   // enum: MICRO_DONATION / PARTICIPATION / CONTENT / CCN
+    reference     string   // optional metadata, max 256 chars
 }
 
-Additional rules
+Structural rules
 
 participant != curator
 
-both addresses MUST be valid NOOR bech32
+both must decode as valid NOOR bech32 addresses
 
-signal_type MUST be one of the official enum
+signal_type must belong to the official enum
 
-reference MAY be empty but MUST NOT exceed 256 characters
+reference is optional but MUST NOT exceed 256 characters
 
-3. Validation (before state changes)
+This interface is considered final and will not change.
+
+3. Validation Rules
+
+Validation occurs before any state transition.
+
 3.1. Basic checks
 
-addresses must decode successfully as sdk.AccAddress
+participant is a valid sdk.AccAddress
 
-signal type must be valid
+curator is a valid sdk.AccAddress
 
-reference valid (<= 256 chars)
+signal type is valid
 
-3.2. Daily limits
+reference ≤ 256 characters
 
-read daily counter for participant:
+If any of these fail → transaction rejected.
 
-if >= MaxSignalsPerDay → reward disabled
+3.2. Daily Limits
 
-read daily counter for curator:
+The keeper reads:
 
-if >= MaxSignalsPerCuratorPerDay → curator reward disabled
+participant daily counter
 
-The message itself is not rejected unless governance decides otherwise (see §7).
+curator daily counter
+
+If either exceeds the limits defined in Params:
+
+MaxSignalsPerDay
+
+MaxSignalsPerCuratorPerDay
+
+→ The message still succeeds,
+→ but rewards = 0 for the affected party.
+
+Counters still increment.
+The message is not rejected.
 
 3.3. PoSS Enabled
 
-if PoSSEnabled == false → rewards = 0, counters still increment.
+If:
 
-4. State transitions (Phase 4 implementation)
+PoSSEnabled == false
 
-When fully implemented, the message will:
 
-Increment daily counters
+Then:
 
-participant daily counter +1
+reward = 0
 
-curator daily counter +1
+counters increment
 
-Increment global counters
+events emitted normally
+
+This allows PoSS to operate in observation mode during testnet.
+
+4. State Transitions (To Be Implemented in Phase 4)
+
+When MsgCreateSignal is fully wired, it will perform:
+
+4.1. Increment Daily Counters
+
+participantDailyCount +1
+
+curatorDailyCount +1
+
+4.2. Increment Global Counters
 
 TotalSignals++
 
-Compute reward
+4.3. Compute Reward
 
-call ComputeSignalReward(params, signalType, blockHeight)
+Using:
 
-apply halving
+BaseReward
 
-apply daily caps
+weights
 
-Mint / transfer NUR
+halving era
 
-participant gets 70 %
+70/30 structural split
 
-curator gets 30 %
+daily caps
 
-unless limited / disabled
+PoSSEnabled state
 
-Update TotalMinted
+4.4. Mint / Transfer NUR
 
-Emit events
+(Phase 4/6 implementation only)
 
-This section is documentation only — the code will be written in Phase 4 PoSS Logic.
+70% to participant
 
-5. Events emitted
-type EventCreateSignal struct {
-    participant       string
-    curator           string
-    signal_type       string
-    reward_participant string // ex: "5unur"
-    reward_curator     string
-    halving_era        uint64
-    reference          string
+30% to curator
+
+OR zero rewards if limits exceeded or PoSS disabled
+
+4.5. Update TotalMinted
+4.6. Emit PoSS Events
+
+This section is documentation only — implementation occurs during Phase 4.
+
+5. Events Produced
+
+MsgCreateSignal emits a transparent event for indexers and explorers.
+
+Example structure:
+
+EventCreateSignal {
+    participant
+    curator
+    signal_type
+    reward_participant
+    reward_curator
+    halving_era
+    reference
 }
 
 
-These events allow explorers, dApps and dashboards to track PoSS activity transparently.
+Visible to:
 
-6. Errors & return types
+explorers
 
-The message MAY return:
+analytics dashboards
 
-ErrInvalidAddress
+governance monitors
 
-ErrInvalidSignalType
+PoSS visualisation tools
 
-ErrReferenceTooLong
+6. Errors & Non-Errors
+6.1. Errors (transaction rejected)
 
-It MUST NOT fail for:
+invalid participant address
 
-exceeding daily limits
-→ rewards = 0 but signal is still processed.
+invalid curator address
 
-PoSS disabled
-→ rewards = 0 but signal is processed.
+invalid signal type
 
-7. Policy: Reject or Accept-without-reward?
+reference too long
 
-NOORCHAIN chooses:
+6.2. NOT Errors (transaction succeeds)
 
-✔️ Accept the signal
-✔️ Increment counters
-✔️ Reward = 0 if above limits or PoSS disabled
+exceeding participant daily limit → reward = 0
 
-NEVER reject the transaction, unless data is malformed.
+exceeding curator daily limit → curator reward = 0
 
-This ensures:
+PoSSEnabled = false → reward = 0
 
-real user behaviour,
+This preserves:
 
-anti-abuse protection without chain halting,
+real user activity
 
-fair long-term accounting for the 80% PoSS mining reserve.
+chain liveness
 
-8. Security & anti-abuse invariants
+transparent accounting for PoSS statistics
 
-To be respected during implementation:
+7. Policy Decision (Final): Accept Without Reward
 
-PoSS never mints above the global cap.
+NOORCHAIN never rejects PoSS signals for economic limits.
 
-ParticipantShare + CuratorShare MUST always equal 100.
+It ALWAYS:
 
-PoSSReserveDenom must be "unur".
+accepts the transaction
 
-Halving schedule MUST be applied to the raw reward.
+increments counters
 
-No double-spend of counters.
+sets reward = 0 if needed
 
-Curators may not validate infinite signals:
+This maintains:
 
-limited by MaxSignalsPerCuratorPerDay.
+fairness
 
-No signal may bypass validation through MsgCreateSignal.
+transparency
 
-9. Implementation notes (Phase 4)
+no accidental chain halts
 
-This message will require:
+clean accounting for the PoSS 80% reserve
+
+Legal Light CH compliance
+
+8. Security & Anti-Abuse Invariants
+
+The implementation MUST enforce:
+
+8.1. Global Cap Always Preserved
+
+PoSS MUST NOT mint above the fixed supply:
+299,792,458 NUR.
+
+8.2. Structural Reward Split
+
+Must always remain:
+
+70% participant
+
+30% curator
+
+Not modifiable by governance.
+
+8.3. Reserve and Denom
+
+PoSSReserveDenom = "unur"
+
+no alternative denominations allowed
+
+8.4. Halving Is Mandatory
+
+Rewards MUST respect the 8-year halving schedule.
+
+8.5. Daily Counters
+
+cannot overflow
+
+must not reset incorrectly
+
+must always be consistent
+
+8.6. No Bypass of Validation
+
+All signals MUST pass through this message.
+
+9. Implementation Notes (Phase 4)
+
+MsgCreateSignal requires:
 
 msg_server.go
 
-integration with keeper
+complete keeper integration
 
-state updates
+state transitions
+
+reward computation logic
+
+BeginBlock/EndBlock integration
 
 event emission
 
-ante check compatibility
+ante handler compatibility
 
-integration into app’s module manager
+inclusion in module routing
 
-All will be implemented cleanly using the specification above.
+This will be implemented in Phase 4B–4C.
 
-✔️ End of PoSS Logic 16
+End of PoSS Logic 16 — Message Specification Completed
 
-(Ready for Phase 4 implementation in upcoming steps)
+This file is now final and ready for development in Phase 4.
