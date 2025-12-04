@@ -1,13 +1,13 @@
-*NOORCHAIN — Phase 4B
+NOORCHAIN — Phase 4B
 
-PoSS Block Logic & Reward Mechanism**
+PoSS Block Logic & Reward Mechanism
 Version 1.1 — Architecture Only (No Code)
 
-🔧 1. Purpose of This Document
+1. Purpose of This Document
 
-This document defines the complete functional behavior of the PoSS module during block execution, including:
+This document defines the complete functional behavior of the PoSS module during block execution. It specifies:
 
-BeginBlock algorithm
+the BeginBlock algorithm
 
 reward engine logic
 
@@ -19,258 +19,233 @@ daily limit enforcement
 
 curator validation
 
-reward distribution from PoSS Reserve
+reward distribution from the PoSS Reserve
 
 event emission
 
-This specification is the canonical reference for implementing BeginBlocker and the reward engine in Phase 4C.
+This file is the canonical specification to implement the BeginBlocker and the PoSS reward engine in Phase 4C.
 
-🧩 2. PoSS Execution Context
+2. PoSS Execution Context
 
-PoSS executes its entire logic in:
+PoSS logic runs entirely in BeginBlock, because:
 
-BeginBlock
+validator power must already be updated (after staking)
 
+PoSS must run before governance logic
 
-Because:
-
-validator power must be updated first (after staking)
-
-PoSS must run before governance
-
-deterministic PoSS state must be written before DeliverTx of next block
+deterministic PoSS state must be written before the next block processes DeliverTx
 
 PoSS does not run in DeliverTx or EndBlock.
 
-🚦 3. BeginBlock Algorithm Overview
+3. BeginBlock Algorithm Overview
 
-The PoSS module performs 7 steps, always in this exact order:
+PoSS always performs the following steps in this exact order:
 
-1. Load signals collected during previous block
-2. Validate signals (curator, anti-abuse, type rules)
-3. Compute weighted signal units
-4. Compute block reward using halving-adjusted formula
-5. Distribute rewards (70/30) from PoSS Reserve
-6. Update PoSS state (indexes, epochs, counters)
-7. Clear temporary signal buffer
+Load signals collected during the previous block
 
+Validate signals (curator, anti-abuse, type validation)
 
-Each step is mandatory and strictly deterministic.
+Compute weighted signal units
 
-🪪 4. Step 1 — Load Signals from Previous Block
+Compute block reward using the halving-adjusted formula
+
+Distribute rewards (70/30) from the PoSS Reserve
+
+Update PoSS state (indexes, epochs, counters)
+
+Clear the temporary signal buffer
+
+All steps are mandatory and strictly deterministic.
+
+4. Step 1 — Load Signals from Previous Block
 
 During DeliverTx, signals are registered but not processed.
 
-BeginBlock loads:
-
-signals = keeper.GetPendingSignals()
-
-
-Each signal record contains:
+BeginBlock retrieves them:
 
 sender
 
 curator
 
-type
+signal type
 
 weight
 
 timestamp
 
-block_height
+block height
 
-If no signals → block reward = 0.
+If no signals exist, the block reward is zero.
 
-🛡️ 5. Step 2 — Validate All Signals
+5. Step 2 — Validate All Signals
 
-Validation must not be skipped.
+Validation cannot be skipped.
 
-Validation Rules (Phase 3 Final Specification)
 A. Curator Validation
 
-curator must belong to the Curator Registry
+curator must be registered
 
-curator must have valid level: Bronze, Silver, Gold
+curator must have level Bronze, Silver, or Gold
 
-curator must not exceed daily validation quota
+curator must not exceed their daily validation quota
 
 curator must not validate their own signals
 
 B. Anti-Abuse Validation
 
-sender must not exceed daily signal quota
+sender must not exceed their daily signal quota
 
 minimum delay between signals
 
-subject to weight-specific limitations
+weight-specific limitations
 
-sender and curator cannot be the same
+sender and curator must be different
 
-no duplicate signal in same block
+no duplicate signal from the same sender within the same block
 
 C. Type Validation
 
-Signal types allowed:
+Allowed signal types and weights:
 
-Type	Name	Weight
-0	micro-donation	0.5×
-1	participation QR	1×
-2	certified content	3×
-3	CCN broadcast	5×
+micro-donation → weight 0.5
+
+participation QR → weight 1
+
+certified content → weight 3
+
+CCN broadcast → weight 5
+
 D. Economic Validation
 
-PoSS Reserve must have enough NUR
+the PoSS Reserve must have enough NUR
 
-weight ∈ {0.5, 1, 3, 5}
+weight must belong to the allowed set {0.5, 1, 3, 5}
 
-Invalid signals are discarded silently.
+Invalid signals are silently discarded.
 
-🎚️ 6. Step 3 — Compute Weighted Signal Units
+6. Step 3 — Compute Weighted Signal Units
 
-Define:
+Each valid signal contributes:
 
-unit = weight_of_signal × multiplier
+unit = weight × multiplier
 
+The multiplier is currently 1 (defined in parameters).
 
-Where multiplier = 1 (for now, defined in params)
+The total unit count for the block is:
 
-Total unit count:
-total_units = Σ (unit of each valid signal)
+total_units = sum of all units from valid signals
 
+If total_units is zero, the block reward is zero.
 
-If total_units = 0 → reward = 0.
+7. Step 4 — Compute Block Reward (Halving-Adjusted)
 
-💰 7. Step 4 — Compute Block Reward (Halving-Adjusted)
+The block reward is calculated using:
 
-The base reward per unit is defined in Phase 3.
+the base reward per unit (Phase 3 definition)
 
-Define:
-
-base_reward_per_unit
-
+the current halving factor
 
 Halving factor:
 
 halving_factor = 1 / (2 ^ current_halving_cycle)
 
-
-Final reward:
+Final block reward:
 
 reward_total = total_units × base_reward_per_unit × halving_factor
 
+This ensures:
 
-Guarantees:
+deterministic rewards
 
-deterministic
+a predictable supply curve
 
-predictable supply curve
+a fixed 8-year halving cycle
 
-follows 8-year halving cycle
-
-🎁 8. Step 5 — Reward Distribution (70/30)
+8. Step 5 — Reward Distribution (70/30)
 
 For each signal:
 
 signal_reward = unit × base_reward_per_unit × halving_factor
 
-
 Distribution:
 
-participant_reward = signal_reward × 0.70
-curator_reward     = signal_reward × 0.30
+70% to the participant
 
+30% to the curator
 
-The keeper performs:
+The keeper executes transfers from the PoSS Reserve:
 
-BankKeeper.SendCoinsFromModuleToAccount(PoSSReserve, participant)
-BankKeeper.SendCoinsFromModuleToAccount(PoSSReserve, curator)
+send reward to the participant
 
+send reward to the curator
 
-Rewards must use:
+Rules:
 
-exact integer arithmetic
+integer arithmetic only
 
 truncation rules defined in Phase 3
 
-If PoSS Reserve lacks NUR → reward = 0.
+if the PoSS Reserve lacks funds → reward becomes zero
 
-🕒 9. Step 6 — Halving Process (Every 8 Years)
+9. Step 6 — Halving Process (Every 8 Years)
 
-Halving cycle defined by:
+Halving uses:
 
-blocks_per_halving = 8 years × 365 days × seconds per day / block_time
+blocks_per_halving = 8 years (converted into block count)
 
+If the current block height reaches the next halving point:
 
-Stored in params.
+halving_cycle increases by 1
 
-Condition:
-
-if block_height ≥ next_halving_height:
-    halving_cycle += 1
-    next_halving_height += blocks_per_halving
-
+next_halving_height is shifted by blocks_per_halving
 
 Effects:
 
-reward becomes half
+reward is reduced by half
 
-event emitted
+a halving event is emitted
 
-new reward era begins
+a new reward era begins
 
-Halving must apply before computing rewards of the next block.
+Halving always applies before rewards of the next block are computed.
 
-🧠 10. Step 7 — PoSS State Updates
+10. Step 7 — PoSS State Updates
 
-After distributing rewards:
-
-Update:
+After reward distribution, the module updates:
 
 reward index
 
-total signals count
+total signal count
 
-last block height
+last processed block height
 
 epoch counters
 
-anti-abuse stats
+anti-abuse statistics
 
-curator stats
+curator statistics
 
-participant stats
+participant statistics
 
 global PoSS metrics
 
-These ensure consistency for:
+This ensures consistency for explorers, dApps, and governance.
 
-explorers
+11. Step 8 — Clear Pending Signals
 
-dApps
+After successful processing, the pending-signal buffer is cleared.
 
-governance
+This prevents:
 
-future modules
+double counting
 
-🧹 11. Step 8 — Clear Pending Signals
+inconsistent indexing
 
-Once processed:
+non-deterministic behavior
 
-keeper.ClearPendingSignals()
+12. Events Emitted
 
-
-Important for:
-
-determinism
-
-avoiding double counting
-
-correct indexing
-
-📡 12. Events Emitted
-
-Events emitted for each block:
+PoSS emits events during BeginBlock processing:
 
 poss.reward_distributed
 
@@ -282,24 +257,17 @@ poss.halving_event
 
 poss.stats_update
 
-Events are essential for:
+These events are required for indexers, explorers, analytics, and external systems.
 
-explorers
+13. Summary of Block Logic
 
-indexers
+Step | Operation
+1 | load pending signals
+2 | validate signals
+3 | compute weighted units
+4 | compute halving-adjusted reward
+5 | distribute 70/30 rewards
+6 | update PoSS state
+7 | clear pending signals
 
-dApps
-
-analytics
-
-🎯 13. Summary of Block Logic
-Step	Operation
-1	load pending signals
-2	validate signals
-3	compute weighted units
-4	compute halving-adjusted reward
-5	send 70/30 rewards
-6	update PoSS state
-7	clear pending signals
-
-This flow must be strictly deterministic and fully compatible with Cosmos consensus rules.
+This flow must be strictly deterministic and fully aligned with Cosmos consensus requirements.
