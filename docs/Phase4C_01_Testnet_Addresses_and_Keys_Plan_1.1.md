@@ -1,99 +1,107 @@
-**NOORCHAIN — Phase 4C
+NOORCHAIN — Phase 4C
 
-Testnet 1.0 — Addresses & Keys Plan**
+Testnet 1.0 — Addresses & Keys Plan
 Version 1.1 — Architecture Only (No Code)
 
-🔧 1. Purpose of This Document
+1. Purpose of This Document
 
-This document defines:
+This document defines the complete address and key strategy for NOORCHAIN Testnet 1.0.
+It specifies:
 
-the address strategy for Testnet 1.0
+the five mandatory genesis wallets
 
-the five required bech32 addresses (foundation, dev, stimulus, presale, PoSS Reserve)
+the bech32 and EVM address formats
 
 the validator keys
 
-the genesis account format
+the genesis account models
 
-the rules for address generation
+the rules for deterministic key generation
 
-the mapping to Cosmos/EVM formats
+the mapping between Cosmos and Ethermint formats
 
-This is the first step before creating the real genesis in Phase 4C_02.
+This specification is required before creating the real genesis during Phase 4C_02.
 
-🧩 2. Address Format Requirements
+2. Address Format Requirements
 
-NOORCHAIN uses:
+NOORCHAIN uses the following Bech32 prefixes (defined in Phase 2):
 
-Bech32 Prefixes
+Account prefix: noor1…
 
-As defined in Phase 2:
+Validator operator: noorvaloper1…
 
-Account prefix: noor1...
+Validator consensus: noorvalcons1…
 
-Validator operator: noorvaloper1...
+Public keys: noorpub1…
 
-Consensus key: noorvalcons1...
+Dual Address Model (Ethermint)
 
-Public keys: noorpub1...
+Every NOORCHAIN account has:
 
-EVM Address Mapping
+a native Cosmos Bech32 address
 
-Ethermint creates a dual-address model:
+an EVM-compatible hexadecimal address (0x…)
 
-Native format (bech32)
+Every account used in Testnet must provide:
 
-EVM-compatible address (0x…)
-
-Every account used in Testnet must support:
-
-Cosmos bech32 address
+bech32 address
 
 EVM hex address
 
-Public key
+public key
 
-Private key
+private key
 
-🏛️ 3. Required Genesis Wallets
+This dual format is required for full RPC/EVM compatibility.
 
-Testnet 1.0 requires exactly 5 real wallets, consistent with the official NOORCHAIN Genesis Economics (5/5/5/5/80).
+3. Required Genesis Wallets (5-Wallet Model)
 
-1️⃣ Foundation Address (5%)
+Testnet 1.0 requires exactly five real wallets, in accordance with the official NOORCHAIN Genesis Economic Model (5% / 5% / 5% / 5% / 80%).
 
-Holds funds for chain infrastructure and public transparency.
+1. Foundation Address — 5%
 
-2️⃣ Dev / Sàrl Address (5%)
+Used for public infrastructure, transparency, documentation and operations.
 
-Used for internal development operations.
+2. Dev / Sàrl Address — 5%
 
-3️⃣ PoSS Stimulus Address (5%)
+Used for development, tooling, integrations and internal operations.
 
-Funds early PoSS incentives.
+3. PoSS Stimulus Address — 5%
 
-4️⃣ Presale Optional Address (5%)
+Used for early PoSS incentives during testing phases.
 
-Reserved for future private investors (timelocked in mainnet).
+4. Presale Optional Address — 5%
 
-5️⃣ PoSS Reserve (80%)
+Reserved for private investors, with vesting in Mainnet 1.0.
 
-Main PoSS reward distribution supply.
+5. PoSS Reserve Address — 80%
 
-🔥 VERY IMPORTANT
+The primary supply holder for PoSS rewards.
+This address must appear in:
 
-These 5 addresses MUST be:
+x/noorsignal params
 
-valid bech32
+genesis.json balances
 
-valid hex (Ethermint)
+bank module total supply
 
-indexable by EVM module
+Mandatory Requirements
 
-stored in genesis as BaseAccounts
+Each of the 5 wallets must:
 
-funded with full NUR distribution
+be a valid bech32 account
 
-These 5 addresses will appear in:
+have a valid EVM hex address
+
+be stored as a BaseAccount in genesis
+
+be funded with the correct NUR allocation
+
+be referenced by PoSS parameters
+
+be deterministic between exports
+
+These five addresses appear in:
 
 genesis.json → auth.accounts
 
@@ -101,140 +109,172 @@ genesis.json → bank.balances
 
 genesis_distribution.json
 
-x/noorsignal params
+x/noorsignal parameters
 
-🔐 4. Validator Keys Requirements
+4. Validator Keys Requirements
 
-Testnet 1.0 will have:
+Testnet 1.0 requires one validator, consisting of:
 
-1 local validator, using:
+a validator operator key (noorvaloper1…)
 
-1 validator operator key → noorvaloper1…
+a consensus key (noorvalcons1…)
 
-1 consensus key → noorvalcons1…
+a self-delegation account
 
-1 self-delegation account
+The validator must be included in:
 
-The validator must be:
+staking.validators
 
-included in staking.validators
+staking.delegations
 
-funded with enough NUR to self-delegate
+auth.accounts
 
-configured with minimum gas prices
+Validator requirements:
 
-connected to Ethermint RPC
+must hold sufficient NUR for self-delegation
 
-🧱 5. Address Generation Rules
+must define minimum gas prices
 
-To create the 5 genesis wallets + validator keys:
+must be compatible with Ethermint RPC
 
-Option A — Using noord keys add
+5. Address Generation Rules
 
-(Recommended during Phase 4C implementation)
+There are three ways to generate the required keys.
 
-Generates:
+Option A — Using noord keys add (recommended)
 
-bech32 account
-hex EVM address
+Automatically produces:
+
+bech32 address
+
+EVM address
+
 public key
+
 private key
 
-Option B — Offline
+JSON exportable keyfile
 
-Using:
+This is the recommended deterministic method for Phase 4C.
+
+Option B — Offline Generation
+
+Possible using:
 
 ethermintd keys
 
 gaiad keys
 
-cosmjs script
+cosmjs or ethermint-compatible scripts
 
-Option C — Imported Keys
+Option C — Importing Existing Keys
 
-If you want to reuse existing addresses, you can.
+Allowed, as long as:
 
-🔄 6. Address Mapping Specification
+the address is valid
+
+the keys are accessible
+
+the bech32 and EVM formats match
+
+6. Address Mapping Specification
 
 Each address must have:
 
 Field	Description
-bech32	noor1…
-evm_hex	0x…
+bech32	Example: noor1…
+evm_hex	Example: 0x…
 public_key	secp256k1
-private_key	for local use only
+private_key	kept offline
 account_number	set by auth module
 sequence	starts at 0
 
-These fields are defined in auth.BaseAccount.
+These fields are part of the Cosmos BaseAccount model.
 
-🗂️ 7. Genesis Accounts Format
+7. Genesis Accounts Format
 
-In genesis.json → auth.accounts, we must insert:
+In genesis.json → auth.accounts, each of the five genesis wallets plus the validator account must appear as BaseAccounts.
 
-{
-  "@type": "/cosmos.auth.v1beta1.BaseAccount",
-  "address":   "noor1...",
-  "pub_key":   { … },
-  "account_number": "0",
-  "sequence": "0"
-}
+Required fields:
 
+bech32 address
 
-For all 5 genesis wallets + validator self-delegation key.
+public key (optional for some testnet accounts)
 
-💰 8. Genesis Balances Format
+account_number = "0"
 
-In genesis.json → bank.balances:
+sequence = "0"
 
-{
-  "address": "noor1…",
-  "coins": [
-    { "denom": "unur", "amount": "XXXXX" }
-  ]
-}
+This ensures deterministic behavior during initial blocks.
 
+8. Genesis Balances Format
 
-The amount is determined by:
+In genesis.json → bank.balances, each of the five genesis wallets must have:
 
-Genesis economic split (5/5/5/5/80)
+address: bech32
 
-Testnet total supply (same as mainnet supply for deterministic PoSS behavior)
+coins: list of denominations
 
-🧠 9. Testnet Address Integrity Rules
+Example structure:
 
-All 5 genesis wallets must:
+denom: unur
 
-appear in auth.accounts
+amount: exact integer allocation
 
-appear in bank.balances
+The amounts must follow:
+
+Testnet supply = Mainnet supply
+
+5% Foundation
+
+5% Dev
+
+5% Stimulus
+
+5% Presale
+
+80% PoSS Reserve
+
+This keeps Testnet deterministic for PoSS simulations.
+
+9. Testnet Address Integrity Rules
+
+All five genesis wallets must:
+
+appear in both auth.accounts and bank.balances
 
 contain the correct NUR amounts
 
-be referenced by x/noorsignal params
+appear in PoSS parameters
 
-be deterministic between runs
-
-be exportable via noord export
+be exportable using “noord export” (deterministic output)
 
 Validator keys must:
 
-match consensus key in validators
+match the staking validator entry
 
-match operator key in staking
+match the consensus public key
 
-match account in auth.accounts
+appear in auth.accounts
 
-📌 10. Summary
+correspond to the operator key
+
+10. Summary
 
 This document defines:
 
-✔️ 5 required genesis wallets
-✔️ validator keys requirements
-✔️ bech32 + EVM dual format
-✔️ genesis account structure
-✔️ genesis balance structure
-✔️ address generation strategy
-✔️ integration with PoSS & Testnet
+the 5 mandatory genesis wallets
 
-This file is the official prerequisite for creating Testnet 1.0 genesis in the next document
+the validator key set
+
+bech32 + EVM dual address format
+
+genesis account structure
+
+genesis balances structure
+
+deterministic key generation rules
+
+integration with PoSS parameters
+
+This file is the official prerequisite for Phase 4C_02 — Testnet Genesis Construction.
