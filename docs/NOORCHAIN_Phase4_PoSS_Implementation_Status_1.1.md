@@ -1,368 +1,300 @@
-NOORCHAIN — Phase 4 PoSS Implementation Status (v1.1)
+NOORCHAIN 1.0 — Global Phases Status (v1.2, EN)
 
-Full technical status of the PoSS module (x/noorsignal) — December 2025
+Scope
+This document provides a complete overview of all NOORCHAIN 1.0 phases (1 → 9).
+It serves as a single, high-level status reference for internal use.
 
-✅ 1. Purpose of Phase 4
+============================================================
 
-Phase 4 is the actual implementation phase of the NOORCHAIN PoSS module, without enabling minting or governance yet.
-The objective is to build a fully functional internal PoSS logic, deterministic and validated, ready for future wiring with BankKeeper, EVM, and governance.
+Phase 1 — Framing & Decisions
+Status: 100% complete
 
-This document captures the exact state of the PoSS module in the repository at this moment.
+Technical decisions
 
-✅ 2. PoSS Architecture — Overview
+Core: Cosmos SDK + Ethermint (EVM) + CometBFT
 
-The x/noorsignal module contains:
+Native token: NUR
 
-types/
+Fixed supply: 299,792,458 (speed of light concept)
 
-Params
+PoSS halving every 8 years (param-based)
 
-GenesisState
+PoSS model
 
-SignalType enum
+Four signal families: micro_donation, participation, content, ccn
 
-Reward helpers (ComputeSignalReward)
+Structural immutable rule: 70% participant / 30% curator
 
-MsgCreateSignal
+Daily limits: participant, curator, participant reward cap
 
-MsgCreateSignalResponse
+Economic model
 
-Store keys, daily counters
+Official allocation 5 / 5 / 5 / 5 / 80
 
-Pure Go validation
+Investor funds handled via Noor Dev Sàrl only
 
-keeper/
+No internal PSP. Fiat flows exclusively through regulated partners
 
-Core Keeper logic
+Fully compliant with Swiss Legal Light CH (no yield promises, no fiat custody)
 
-Daily per-user counters
+Phase 1 is locked and will never be modified.
 
-Daily reward caps
+============================================================
+2. Phase 2 — Technical Skeleton
+Status: 100% complete
 
-PendingMint planning queue
+Deliverables
 
-Genesis load/store
+Clean repository layout
 
-Global PoSS statistics view
+Complete app/app.go structure
 
-module.go
+Mounted stores: auth, bank, staking, gov, params, evm, feemarket, noorsignal
 
-AppModuleBasic / AppModule
+Initialized keepers
 
-InitGenesis / ExportGenesis
+Minimal but functional ModuleManager
 
-BeginBlock (currently empty)
+Full encoding configuration
 
-Fully integrated in app/app.go
+Initial scripts (testnet.sh)
 
-handler.go
+This skeleton is stable and serves as the foundation for all later phases.
 
-Minimal stub (required for SDK 0.46)
+============================================================
+3. Phase 3 — Documentation & Specifications
+Status: ~80% complete
 
-Does not process any tx yet
+Documents completed
 
-✅ 3. PoSS Parameters (fully implemented)
-Available parameters:
+Architecture overview
 
-PoSSEnabled
+Genesis structure and allocation principles
 
-MaxSignalsPerDay
+Full PoSS functional specification
 
-MaxSignalsPerCuratorPerDay
+Economic model (5/5/5/5/80)
 
-MaxRewardPerDay (sdk.Coin)
+PoSS technical status
 
-BaseReward (sdk.Coin)
+PoSS testnet behavioural guide
 
-WeightMicroDonation
+Documents still missing
 
-WeightParticipation
+AnteHandler and EVM gas/fee specification
 
-WeightContent
+CLI/API/Query design specification
 
-WeightCCN
+Final “Phase 3 Completion Pack”
 
-HalvingPeriodBlocks
+Phase 3 is advanced but not fully closed.
 
-PoSSReserveDenom = "unur"
+============================================================
+4. Phase 4 — Implementation (Code)
+Status: ~95% complete
 
-Behavior:
+4.1 Core App / Cosmos / EVM
 
-If PoSSEnabled = false, PoSS counts signals but produces 0/0 rewards.
+Fully wired Cosmos SDK 0.46.11
 
-All parameters validated before storage.
+Ethermint 0.22.0 EVM integrated
 
-GetParams() auto-initializes defaults if no params exist.
+FeeMarket fully operational
 
-Governance-ready.
+AnteHandler functional
 
-✅ 4. Reward Engine (70/30 split)
+Builds and unit tests fully passing
 
-Function:
-ComputeSignalReward(params, signalType, height)
+4.2 PoSS module — Types
 
-Steps:
+Complete Params structure
 
-BaseReward × weight
+DefaultParams (PoSS OFF safe mode)
 
-Halving every 8 years (via block height)
+Signal weights and reward engine
 
-Fixed split:
+Halving logic (param-based)
 
-70% to participant
+Immutable 70/30 split
 
-30% to curator
+GenesisState implemented
 
-Pure, deterministic, no store access.
+Daily counters implemented
 
-✅ 5. GenesisState (PoSS)
-Stored fields:
+Reward cap implemented
 
-TotalSignals
+All types-level tests passing
 
-TotalMinted
+4.3 PoSS module — Keeper
 
-Stable 70/30 rules
+Parameter management via real ParamSubspace
 
-Reserved space for PendingMint
+Fully functional internal pipeline (without minting)
 
-Implemented:
+PendingMint scheduling queue
 
-DefaultGenesis()
+Daily counters
 
-ValidateGenesis()
+Global PoSS statistics
 
-InitGenesis()
+Genesis loading/export
 
-ExportGenesis()
+All keeper tests passing
 
-Stored as pure JSON, no proto dependency.
+4.4 PoSS module — AppModule
 
-✅ 6. Daily Counters
-Storage:
+AppModuleBasic complete
 
-Participant daily signal counter
-Key → DailyCounterKey(address,date)
-Value → uint64
+Module integrated in ModuleManager
 
-Participant daily reward tracker
-Key → daily_reward:<addr>:<date>
-Value → uint64 (big-endian)
+BeginBlock / EndBlock placeholders
 
-Functions:
+No MsgServer or QueryServer yet
 
-GetDailySignalsCount
+4.5 Testnet
 
-IncrementDailySignalsCount
+testnet/genesis.json functional
 
-getDailyRewardAmount
+genesis_distribution.json awaiting real addresses
 
-setDailyRewardAmount
+scripts/testnet.sh working
 
-✅ 7. MaxRewardPerDay Cap
+data-testnet/ created deterministically
 
-Behavior:
+4.6 Remaining work to reach 100%
 
-If MaxRewardPerDay = 0, cap disabled.
+Real PoSS reserve module account
 
-Otherwise:
+Actual mint/send via BankKeeper
 
-If participant already reached the cap → reward = 0/0
+MsgServer (proto)
 
-The signal still increases the daily counter
+QueryServer
 
-If adding new reward would exceed the cap → reward = 0/0
+CLI integration
 
-Otherwise → store updated reward sum
+Activation of PoSS when legally and technically safe
 
-Handled entirely inside ProcessSignalInternal().
+============================================================
+5. Phase 5 — Legal & Governance
+Status: conceptually advanced (~60%)
 
-✅ 8. Internal PoSS Pipeline (ProcessSignalInternal)
+Completed conceptually
 
-This is the core functional engine of PoSS v1.
+Full Legal Light CH alignment
 
-Steps performed:
+Governance parameters defined (voting, tally, deposit)
 
-Compute raw reward (with halving + weights)
+Strict allocation model (5/5/5/5/80)
 
-Apply MaxRewardPerDay
+Multi-sig rules for sensitive pools
 
-Increment participant daily counter
+Investor fund-flow rules (via Sàrl only)
 
-Create PendingMint entry
+Still required in the repo
 
-Update global:
+Dedicated Phase 5 document
 
-TotalSignals
+FINMA Light classification documentation
 
-TotalMinted
+Governance processes description
 
-Return theoretical rewards to caller
+Integration of governance parameters inside genesis.json
 
-What it does not do yet:
+============================================================
+6. Phase 6 — Genesis Pack & Communication
+Status: partly complete (~40%)
 
-enforce MaxSignalsPerDay
+Completed
 
-enforce MaxSignalsPerCuratorPerDay
+Economic model
 
-real minting (BankKeeper)
+Initial genesis templates
 
-sending coins
+Internal documentation
 
-curator counters
+Remaining
 
-event emission (ABCI)
+Inject 5 real Bech32 addresses (foundation, dev, stimulus, presale, PoSS reserve)
 
-MsgServer proto implementation
+Align all files (genesis.json, genesis_distribution.json)
 
-QueryServer implementation
+Produce the public “Genesis Pack”
 
-These will be implemented in Phase 4D → 4F → 6.
+Public-facing summary documentation
 
-✅ 9. PendingMint Queue
+============================================================
+7. Phase 7 — Mainnet 1.0
+Status: 0%
 
-PoSS supports scheduling future mint operations (not active yet).
+Will include
 
-Key format:
+Public PoSS testnet (PoSS ON)
 
-pending_mint:<height>:<participant>:<timestamp_nano>
+Calibration of PoSS parameters
 
+Security and economic audits
 
-Stored JSON object:
+Finalized mainnet genesis
 
-block height
+Mainnet launch plan
 
-timestamp
+============================================================
+8. Phase 8 — dApps & Ecosystem
+Status: vision only
 
-participant
+Target dApps
 
-curator
+NOOR Pay
 
-signal type
+Curators Hub
 
-participantReward
+CCN Studio
 
-curatorReward
+Public APIs
 
-Mint is not executed yet (Legal Light).
+No code expected in the core repo for now.
 
-✅ 10. MsgCreateSignal (pure Go)
+============================================================
+9. Phase 9 — Partnerships & Audits
+Status: 0%
 
-Message fields:
+Future deliverables
 
-Participant (bech32 noor1…)
+External technical audits
 
-Curator (bech32)
+Economic/game-theory review
 
-SignalType
+Legal audit for FINMA Light
 
-Metadata
+Partnerships with NGOs, schools, institutions
 
-Timestamp
+PSP integration agreements
 
-Date (YYYY-MM-DD)
+============================================================
+10. Summary Table
 
-Implements:
+Phase 1 — 100%
+Phase 2 — 100%
+Phase 3 — 80%
+Phase 4 — 95%
+Phase 5 — 60%
+Phase 6 — 40%
+Phase 7 — 0%
+Phase 8 — 0%
+Phase 9 — 0%
 
-sdk.Msg
+============================================================
+11. Current Technical Snapshot (Dec 2025)
 
-proto.Message (minimal stub)
+go build → OK
+go test → OK
+PoSS OFF by default
+Minimal deterministic testnet working
+ModuleManager stable
+Legal Light preserved
+No conflicting dependencies
+No dangling logic
 
-Validation:
-
-full bech32 check
-
-signal type check
-
-date format check
-
-Unit tests → PASS.
-
-✅ 11. Testing Status
-
-Keeper tests → PASS
-
-Msg tests → PASS
-
-Module compiles cleanly
-
-go test ./... → ALL GREEN
-
-Handler stub does not break build
-
-✅ 12. Testnet infrastructure
-
-Script:
-scripts/testnet.sh
-
-Creates:
-
-data-testnet/
-
-data-testnet/config/genesis.json
-(copied from testnet/genesis.json)
-
-Result:
-
-A clean home directory ready for ./noord start
-
-Note:
-noord start isn't wired yet → expected at this stage.
-
-🎯 13. Phase 4 Completion Percentage
-
-Current PoSS internal logic completion:
-
-≈ 85–90% DONE
-
-Remaining:
-
-MsgServer proto + routing
-
-QueryServer (gRPC + REST)
-
-Daily curator counters
-
-Bank wiring (mint/send)
-
-Events
-
-Integration with EVM hooks
-
-Governance activation of parameters
-
-Testnet activation (PoSS OFF)
-
-🔜 14. Next Recommended Steps (Phase 4D–4F)
-
-PoSS MsgServer (full proto)
-
-PoSS QueryServer
-
-BankKeeper wiring (mint + transfer)
-
-Events & telemetry
-
-Daily curator limits
-
-Full PoSS flowchart / diagrams
-
-Testnet 1.0 with PoSS OFF
-
-🤝 15. Summary
-
-The PoSS module is now:
-
-structurally complete
-
-deterministic
-
-compliant with Cosmos SDK 0.46
-
-Legal Light compliant (no mint yet)
-
-fully testable
-
-ready for progressive activation in later phases
-
-NOORCHAIN now has a solid, professional, Swiss-grade foundation for PoSS.
+Overall status
+NOORCHAIN 1.0 is in a clean, consistent, highly stable state suitable for Swiss-grade blockchain development.
