@@ -1,91 +1,89 @@
-**NOORCHAIN — Phase 4B
+NOORCHAIN — Phase 4B
 
-PoSS Messages, Queries & Genesis Specification**
+PoSS Messages, Queries & Genesis Specification
 Version 1.1 — Architecture Only (No Code)
 
-🔧 1. Purpose of This Document
+1. Purpose of This Document
 
 This document defines:
 
-the messages (Msg) accepted by PoSS
+the PoSS message types
 
-the query API exposed by PoSS
+the PoSS query API (gRPC)
 
-the genesis requirements
+the genesis structure and requirements
 
-the minimal set of parameters the module must support
+the set of PoSS module parameters
 
 the events emitted by the module
 
-This is the final blueprint required before starting to code the module in Phase 4C.
+This is the final architectural blueprint before implementing the module during Phase 4C.
+It contains no code.
 
-No code is included.
+2. Message Types (Msg)
 
-🧩 2. Message Types (Msg)
-
-PoSS has only one actionable message, as defined in Phase 3:
+PoSS defines exactly one actionable transaction message.
 
 2.1 MsgSubmitSignal
-Purpose
 
-Submit a PoSS signal validated by a curator.
+Purpose: Submit a PoSS signal validated by a curator.
 
-Fields
+Fields:
+
 sender_address
+
 curator_address
+
 signal_type
+
 metadata (optional)
-signature (optional if handled outside)
 
-Requirements
+signature (optional if performed off-chain or externally)
 
-binding to DeliverTx (not BeginBlock)
+Execution context:
 
-stored in pending buffer
+Received in DeliverTx
 
-validated later in BeginBlock
+Stored in a pending buffer
 
-no reward distributed here
+Fully validated and rewarded only in BeginBlock
 
-Reject Conditions
+Reject conditions:
 
 invalid curator
 
 invalid signal type
 
-anti-abuse violations
+sender equals curator
 
-sender == curator
+anti-abuse limit violations
 
 duplicated signal
 
-weight not defined
+undefined or invalid weight
 
-Success Effect
+Success effect:
 
-signal stored in pending state
+the signal is written to pending storage
 
-event emitted
+event poss.signal_submitted is emitted
 
-🔍 3. Query API (gRPC)
+3. Query API (gRPC)
 
-The module exposes several query endpoints for dApps, explorers, and wallets.
-
-All queries MUST be defined in proto/noorsignal/query.proto.
+The module exposes several read-only endpoints for explorers, dApps, wallets and analytics systems.
+All queries must be specified in proto/noorsignal/query.proto.
 
 3.1 QuerySignalByID
 
-Fetch a signal by its unique ID.
-
 Returns:
 
-signal details
+signal metadata
 
 block height
 
-curator
-
 sender
+
+curator
 
 weight
 
@@ -93,43 +91,36 @@ timestamp
 
 3.2 QuerySignalsByAddress
 
-Return all signals from a specific address.
-
-Useful for:
-
-user dashboards
-
-explorers
-
-stats pages
+Returns all signals emitted by a given address.
+Used for dashboards and account history.
 
 3.3 QueryCuratorStats
 
-Return:
+Returns:
 
 total validated signals
 
-curator level (Bronze/Silver/Gold)
+curator level (Bronze / Silver / Gold)
 
 daily validation counters
 
-rewards received
+accumulated rewards
 
 3.4 QueryParticipantStats
 
-Return:
+Returns:
 
-total emitted signals
+total signals emitted
 
-rewards received
+total rewards received
 
-recent activity
+recent PoSS activity
 
 3.5 QueryRewardState
 
-Return:
+Returns:
 
-last_reward_block
+last reward block
 
 current reward epoch
 
@@ -137,107 +128,108 @@ current halving cycle
 
 accumulated reward index
 
-total PoSS rewards given
+total PoSS rewards distributed since genesis
 
 3.6 QueryParams
 
-Return PoSS module parameters, including:
+Returns all PoSS parameters:
 
 weight table
 
 halving schedule
 
-max daily signals
+maximum daily signals
 
-curator rules
+curator-level requirements
 
 PoSS Reserve address
 
-base_reward_per_unit
+base reward per unit
 
 3.7 QueryModuleState
 
-Return the entire PoSS module state for snapshots.
+Returns a complete snapshot of the PoSS module state (for archive snapshots and debugging).
 
-🧱 4. Genesis Specification
+4. Genesis Specification
 
-The genesis file must include all fields necessary for PoSS to begin in a valid state.
+The genesis file must contain all fields required for PoSS to begin in a deterministic and valid state.
 
-4.1 PoSS Genesis Fields
-Required fields:
+4.1 Required Genesis Fields
+
 poss_reserve_address
+
 initial_halving_cycle
+
 blocks_per_halving
+
 base_reward_per_unit
+
 weight_table
+
 max_daily_signals
-curator_set (list of curators + level)
-initial_stats (optional)
+
+curator_set (curators + level)
 
 Optional fields:
 
 initial total signals
 
-initial accumulated rewards
+initial total rewards
 
-initial curator stats
+initial curator statistics
 
 4.2 Genesis Initialization Logic (InitGenesis)
 
-During chain initialization:
+During chain boot:
 
-Load params
+load and validate PoSS params
 
-Load curator registry
+load curator registry
 
-Load PoSS Reserve address
+load PoSS reserve address
 
-Set halving cycle + next halving height
+initialize halving cycle and next halving height
 
-Set base reward per unit
+initialize all PoSS KVStore keys
 
-Initialize KVStore keys
+verify PoSS Reserve balance exists in bank module
 
-Validate reserve balance in bank module
+emit event poss.genesis_initialized
 
-Emit event poss.genesis_initialized
-
-No rewards are processed during InitGenesis.
+No rewards are computed during InitGenesis.
 
 4.3 Genesis Export (ExportGenesis)
 
-Module should export:
+The module must export:
 
-params
+PoSS params
 
 reward state
 
 curator data
 
-stats
-
 halving data
 
-📦 5. Module Parameters (Params)
+module statistics
 
-Stored in types/params.go.
+5. Module Parameters (Params)
 
-The following parameters must be defined:
+All parameters are stored in types/params.go and exposed in genesis.
 
 Parameter	Description
-max_daily_signals	per-address limit
+max_daily_signals	per-address daily signal limit
 weight_table	mapping of signal type → weight
-blocks_per_halving	number of blocks per halving
-base_reward_per_unit	reward unit multiplier
-min_curator_level	Bronze/Silver/Gold
-poss_reserve_address	funding module account
-rate_limit_enabled	anti-abuse toggle
+blocks_per_halving	number of blocks between halvings
+base_reward_per_unit	base reward per weighted unit
+min_curator_level	Bronze / Silver / Gold requirement
+poss_reserve_address	module account holding PoSS funds
+rate_limit_enabled	toggle for anti-abuse logic
 
-All parameters are part of genesis.
+These parameters are adjustable via governance after launch.
 
-📡 6. Events Emitted
+6. Events Emitted
 
-The PoSS module must emit:
+The PoSS module emits the following events:
 
 Signal Events
 
@@ -263,58 +255,68 @@ poss.state_update
 
 poss.genesis_initialized
 
-Events enable:
+Events are required for:
 
 explorers
 
-dApps
-
 indexers
 
-analytics
+analytics systems
 
-🧠 7. Module Integration Rules
+dApps
+
+PoSS dashboards
+
+7. Module Integration Rules
 DeliverTx
 
-only records signals
+records incoming signals
 
-NO rewards
+performs light validation
 
-NO halving
+does not compute rewards
 
-NO economic logic
+does not apply halving
+
+economic logic is forbidden here
 
 BeginBlock
 
-runs full PoSS reward cycle
+executes the full PoSS reward cycle
 
-deterministic
+validates all pending signals
 
-reward distribution
+computes weighted units
 
-halving
+applies halving
 
-anti-abuse updates
+distributes 70/30 rewards
+
+updates PoSS state
+
+clears pending signals
+
+emits events
 
 EndBlock
 
-PoSS does nothing here
+PoSS performs no operations here
 
 Commit
 
-state commit only
+state writes only
 
-🎯 8. Summary
+8. Summary
 
 The PoSS module provides:
 
-Msg
+Messages
 
-1 Msg: MsgSubmitSignal
+one message: MsgSubmitSignal
 
 Queries
 
-by signal
+by signal ID
 
 by address
 
@@ -330,26 +332,28 @@ full module snapshot
 
 Genesis
 
-includes all parameters
+full PoSS parameter set
 
-halving schedule
+halving settings
 
-reward base
+base reward
+
+weight table
 
 curator registry
 
-PoSS reserve settings
+PoSS Reserve address
 
 Block Logic
 
-BeginBlock-only reward engine
+deterministic reward engine
 
-deterministic operations
+BeginBlock execution
 
 70/30 reward split
 
 halving every 8 years
 
-no inflation
+strictly no inflation beyond the PoSS Reserve
 
-This file completes the PoSS Blueprint and prepares for coding in Phase 4C.
+This document completes the Phase 4B blueprint and is ready for implementation in Phase 4C.
