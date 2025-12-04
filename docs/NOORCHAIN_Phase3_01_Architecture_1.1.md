@@ -1,41 +1,47 @@
-NOORCHAIN 1.0 — Core Architecture (Phase 3 Documentation)
-
-Version: 1.1
-Language: English
-
+NOORCHAIN 1.0 — Core Architecture
+Phase 3 Documentation
+Version 1.1 — English
 1. Overview
 
-NOORCHAIN 1.0 is a sovereign Swiss blockchain built with:
+NOORCHAIN 1.0 is a sovereign Swiss blockchain built with a hybrid Cosmos/EVM foundation and an ethical economic model based on Proof of Signal Social (PoSS).
+
+Core design elements:
 
 Cosmos SDK v0.46.11
 
-Ethermint v0.22.0 (EVM compatibility)
+Ethermint v0.22.0 (full EVM compatibility)
 
 CometBFT/Tendermint v0.34.27
 
-PoSS (Proof of Signal Social) economic consensus
+Fixed token supply: 299,792,458 NUR
 
-Fixed supply: 299,792,458 NUR (speed of light)
+Halving period: every 8 years
 
-Halving: every 8 years
+PoSS reward split: 70% participant / 30% curator
 
-Reward split: 70% participant / 30% curator
+Legal model: Swiss Legal Light CH, non-custodial and non-financial
 
-The Phase 4 implementation provides a full core chain without business logic yet.
+Status: Phase 4 implementation complete, providing a fully functional chain core
+
+At this stage, the chain runs with all essential modules, stores, keepers, ABCI lifecycle logic and EVM execution.
+The PoSS logic exists structurally but is not yet activated or distributing rewards.
 
 2. Core Modules
 Module	Status	Description
-auth	✅	Accounts, signatures, public keys
-bank	✅	Balances, transfers
-staking	✅	Validators, delegations (future PoSS integration)
-gov	🟧	Store and param subspace exist, keeper not wired yet
-params	✅	Global param keeper and per-module subspaces
-evm	✅	Full EVM execution (Ethermint)
-feemarket	✅	EIP-1559 dynamic fees
-noorsignal	🟧 (skeleton)	PoSS module placeholder
-3. Keepers
+auth	Complete	Account management, signatures, public key system
+bank	Complete	Balances, transfers, supply tracking
+staking	Complete	Validators, delegations, baseline staking logic
+gov	Store ready	Governance store and params subspace present (keeper wiring planned)
+params	Complete	Global parameters, per-module subspaces
+evm	Complete	Full EVM execution through Ethermint
+feemarket	Complete	EIP-1559 dynamic fee system
+noorsignal	Structural skeleton	Base PoSS module scaffolding, no active logic yet
 
-The NoorchainApp currently includes:
+All modules are registered in the application, with their stores mounted and available.
+
+3. Keeper Architecture
+
+The NoorchainApp currently includes the following keepers:
 
 AccountKeeper
 
@@ -49,72 +55,137 @@ FeeMarketKeeper
 
 EvmKeeper
 
-NoorSignalKeeper (empty)
+NoorSignalKeeper (structural, no rewards logic yet)
 
-Each store (KV/transient) is mounted and fully functional.
+Each module has:
+
+A dedicated key (store key)
+
+Optional transient stores
+
+Correct mounting order in the BaseApp initialization flow
+
+This configuration ensures a fully operational blockchain even before PoSS activation.
 
 4. AnteHandler
 
-NOORCHAIN uses the Ethermint NewAnteHandler() to support both:
+NOORCHAIN uses Ethermint’s NewAnteHandler, supporting both Cosmos and Ethereum-style transactions.
 
-Cosmos SDK transactions
+Capabilities include:
 
-Ethereum-compatible transactions (MsgEthereumTx)
+Cosmos SDK signature checks
 
-This includes:
+EVM signatures (MsgEthereumTx)
 
-Gas checks
+Gas consumption and validation rules
 
-Signature verification
+Min gas price and dynamic fee enforcement
 
-EVM-specific decorators
+Ethereum-specific decorators for execution safety
 
-Min gas price enforcement
+Compatibility with EIP-1559 fee market
 
-Dynamic fee rules (FeeMarket)
+This makes NOORCHAIN a dual-transaction blockchain:
+Cosmos messages + full Ethereum tx support.
 
 5. ABCI Lifecycle
 
-The following methods are implemented:
+The following ABCI methods are implemented and functional:
 
-InitChainer — accepts a JSON genesis state
+InitChainer
 
-BeginBlocker — empty for now
+Parses and initializes state from the genesis file
 
-EndBlocker — empty for now
+Configures module parameters and initial states
 
-Each module is initialized in the correct order.
+BeginBlocker
 
-6. NOOR Signal Module (PoSS) [Skeleton]
+Registered for all modules
 
-Currently implemented:
+Currently empty (PoSS logic will later use it)
 
-Module structure
+EndBlocker
+
+Registered for all modules
+
+Currently empty (PoSS reward distribution may connect here in future phases)
+
+Modules are initialized in correct dependency order, ensuring deterministic state execution.
+
+6. NOOR Signal Module (PoSS) — Current State
+
+The NoorSignal module exists structurally but does not yet implement PoSS logic.
+
+Currently implemented (Phase 3–4 structural work):
+
+Module folder structure
 
 Keeper structure
 
+Genesis import and export
+
+Module registration in the ModuleManager
+
+ABCI BeginBlock and EndBlock hooks (empty handlers)
+
+Placeholder event, parameter and state files
+
+Not yet implemented (PoSS Logic Phases 1–5):
+
+Parameters (PoSSEnabled, weights, limits, halving period)
+
+Signal types and validation structure
+
+Reward calculation
+
+Halving mechanism
+
+Curator roles and verification
+
+Daily counters and anti-abuse rules
+
+Storage and indexing of signals
+
+Queries (signal, curator, config, counters)
+
+Msg handlers (SubmitSignal, ValidateSignal, AddCurator, etc.)
+
+These elements are added gradually across PoSS Logic 1 → 10 and will become active only in Phase 6 (activation phase).
+
+7. Status Summary (Phase 3 Completed → Phase 4 Completed)
+Fully Completed
+
+BaseApp
+
+Module registration
+
+Store mounting
+
+Keepers initialization
+
+AnteHandler (Cosmos + Ethereum)
+
+EVM execution
+
+Fee Market system
+
 Genesis import/export
 
-ABCI Begin/EndBlock triggers (empty)
+Basic ABCI lifecycle
 
-Module registration in ModuleManager
+Structured but inactive
 
-Not yet implemented:
+PoSS module
 
-Params
+Governance keeper wiring
 
-Signal types
+PoSS BeginBlock/EndBlock logic
 
-Reward logic
+Reward distribution
 
-Halving logic
+Curator validation mechanism
 
-Curator validation
+NOORCHAIN is now a fully operational core blockchain ready for:
+Testnet, governance integration, and full PoSS activation.
 
-Storage model
-
-Queries
-
-Msg handlers
-
-These features belong to PoSS Logic 1–5 (next phases).
+End of Document — Version 1.1
