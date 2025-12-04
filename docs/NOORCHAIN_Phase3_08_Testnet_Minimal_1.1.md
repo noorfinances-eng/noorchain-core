@@ -1,313 +1,257 @@
-# NOORCHAIN 1.0 — Minimal Local Testnet & PoSS Status (v1.1)
+NOORCHAIN_Phase3_08_MinimalTestnet_and_PoSSStatus_1.1.md
+NOORCHAIN 1.0 — Minimal Local Testnet & PoSS Status
 
-**Scope**  
-This document describes the current minimal local testnet setup for NOORCHAIN 1.0, and how it relates to the PoSS module (`x/noorsignal`) in its current “economic OFF” state.
+Version: 1.1
+Status: Official Phase 3 Document
+Last Updated: 2025-12-03
 
-It completes:
+1. Scope
 
-- `NOORCHAIN_Phase3_05_PoSS_Status_and_Testnet_1.1.md`
-- `NOORCHAIN_Phase3_07_PoSS_Params_and_KeeperTests_1.1.md`
+This document defines the minimal local testnet setup currently available in noorchain-core, and explains how PoSS behaves on this testnet in its economic OFF configuration.
 
----
+It complements:
 
-## 1. Minimal local testnet structure
+NOORCHAIN_Phase3_05_PoSS_Status_and_Testnet_1.1.md
 
-A very simple filesystem-based testnet is now available in the repository:
+NOORCHAIN_Phase3_07_PoSS_Params_and_KeeperTests_1.1.md
 
-- Directory: `data-testnet/` (generated)
-- Genesis template: `testnet/genesis.json`
-- Distribution placeholder: `testnet/genesis_distribution.json`
-- Helper script: `scripts/testnet.sh`
+NOORCHAIN_Phase3_04_PoSS_FullSpecification_1.1.md
 
-The goal of this setup is **not** to run a full production-like network, but to:
+2. Minimal Local Testnet Structure
 
-- provide a deterministic directory layout (`$HOME/config/genesis.json`),
-- keep the PoSS genesis state consistent with our specs,
-- prepare the ground for future `noord start` / CLI integration.
+A simple filesystem-based testnet is available:
 
----
+data-testnet/ (generated local chain directory)
 
-## 2. Genesis template for PoSS (testnet/genesis.json)
+testnet/genesis.json (genesis template)
 
-The file:
+testnet/genesis_distribution.json (economics placeholder)
 
-- `testnet/genesis.json`
+scripts/testnet.sh (reset & initialize script)
 
-currently contains a **minimal app_state** with the modules we care about at this stage:
+This setup is not intended to run a full node yet.
+Its goals are:
 
-- `auth`  
-- `bank`  
-- `staking`  
-- `evm`  
-- `feemarket`  
-- `params`  
-- `noorsignal` (PoSS)
+provide deterministic directories ($HOME/config/genesis.json),
 
-Example (simplified):
+initialize PoSS genesis state according to specifications,
 
-```json
-{
-  "genesis_time": "2025-01-01T00:00:00Z",
-  "chain_id": "noorchain-testnet-1",
-  "initial_height": "1",
-  "app_hash": "",
-  "app_state": {
-    "auth": {
-      "accounts": []
-    },
-    "bank": {
-      "params": {
-        "default_send_enabled": true
-      },
-      "balances": [],
-      "supply": [],
-      "denom_metadata": []
-    },
-    "staking": {
-      "params": {
-        "bond_denom": "unur"
-      }
-    },
-    "evm": {},
-    "feemarket": {},
-    "params": {},
-    "noorsignal": {
-      "total_signals": "0",
-      "total_minted": "0",
-      "max_signals_per_day": "20",
-      "participant_share": "70",
-      "curator_share": "30"
-    }
-  }
+prepare for future noord start and CLI integration,
+
+serve as a safe Testnet 0 before real Testnet 1.0.
+
+3. Genesis Template (testnet/genesis.json)
+
+The file testnet/genesis.json contains a minimal app_state for:
+
+auth
+
+bank
+
+staking
+
+evm
+
+feemarket
+
+params
+
+noorsignal (PoSS)
+
+3.1 PoSS Genesis Section
+"noorsignal": {
+  "total_signals": "0",
+  "total_minted": "0",
+  "max_signals_per_day": "20",
+  "participant_share": "70",
+  "curator_share": "30"
 }
-2.1. PoSS genesis section
-The noorsignal section is aligned with GenesisState:
 
-total_signals = "0"
 
-total_minted = "0" (in unur, as a string)
-
-max_signals_per_day = "20"
-
-participant_share = "70"
-
-curator_share = "30"
-
-This is consistent with the structural PoSS rule:
-
-70 % to participant
-
-30 % to curator
-
-and a first anti-abuse limit (max_signals_per_day).
-
-In code, this is handled by:
-
-x/noorsignal/types/genesis.go
-
-x/noorsignal/keeper/keeper.go (InitGenesis / ExportGenesis)
-
-3. Distribution placeholder (genesis_distribution.json)
-The file:
-
-testnet/genesis_distribution.json
-
-is a placeholder for the future 5-address economic allocation:
-
-5 % Foundation (NOOR Foundation)
-
-5 % Dev Sàrl (Noor Dev)
-
-5 % PoSS Stimulus
-
-5 % Optional pre-sale
-
-80 % PoSS mintable supply
-
-Structure (simplified):
-
-json
-Copier le code
-{
-  "foundation": {
-    "address": "",
-    "allocation": "0"
-  },
-  "dev": {
-    "address": "",
-    "allocation": "0"
-  },
-  "stimulus": {
-    "address": "",
-    "allocation": "0"
-  },
-  "presale": {
-    "address": "",
-    "allocation": "0"
-  },
-  "poss": {
-    "address": "",
-    "allocation": "0"
-  }
-}
-At this stage:
-
-All addresses are empty strings ("").
-
-All allocations are "0".
-
-Later, for NOORCHAIN Testnet 1.0, the 5 real Bech32 addresses will be injected here and in the final genesis.json / genesis_distribution.json pairing.
-
-4. Testnet script (scripts/testnet.sh)
-The helper script:
-
-scripts/testnet.sh
-
-is a very small tool that:
-
-Removes any previous data-testnet/ directory.
-
-Recreates data-testnet/config/.
-
-Copies testnet/genesis.json into data-testnet/config/genesis.json.
-
-Script content (summary):
-
-bash
-Copier le code
-#!/usr/bin/env bash
-
-set -e
-
-echo "🔧 Initializing NOORCHAIN local testnet (filesystem only)..."
-
-CHAIN_DIR="./data-testnet"
-
-rm -rf "$CHAIN_DIR"
-mkdir -p "$CHAIN_DIR/config"
-
-cp testnet/genesis.json "$CHAIN_DIR/config/genesis.json"
-
-echo "✅ Testnet directory initialized in $CHAIN_DIR"
-echo "  - genesis.json copied to $CHAIN_DIR/config/genesis.json"
-echo
-echo "👉 Next step (later):"
-echo "   ./noord start --home $CHAIN_DIR"
-4.1. How to use
-From the repository root:
-
-bash
-Copier le code
-chmod +x scripts/testnet.sh   # once
-scripts/testnet.sh
-Result:
-
-data-testnet/config/genesis.json is always in sync with testnet/genesis.json.
-
-No dependency on noord init for now.
-
-Safe to run multiple times (always resets the local testnet directory).
-
-5. PoSS state on this minimal testnet
-With the current code and genesis:
-
-PoSS module is initialized via InitGenesis (AppModule).
-
-GenesisState PoSS starts with:
+This matches GenesisState from Phase 3:
 
 TotalSignals = 0
 
-TotalMinted = "0"
+TotalMinted = "0" (unur)
 
-5.1. Params behaviour
-On this minimal testnet:
+MaxSignalsPerDay = 20
 
-PoSS Params are not explicitly set in genesis.json.
+Reward split = 70/30 (immutable structural rule)
 
-On first use, the keeper’s GetParams(ctx) will:
+Handled by:
 
-detect that the ParamSubspace is empty,
+x/noorsignal/types/genesis.go
 
-write DefaultParams() into the Subspace,
+x/noorsignal/keeper/keeper.go — Init / Export Genesis
 
-return the defaults.
+4. Distribution Placeholder (testnet/genesis_distribution.json)
 
-Therefore:
+This file prepares the economic distribution for the 5 official NOORCHAIN genesis addresses:
 
-PoSSEnabled = false by default,
+Pool	%	Description
+Foundation	5%	NOOR Foundation (non-profit)
+Dev Sàrl	5%	Founder / Dev structure
+PoSS Stimulus	5%	Curators & early adopters
+Pre-Sale	5%	Optional private CH investors
+PoSS Reserve	80%	Long-term PoSS emission
 
-Limits and weights are loaded from DefaultParams,
+Template (simplified):
 
-The system is economically OFF, but structurally ready.
+{
+  "foundation": { "address": "", "allocation": "0" },
+  "dev":        { "address": "", "allocation": "0" },
+  "stimulus":   { "address": "", "allocation": "0" },
+  "presale":    { "address": "", "allocation": "0" },
+  "poss":       { "address": "", "allocation": "0" }
+}
 
-5.2. Signals and rewards
-If a PoSS signal is processed internally via:
 
-Keeper.ProcessSignalInternal(...)
+These values will be filled during Phase 6 — Genesis Pack.
 
-then:
+5. Testnet Script (scripts/testnet.sh)
 
-TotalSignals will increase by 1,
+Purpose:
 
-TotalMinted will increase by participantReward + curatorReward,
+delete previous data-testnet/
 
-daily counters will increment for the participant,
+recreate directory
 
-BUT with PoSSEnabled = false, both rewards are 0 unur:
+copy genesis template into data-testnet/config/
+
+Result:
+
+data-testnet/config/genesis.json
+
+
+Command to run:
+
+chmod +x scripts/testnet.sh
+scripts/testnet.sh
+
+
+This ensures:
+
+consistent genesis state
+
+reproducible directory layout
+
+safe reset for repeated testing
+
+6. PoSS State on the Minimal Testnet
+6.1 Genesis Initialization
+
+Upon chain initialization:
+
+InitGenesis loads PoSS section
+
+PoSS state becomes:
+
+TotalSignals = 0
+TotalMinted  = "0"
+
+6.2 Params Behaviour
+
+Since PoSS Params are NOT included in genesis.json yet:
+
+the first call to GetParams(ctx) finds the Subspace empty
+
+the keeper writes and returns DefaultParams()
+
+Meaning:
+
+PoSSEnabled = false
+
+PoSS is structurally ON, but economically OFF
+
+Weights, BaseReward, limits all use official defaults
+
+This is exactly the Legal Light safe mode.
+
+7. PoSS Behaviour on Testnet (Current Stage)
+7.1 Signals
+
+If PoSS is triggered internally (via tests or direct keeper call):
+
+daily counters increment
+
+TotalSignals increments
+
+reward computation happens theoretically
+
+7.2 Rewards
+
+Because PoSSEnabled = false:
 
 participantReward = 0 unur
+curatorReward     = 0 unur
 
-curatorReward = 0 unur
 
-So TotalMinted stays "0".
+Thus:
 
-This matches the Legal Light / Safe OFF strategy:
+TotalMinted remains "0"
 
-PoSS logic and accounting are live,
+No coins are minted
 
-real NUR minting will only happen later, once:
+No balances change
 
-PoSSEnabled = true,
+This is REQUIRED by Legal Light CH and our technical roadmap.
 
-a PoSS reserve account exists,
+8. Purpose of This Minimal Testnet
 
-Bank/mint wiring and daily limits are enforced.
+This Testnet 0 exists to:
 
-6. Next steps (beyond this document)
-This minimal testnet is a bridge between:
+validate PoSS module behaviour
 
-Phase 3 — Documentation & Specs
+validate Params persistence
 
-Phase 4 — Implementation (coding, PoSS module, tests)
+simulate counters, stats, signals
 
-Phase 6 — Genesis Pack & Communication
+prepare local tooling before real node execution
 
-Next planned steps:
+test JSON serialization, module integration, and state transitions
 
-Introduce a proper noord start flow based on data-testnet/ and the Ethermint/Cosmos configuration.
+It is NOT a real blockchain network yet.
 
-Extend test scenarios:
+Real launch sequence begins in:
 
-CLI / gRPC to inspect:
+Phase 4C → Testnet 1.0 (CLI, app wiring, genesis packing)
 
-PoSS Params
+Phase 6 → Full Genesis Pack & Documentation
 
-Global PoSS stats (TotalSignals, TotalMinted)
+Phase 7 → NOORCHAIN Testnet 1.0
 
-Simulate PoSS signals in integration tests.
+Phase 8 → Testnet expansion
 
-When legal and economic conditions are satisfied:
+Phase 9 → Public audits / Mainnet readiness
 
-enable PoSS (PoSSEnabled = true),
+9. Next Steps (After This Document)
 
-wire a real PoSS reserve (module account) with Bank/mint,
+Add noord start flow using data-testnet/
 
-enforce PoSS daily limits and halving.
+Add CLI to inspect PoSS Params (GetParams)
 
-Until then, this minimal testnet remains a safe playground:
+Add CLI to simulate PoSS signals
 
-no real NUR minting,
+Implement PoSS Reserve module account
 
-no economic impact,
+Add Bank transfers when PoSSEnabled = true (later)
 
-but a fully defined place to observe and validate PoSS behaviour.
+Add strict or soft limit enforcement for daily caps
+
+Prepare final Genesis Pack (Phase 6)
+
+10. Summary (Header)
+
+NOORCHAIN 1.0 — Minimal Testnet & PoSS Status (v1.1) defines:
+
+the structure of the minimal local testnet
+
+how genesis.json includes PoSS state
+
+how PoSS Params behave via the Subspace
+
+how the PoSS module behaves in safe OFF mode
+
+the exact relationship with upcoming phases
+
+This is the official reference for internal testing prior to full Testnet 1.0.
