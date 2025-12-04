@@ -1,498 +1,446 @@
 NOORCHAIN 1.0 — Phase 3.06
 Full Transactional Flow (Cosmos + EVM + PoSS)
 Version 1.1 — Official Document
+0. Purpose of this Document
 
-Purpose of this document
-Describe, end-to-end, how a transaction flows through NOORCHAIN:
+This document provides the complete, end-to-end transaction flow for NOORCHAIN 1.0 across:
 
-standard Cosmos transactions
+Cosmos transactions
 
 EVM (Ethermint) transactions
 
-PoSS transactions
-and how they interact with:
+PoSS (x/noorsignal) transactions
 
-CometBFT
-
-Cosmos SDK (BaseApp, modules, keepers)
-
-EVM module
-
-PoSS module (x/noorsignal)
-
-This document is the “big picture” view of NOORCHAIN’s runtime behavior.
-
-1. Layers Overview
-
-NOORCHAIN is structured in four main runtime layers:
-
-Network & Consensus Layer
-
-P2P networking
+and explains how these interact with:
 
 CometBFT consensus
 
-block proposal, voting, finalization
+Cosmos SDK BaseApp
 
-Application Layer (Cosmos SDK)
+Module Manager & Keepers
+
+EVM module
+
+PoSS module
+
+This document represents the high-level runtime architecture of NOORCHAIN and is used for:
+
+implementation validation (Phase 4)
+
+Testnet behavior understanding (Phase 7)
+
+audit preparation
+
+whitepaper & technical documentation
+
+1. Runtime Layer Overview
+
+NOORCHAIN’s runtime is composed of four integrated layers:
+
+1.1 Network & Consensus Layer
+
+P2P networking
+
+CometBFT consensus engine
+
+Block proposal and validation
+
+Finality through BFT voting
+
+CometBFT is responsible for ordering transactions, NOT executing them.
+
+1.2 Application Layer (Cosmos SDK)
 
 BaseApp
 
+Message routing and ante-handling
+
 Module Manager
 
-Keepers & Stores
+Keepers and state stores
 
-Execution Sub-Layers
+This is where all state transitions occur.
 
-Cosmos Msg pipeline (native modules)
+1.3 Execution Sub-Layers
 
-EVM pipeline (Ethermint)
+Cosmos Execution Path (bank, staking, gov…)
 
-PoSS pipeline (noorsignal module)
+EVM Execution Path (Ethermint)
 
-API / Client Layer
+PoSS Execution Path (x/noorsignal)
+
+All execution paths coexist independently inside BaseApp.
+
+1.4 Client API Layer
 
 gRPC
 
-REST (gRPC-Gateway)
+REST (gRPC-gateway)
 
-JSON-RPC (EVM)
-
-This document focuses on what happens from the moment a transaction is created, until it is finalized and queryable.
+JSON-RPC (EVM) for MetaMask & tools
 
 2. Transaction Entry Points
 
-Transactions can enter NOORCHAIN through different gateways:
+Transactions can enter NOORCHAIN via:
 
-2.1. Cosmos SDK Clients
+2.1 Cosmos SDK Clients
 
-cosmos-sdk gRPC Msg clients
+gRPC Msg clients
 
-REST JSON endpoints
+REST endpoints
 
-CLI (later: noord tx ...)
+CLI (e.g., noord tx …)
 
-These produce Cosmos transactions (protobuf-encoded).
+These produce Cosmos protobuf transactions.
 
-2.2. EVM / Web3 Clients
+2.2 EVM / Web3 Clients
 
 MetaMask
 
 Ethers.js / Web3.js
 
-Hardhat / Foundry
+Hardhat, Foundry
 
-Smart contract UIs
+Smart-contract UIs
 
-These produce Ethereum-style RLP-encoded transactions.
+These produce Ethereum RLP-encoded transactions.
 
-2.3. PoSS UI / dApps
+2.3 PoSS dApps / frontends
 
-Custom frontends or apps that:
-
-build Cosmos messages (MsgEmitSignal, MsgValidateSignal)
-
-send them via gRPC / REST / CLI.
-
-In all cases, the transaction ends up submitted to the node, which then passes it into CometBFT’s mempool.
-
-3. High-Level Flow: From Submission to Finalization
-3.1. Step-by-Step Overview
-
-Client builds transaction
-
-Cosmos or EVM format
-
-signed by the user
-
-Transaction submission
-
-via gRPC, REST or JSON-RPC
-
-node receives the raw transaction
-
-Mempool admission (CheckTx)
-
-AnteHandler runs basic checks
-
-invalid txs are rejected
-
-valid txs enter mempool
-
-Block proposal
-
-proposer node selects txs from mempool
-
-creates a block proposal
-
-Consensus
-
-validators vote on the proposed block
-
-once ≥2/3 voting power agrees → block is committed
-
-Block execution (DeliverTx)
-
-BaseApp processes each tx
-
-state transitions apply via modules (Cosmos / EVM / PoSS)
-
-EndBlock & Commit
-
-validators updated
-
-state root computed
-
-committed to CometBFT
-
-Query availability
-
-new state is queryable via gRPC / REST / JSON-RPC
-
-4. Cosmos Transaction Flow
-4.1. Example: Simple Bank Transfer (Cosmos Tx)
-
-User signs a MsgSend (Cosmos bank module).
-
-Tx is broadcast to a node.
-
-CheckTx (Cosmos path):
-
-decode tx (protobuf)
-
-account sequence & signature checked
-
-gas & fees checked (in unur)
-
-If valid → stored in mempool.
-
-On block inclusion:
-
-DeliverTx routes to the bank module
-
-BankKeeper updates balances
-
-events are emitted (transfer event)
-
-BeginBlock / EndBlock logic executes (staking, PoSS daily hooks if any).
-
-New balances are committed and visible in queries.
-
-4.2. Cosmos Tx Internals
-
-AnteHandler uses:
-
-AccountKeeper
-
-BankKeeper
-
-ParamsKeeper
-
-Router directs to:
-
-bank, staking, gov, noorsignal, etc.
-
-5. EVM Transaction Flow
-5.1. Example: Smart Contract Call
-
-User sends a signed Ethereum transaction (e.g., eth_sendRawTransaction).
-
-Node receives RLP transaction.
-
-CheckTx (EVM path):
-
-EVM AnteHandler decodes tx
-
-verifies ECDSA signature
-
-checks nonce
-
-checks gas limit and max fees
-
-checks EVM account balance in unur
-
-If valid → tx is added to the EVM-aware mempool.
-
-Block proposer picks txs.
-
-During DeliverTx:
-
-BaseApp routes tx to evm module
-
-EVMKeeper executes contract call
-
-EVM state is updated (storage, balances, nonces)
-
-logs and bloom filters are generated
-
-Gas consumed is charged in unur.
-
-Receipts become accessible via JSON-RPC (eth_getTransactionReceipt).
-
-5.2. Differences vs Cosmos Tx
-
-EVM txs are opaque to Cosmos modules except evm & feemarket.
-
-They use EVM account nonce, not Cosmos sequence.
-
-They pay gas using EIP-1559 rules via feemarket.
-
-6. PoSS Transaction Flow
-
-PoSS is implemented as a Cosmos SDK module (noorsignal).
-
-6.1. Main PoSS Messages
+Frontends generate:
 
 MsgEmitSignal
 
-participant emits a signal
+MsgValidateSignal
 
-includes type, metadata, optional link
+submitted through gRPC/REST.
+
+3. High-Level Flow: Submission → Finalization
+Step-by-Step Lifecycle
+
+Client builds transaction
+
+Cosmos protobuf OR Ethereum RLP
+
+Signed by user
+
+Submit to node
+
+via gRPC / REST / JSON-RPC
+
+Mempool admission (CheckTx)
+
+AnteHandler checks:
+
+account, signature
+
+nonce/sequence
+
+gas & fees
+
+basic validation
+
+Block proposal
+
+proposer selects txs from mempool
+
+Consensus
+
+validators vote
+
+≥2/3 majority → block committed
+
+DeliverTx execution
+
+BaseApp routes tx to correct module
+
+Runs Cosmos, EVM or PoSS logic
+
+EndBlock & Commit
+
+state changes finalized
+
+new root hashed
+
+validators updated
+
+Query availability
+
+gRPC / REST / JSON-RPC return new state
+
+4. Cosmos Transaction Flow
+4.1 Example: Bank Transfer (MsgSend)
+
+User signs a Cosmos transaction containing MsgSend.
+
+Broadcast → CheckTx:
+
+protobuf decoding
+
+sequence & signature verified
+
+gas & fee check
+
+DeliverTx:
+
+routed to bank module
+
+BankKeeper updates balances
+
+events are emitted
+
+EndBlock: staking & PoSS hooks run if applicable
+
+4.2 Internals
+
+AnteHandler uses AccountKeeper, BankKeeper
+
+Module Router dispatches message to correct module
+
+Cosmos execution model = strict protobuf msg routing
+
+5. EVM Transaction Flow
+5.1 Example: Smart-Contract Call
+
+User sends signed Ethereum transaction via JSON-RPC (eth_sendRawTransaction).
+
+CheckTx (EVM path):
+
+decode RLP
+
+verify ECDSA signature
+
+check gas limit & EIP-1559 fields
+
+check EVM balance (unur)
+
+DeliverTx:
+
+routed to evm module
+
+EVMKeeper runs VM execution
+
+storage writes, logs, bloom filters
+
+gas is charged in unur
+
+Receipts made available through JSON-RPC
+
+5.2 Differences vs Cosmos Tx
+Aspect	Cosmos Tx	EVM Tx
+Encoding	protobuf	RLP
+Signature	Cosmos secp256k1	Ethereum secp256k1
+Nonce	Cosmos sequence	EVM nonce
+Fees	Cosmos gas	EIP-1559
+Execution	module handlers	EVM runtime
+6. PoSS Transaction Flow
+
+PoSS is implemented entirely within the Cosmos SDK as module x/noorsignal.
+
+6.1 Main Messages
+
+MsgEmitSignal
 
 MsgValidateSignal
 
-curator validates a specific signal
+MsgAdminUpdateParams (admin-only)
 
-triggers reward logic
+6.2 Example Flow
+Step 1 — Participant emits signal
 
-MsgAdminUpdateParams
+builds MsgEmitSignal
 
-admin-only
+CheckTx validates sender, gas, msg format
 
-updates parameters (limits, weights, etc.)
+DeliverTx:
 
-6.2. Example: Emitting and Validating a PoSS Signal
+stores signal
 
-Step 1 — Emit Signal
+sets metadata
 
-Participant builds a Cosmos tx containing MsgEmitSignal.
+emits EventSignalEmitted
 
-Tx is broadcast via gRPC/REST.
+Step 2 — Curator validates signal
 
-CheckTx (Cosmos pipeline) checks:
+builds MsgValidateSignal
 
-sender account
+CheckTx validates curator + limits
 
-fees & gas
+DeliverTx:
 
-format of MsgEmitSignal
+verifies eligibility
 
-In DeliverTx:
+runs PoSS anti-abuse logic
 
-noorsignal module stores the signal
-
-calculates its weight
-
-marks it as “awaiting validation”
-
-emits EventSignalEmitted.
-
-Step 2 — Validate Signal
-
-Curator builds a tx with MsgValidateSignal.
-
-CheckTx ensures:
-
-curator is a registered curator
-
-curator hasn’t exceeded daily limits
-
-signal exists and is not already validated
-
-In DeliverTx:
-
-PoSS executes full anti-abuse logic
-
-computes rewards based on:
+computes reward:
 
 weight
 
-daily epoch totals
-
 70/30 split
 
-instructs BankKeeper to send rewards:
+halving
 
-from ReservePoolAddress
+daily limits
 
-to participant & curator
+instructs BankKeeper to transfer rewards (when fully active)
 
-Emits:
+emits:
 
 EventSignalValidated
 
-EventRewardDistributed.
+EventRewardDistributed
 
 7. Block Lifecycle with PoSS
-7.1. BeginBlock
-
-PoSS may perform:
-
-epoch boundary checks (new day?)
-
-reset daily counters when epoch changes
-
-light housekeeping (e.g., prune old pending signals)
-
-7.2. DeliverTx
-
-Cosmos txs → run in their module
-
-EVM txs → run in evm module
-
-PoSS txs → run in noorsignal
-
-Multiple tx types can coexist in the same block.
-
-7.3. EndBlock
+7.1 BeginBlock
 
 PoSS may:
 
-finalize stats for the epoch
+detect epoch boundary
 
-emit aggregated events (optional)
+reset or rotate daily counters
 
-prepare next epoch metadata
+run cleanup tasks
 
-Staking and validator updates also occur in EndBlock through the staking module.
+7.2 DeliverTx
+
+Cosmos tx → native modules
+
+EVM tx → evm module
+
+PoSS tx → noorsignal module
+
+All paths coexist inside same block.
+
+7.3 EndBlock
+
+PoSS may:
+
+finalize epoch stats
+
+prepare next-day counters
+
+Standard modules execute staking, governance updates, etc.
 
 8. Event & Query Flow
-8.1. Events
+8.1 Event Emission
 
-Every transaction can emit multiple events:
+Modules emit events during DeliverTx.
 
-Cosmos modules → bank, staking, gov events
+Sources:
 
-EVM module → logs (converted to Ethereum logs, plus Cosmos events)
+Cosmos modules (bank, staking…)
 
-PoSS → signals, validation, rewards
+EVM logs (converted to Ethereum logs + Cosmos events)
 
-Explorers and off-chain tools subscribe to:
+PoSS events:
 
-WebSocket RPC
+EventSignalEmitted
 
-gRPC streams
+EventSignalValidated
 
-JSON-RPC logs
+EventRewardDistributed
 
-8.2. Queries
+Explorers capture these via:
 
-After commit, clients can query:
+Websocket
+
+gRPC stream
+
+JSON-RPC
+
+8.2 Queries
+
+After commit, clients may query:
 
 Cosmos gRPC / REST
 
 balances
 
-stakes
+staking
 
 PoSS stats
 
-JSON-RPC
+PoSS parameters
 
-EVM receipts
+signal history
 
-EVM logs
+EVM JSON-RPC
 
-block and tx data
+transaction receipts
 
-PoSS-specific queries include:
+block logs
 
-QuerySignals(address)
+smart contract calls
 
-QueryCurator(address)
+account states
 
-QueryParams()
-
-QueryRewardHistory(address)
-
-QueryStats()
-
-9. Example End-to-End Scenario
-
-Scenario:
-
-A user sends NUR to another user (Cosmos bank tx).
-
-The same user emits a PoSS signal for a good action.
-
-A curator validates that signal.
-
-A dApp updates a smart contract via EVM.
-
-Block behavior:
+9. End-to-End Example Scenario
 
 Block contains:
 
-1 bank tx
+1 bank transaction
 
 1 MsgEmitSignal
 
 1 MsgValidateSignal
 
-1 EVM tx
+1 EVM transaction
 
 During DeliverTx:
 
-Bank tx updates balances.
+Bank tx updates balances
 
-EmitSignal stores PoSS signal.
+EmitSignal stores PoSS signal
 
-ValidateSignal:
+ValidateSignal performs PoSS reward logic
 
-checks anti-abuse
+anti-abuse
 
-sends rewards from PoSS Reserve to both parties.
+halving
 
-EVM tx updates contract storage.
+70/30 split
 
-At the end of the block:
+bank transfers (when active)
 
-staking & other hooks run
+EVM tx updates contract state
 
-PoSS updates daily stats if needed
+EndBlock finalizes all modules
 
-state is committed and exposed for queries.
+The entire block produces a deterministic state and event set.
 
-10. Role of CometBFT in the Flow
+10. Role of CometBFT
 
-CometBFT:
+CometBFT ensures:
 
-orders all transactions
+deterministic ordering
 
-ensures Byzantine-fault-tolerant consensus
+voting-based finality
 
-provides finality for each block
+block commitment
 
-It does not know about:
+CometBFT does not execute application logic.
+Everything related to Cosmos, EVM or PoSS is executed inside BaseApp.
 
-PoSS logic
-
-EVM semantics
-
-bank, staking, etc.
-
-All of that is handled by the Cosmos application (NOORCHAIN).
-
-11. Summary (Header-Style)
+11. Summary (Header Block)
 
 NOORCHAIN — Phase3_06 — Full Transactional Flow (Cosmos + EVM + PoSS)
-This document describes how:
 
-Cosmos transactions
+This document defines how all transaction types flow through NOORCHAIN:
 
-EVM transactions
+Cosmos protobuf transactions
 
-PoSS transactions
-move through NOORCHAIN from client to final state, including:
+EVM RLP transactions
 
-mempool & CheckTx
+PoSS module transactions
 
-block proposal & consensus
+and explains the interactions between:
 
-DeliverTx routing to modules
+CometBFT
 
-PoSS reward distribution
+Cosmos SDK
 
-event emission & queries.
+Ethermint
 
-It is the reference for understanding NOORCHAIN’s runtime behavior and for validating that all layers (CometBFT, Cosmos SDK, Ethermint, PoSS) integrate correctly.
+PoSS runtime
+
+It is the canonical reference for understanding the integrated execution pipeline of NOORCHAIN before Testnet activation.
