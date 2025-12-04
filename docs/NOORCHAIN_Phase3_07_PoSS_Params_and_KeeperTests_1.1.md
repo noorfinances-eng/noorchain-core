@@ -1,451 +1,372 @@
-# NOORCHAIN 1.0 — PoSS Params, Keeper & Tests (v1.1)
+NOORCHAIN_Phase3_07_PoSS_Params_Keeper_Tests_1.1.md
+NOORCHAIN 1.0 — PoSS Parameters, Keeper Behaviour & Test Coverage
 
-**Scope**  
-This document updates Phase 3 with the current state of the PoSS parameters, keeper logic and unit tests in `noorchain-core`.  
-It completes:
+Version: 1.1
+Status: Official Phase 3 Document
+Last Updated: 2025-12-03
 
-- `NOORCHAIN_Phase3_03_PoSS_Specs_1.1.md`
-- `NOORCHAIN_Phase3_05_PoSS_Status_and_Testnet_1.1.md`
+1. Scope
 
----
+This document describes the current state of the PoSS Parameters, Keeper logic and unit tests in the x/noorsignal module.
+It complements:
 
-## 1. PoSS Params on-chain (x/params Subspace)
+NOORCHAIN_Phase3_03_PoSS_Specs_1.1.md
 
-### 1.1. Params structure
+NOORCHAIN_Phase3_05_PoSS_Status_and_Testnet_1.1.md
 
-The PoSS parameters are defined in:
+NOORCHAIN_Phase3_04_PoSS_FullSpecification_1.1.md
 
-- `x/noorsignal/types/params.go`
+This file is part of Phase 3 Documentation and represents the authoritative reference before Phase 4 integration and Testnet activation.
 
-The `Params` struct currently includes:
+2. PoSS Parameters (Params) — On-Chain Configuration
+2.1 Params Structure
 
-- `PoSSEnabled bool`  
-  Master switch for PoSS rewards (economic ON/OFF).
+Defined in:
 
-- Limits:
-  - `MaxSignalsPerDay uint64`
-  - `MaxSignalsPerCuratorPerDay uint64`
+x/noorsignal/types/params.go
 
-- Rewards:
-  - `MaxRewardPerDay sdk.Coin`
-  - `BaseReward sdk.Coin`
 
-- Weights:
-  - `WeightMicroDonation uint32`
-  - `WeightParticipation uint32`
-  - `WeightContent uint32`
-  - `WeightCCN uint32`
+The PoSS module exposes the following configurable fields:
 
-- Reserve & halving:
-  - `PoSSReserveDenom string` (always `"unur"`)
-  - `HalvingPeriodBlocks uint64` (placeholder for an 8-year halving period)
+PoSSEnabled bool
+Master economic switch (default: OFF).
 
-### 1.2. DefaultParams (economic OFF, safe mode)
+Daily limits
 
-`DefaultParams()` returns a safe configuration:
+MaxSignalsPerDay
 
-- `PoSSEnabled = false`
-- `MaxSignalsPerDay = 20`
-- `MaxSignalsPerCuratorPerDay = 100`
-- `BaseReward = 1 unur`
-- `MaxRewardPerDay = 100 unur`
-- Weights:
-  - MicroDonation = 5
-  - Participation = 2
-  - Content = 3
-  - CCN = 1
-- `PoSSReserveDenom = "unur"`
-- `HalvingPeriodBlocks = 0` (not configured yet)
+MaxSignalsPerCuratorPerDay
 
-**Important**  
-With these defaults, PoSS is **fully wired** but **economically OFF**.  
-The reward helpers will return `0/0` as long as `PoSSEnabled = false`.
+Rewards
 
-### 1.3. ParamSet & KeyTable
+BaseReward sdk.Coin
 
-PoSS Params are now a **real ParamSet**:
+MaxRewardPerDay sdk.Coin
 
-- `ParamKeyTable()` defines a `KeyTable` with all PoSS fields.
-- Each field has an associated parameter key:
-  - `KeyPoSSEnabled`
-  - `KeyMaxSignalsPerDay`
-  - `KeyMaxSignalsPerCuratorPerDay`
-  - `KeyMaxRewardPerDay`
-  - `KeyBaseReward`
-  - `KeyWeightMicroDonation`
-  - `KeyWeightParticipation`
-  - `KeyWeightContent`
-  - `KeyWeightCCN`
-  - `KeyPoSSReserveDenom`
-  - `KeyHalvingPeriodBlocks`
+Weights
 
-This allows PoSS parameters to be stored and updated **on-chain** via `x/params` and, later, via governance (`x/gov`).
+WeightMicroDonation
 
-### 1.4. Validation rules
+WeightParticipation
 
-`Params.Validate()` enforces basic coherence:
+WeightContent
 
-- `PoSSReserveDenom` must not be empty.
-- `MaxSignalsPerDay > 0`.
-- `MaxSignalsPerCuratorPerDay > 0`.
-- `BaseReward` and `MaxRewardPerDay`:
-  - Same denom as `PoSSReserveDenom`.
-  - Non-negative amounts.
-- All weights (`Micro`, `Participation`, `Content`, `CCN`) must be `> 0`.
-- `HalvingPeriodBlocks = 0` is allowed (means “not configured yet”).
+WeightCCN
 
----
+Reserve & Halving
 
-## 2. PoSS Keeper behaviour (Params, Genesis, Pipeline)
+PoSSReserveDenom (must be "unur")
 
-The PoSS keeper lives in:
+HalvingPeriodBlocks (placeholder for 8-year halving)
 
-- `x/noorsignal/keeper/keeper.go`
+2.2 DefaultParams (Safe Mode — Economic OFF)
 
-### 2.1. Keeper fields
+DefaultParams() returns:
 
-```go
+PoSSEnabled = false
+
+MaxSignalsPerDay = 20
+
+MaxSignalsPerCuratorPerDay = 100
+
+BaseReward = 1 unur
+
+MaxRewardPerDay = 100 unur
+
+Weights:
+
+Micro = 5, Participation = 2, Content = 3, CCN = 1
+
+PoSSReserveDenom = "unur"
+
+HalvingPeriodBlocks = 0
+
+Consequences:
+✔ PoSS is fully wired
+✔ All reward computations return "0unur"
+✔ No economic effect occurs on any signal
+
+2.3 ParamSet & KeyTable
+
+PoSS Params form a real ParamSet, allowing:
+
+persistent storage in the x/params Subspace
+
+future governance updates via x/gov
+
+Generated keys:
+
+KeyPoSSEnabled
+
+KeyMaxSignalsPerDay
+
+KeyMaxSignalsPerCuratorPerDay
+
+KeyMaxRewardPerDay
+
+KeyBaseReward
+
+KeyWeightMicroDonation
+
+KeyWeightParticipation
+
+KeyWeightContent
+
+KeyWeightCCN
+
+KeyPoSSReserveDenom
+
+KeyHalvingPeriodBlocks
+
+2.4 Validation Rules
+
+Params.Validate() enforces:
+
+Non-empty denom
+
+BaseReward & MaxRewardPerDay ≥ 0
+
+All weights > 0
+
+MaxSignalsPerDay > 0
+
+MaxSignalsPerCuratorPerDay > 0
+
+HalvingPeriodBlocks = 0 allowed
+
+Denom must match "unur"
+
+If validation fails → defaults are returned.
+
+3. PoSS Keeper Behaviour
+
+Located in:
+
+x/noorsignal/keeper/keeper.go
+
+3.1 Keeper Structure
 type Keeper struct {
     cdc        codec.Codec
     storeKey   storetypes.StoreKey
     paramSpace paramstypes.Subspace
 }
-cdc : codec for encoding/decoding state.
 
-storeKey : access to the KVStore of x/noorsignal.
 
-paramSpace : Subspace used to store PoSS Params via x/params.
+The Subspace automatically receives the PoSS KeyTable if missing.
 
-During keeper creation:
+3.2 Genesis Handling
 
-The Subspace is ensured to have the PoSS KeyTable:
+Helper methods:
 
-If no KeyTable is present, WithKeyTable(ParamKeyTable()) is applied.
+InitGenesis(ctx, gs)
 
-2.2. Genesis state helpers
-The keeper handles a minimal PoSS GenesisState:
+ExportGenesis(ctx)
 
-getGenesisState(ctx):
-
-Reads JSON under KeyGenesisState.
-
-Returns DefaultGenesis() if empty.
-
-setGenesisState(ctx, gs):
-
-Validates the state via ValidateGenesis.
-
-Stores JSON under KeyGenesisState.
-
-Public methods:
-
-InitGenesis(ctx, gs):
-
-Validates & persists the initial state.
-
-ExportGenesis(ctx):
-
-Reads the current state and returns it as a GenesisState.
-
-The genesis fields currently used are:
+Genesis fields managed:
 
 TotalSignals uint64
 
-TotalMinted string (in unur)
+TotalMinted string (unur)
 
-2.3. Params management (Subspace)
-The keeper exposes two methods for PoSS Params:
+3.3 Parameter Handling
+SetParams(ctx, params)
 
-SetParams
-go
-Copier le code
-func (k Keeper) SetParams(ctx sdk.Context, params noorsignaltypes.Params)
-Validates the params (params.Validate()).
+Validates
 
-Stores them in the Subspace via SetParamSet.
+Saves into Subspace
 
-GetParams
-go
-Copier le code
-func (k Keeper) GetParams(ctx sdk.Context) noorsignaltypes.Params
-Behaviour:
+GetParams(ctx)
 
-First run / empty store
+If Subspace empty → loads DefaultParams() and persists them
 
-The keeper checks if the Subspace has at least one key:
+If corrupted → returns defaults
 
-if !k.paramSpace.Has(ctx, KeyPoSSReserveDenom) { ... }
+Otherwise → returns stored values
 
-If there is no stored value:
+This makes PoSS safe for Testnet even on empty stores.
 
-DefaultParams() is loaded.
-
-SetParams() is called once to persist them.
-
-The defaults are returned.
-
-Subsequent runs
-
-GetParamSet is used to read the PoSS Params from the Subspace.
-
-If the loaded Params fail Validate():
-
-A safe fallback is applied: DefaultParams() is returned.
-
-This pattern ensures:
-
-No panic on an empty Subspace.
-
-A deterministic “safe-off” behaviour, even if Params are corrupted.
-
-2.4. Reward helper (ComputeSignalRewardForBlock)
-go
-Copier le code
-func (k Keeper) ComputeSignalRewardForBlock(
-    ctx sdk.Context,
-    signalType noorsignaltypes.SignalType,
-) (sdk.Coin, sdk.Coin, error)
-Steps:
-
-params := k.GetParams(ctx)
-
-height := ctx.BlockHeight()
-
-Calls noorsignaltypes.ComputeSignalReward(params, signalType, height):
-
-BaseReward * weight(signalType)
-
-Halving via HalvingPeriodBlocks
-
-Structural 70/30 split
-
-If PoSSEnabled = false, the helper returns 0/0 (denom unur).
-
-2.5. Daily counters
-The keeper manages a per-address, per-day counter of PoSS signals:
-
-GetDailySignalsCount(ctx, address, date string) uint32
-
-SetDailySignalsCount(ctx, address, date string, count uint32)
-
-IncrementDailySignalsCount(ctx, address, date string) uint32
-
-Keys are built via:
-
-noorsignaltypes.DailyCounterKey(address, date)
-
-This is used later to enforce MaxSignalsPerDay and anti-abuse rules.
-
-2.6. Pending mint queue
-A planning-only “pending mint” queue is implemented:
-
-go
-Copier le code
-func (k Keeper) RecordPendingMint(
-    ctx sdk.Context,
-    participantAddr string,
-    curatorAddr string,
-    signalType noorsignaltypes.SignalType,
-    participantReward sdk.Coin,
-    curatorReward sdk.Coin,
-) error
-Builds a PendingMint struct with:
-
-Block height, timestamp
-
-Participant & curator addresses
-
-SignalType
-
-ParticipantReward / CuratorReward
-
-Serializes to JSON and stores under a simple debug-friendly key:
-
-pending_mint:<height>:<participant>:<timestamp_nano>
-
-Important
-This does not mint any coins and does not move balances.
-It is only a planning/logging mechanism for future PoSS activation.
-
-2.7. Internal pipeline: ProcessSignalInternal
-go
-Copier le code
-func (k Keeper) ProcessSignalInternal(
-    ctx sdk.Context,
-    participantAddr string,
-    curatorAddr string,
-    signalType noorsignaltypes.SignalType,
-    date string,
-) (sdk.Coin, sdk.Coin, error)
-Steps:
-
-Compute rewards at current block:
-
+3.4 Reward Helper
 ComputeSignalRewardForBlock(ctx, signalType)
 
-Increment participant daily counter for date.
 
-Record a PendingMint entry.
+Steps:
 
-Update global PoSS totals in Genesis:
+Load Params
+
+Read block height
+
+Compute:
+
+base reward
+
+weight
+
+halving factor
+
+structural 70/30 split
+
+If PoSSEnabled = false → return (0unur, 0unur)
+
+3.5 Daily Counters
+
+Per-address per-day counters:
+
+GetDailySignalsCount
+
+SetDailySignalsCount
+
+IncrementDailySignalsCount
+
+Used for anti-abuse (MaxSignalsPerDay).
+
+Stored using:
+
+DailyCounterKey(address, date)
+
+3.6 Pending Mint Queue (Planning Only)
+
+RecordPendingMint(...) stores a JSON entry describing:
+
+block height
+
+timestamp
+
+participant & curator
+
+signal type
+
+theoretical rewards
+
+No coins are minted.
+This is purely diagnostic and for future wiring.
+
+3.7 Internal Pipeline: ProcessSignalInternal
+
+Actions:
+
+Compute reward (theoretical)
+
+Increment daily counter
+
+Record PendingMint entry
+
+Update:
 
 TotalSignals++
 
-TotalMinted += participantReward + curatorReward
+TotalMinted += participant + curator
 
-Return (participantReward, curatorReward).
+Return theoretical rewards
 
-Limitations (by design at this stage)
+Not implemented yet:
 
-No enforcement of daily limits (MaxSignalsPerDay, MaxSignalsPerCuratorPerDay) yet.
+enforcement of daily limits
 
-No real minting or Bank transfers.
+enforcement of curator limits
 
-PoSS remains economically OFF as long as PoSSEnabled = false.
+real minting / transfers
 
-3. Unit tests for PoSS logic (types + keeper)
-3.1. Reward logic tests (types)
-File:
-
-x/noorsignal/types/rewards_test.go
+4. Unit Testing Coverage
+4.1 Reward Tests (x/noorsignal/types/rewards_test.go)
 
 Covers:
 
-PoSSEnabled = false
+PoSSEnabled = false → reward = 0/0
 
-ComputeSignalReward returns 0/0 with the correct denom (unur).
+Weight scaling logic
 
-PoSSEnabled = true + weights + 70/30
+Structural 70/30 split
 
-BaseReward = 100 unur
+Example:
 
-Weight(micro_donation) = 5 → total = 500 unur
+BaseReward = 100
+Weight = 5 → total = 500
+→ participant = 350
+→ curator = 150
 
-Split:
+Ensures no rounding errors.
 
-Participant: 350 unur
+4.2 Keeper Tests (x/noorsignal/keeper/keeper_test.go)
 
-Curator: 150 unur
+A full in-memory Cosmos environment is created:
 
-Ensures participant + curator == total.
+TMDB (NewMemDB)
 
-These tests validate:
+CommitMultiStore
 
-Correct handling of the master switch PoSSEnabled.
+x/noorsignal and x/params stores
 
-Correct proportional scaling by weights.
+ParamSubspace
 
-Correct structural 70/30 split without rounding drifts.
+Full Keeper
 
-3.2. Keeper tests
-File:
+Test 1 — Default Params are persisted
 
-x/noorsignal/keeper/keeper_test.go
+GetParams(ctx) on an empty store:
 
-Includes an in-memory test setup:
+✔ returns defaults
+✔ persists them in Subspace
 
-setupKeeperAndContext(t):
+Test 2 — SetParams / GetParams round-trip
 
-In-memory TMDB (NewMemDB).
+Custom params are stored then retrieved → must match.
 
-Cosmos CommitMultiStore.
+Test 3 — ProcessSignalInternal
 
-Store keys for:
+For PoSSEnabled = true:
 
-x/noorsignal KVStore.
+participant counter increments
 
-x/params KVStore + transient store.
+TotalSignals increments
 
-Minimal codec setup (like MakeEncodingConfig).
+TotalMinted increments exactly by (participant + curator reward)
 
-ParamsKeeper + PoSS Subspace.
+No panic, no undefined behaviour
 
-Real Keeper instance.
+5. Impact on Testnet & Phase Progress
 
-sdk.Context.
+With this implementation:
 
-Test 1 — TestGetParams_DefaultsStored
-Calls k.GetParams(ctx) on an empty ParamSubspace.
+✔ PoSS Params are now fully on-chain
+✔ DefaultParams are automatically persisted
+✔ Keeper logic is safe, deterministic and test-covered
+✔ PoSS remains economically OFF by default
+✔ Internal pipeline is validated
 
-Expects:
+Phase 4 status:
 
-Defaults to be returned (PoSSReserveDenom, PoSSEnabled, limits).
+4.3 (PoSS Types) → 100%
 
-Second call returns the same values, proving that defaults are persisted into the Subspace.
+4.4 (PoSS Keeper) → 80–85%
 
-Test 2 — TestSetParams_RoundTrip
-Builds custom Params from DefaultParams():
+4.6 (Tests & Build) → Significant progress
 
-PoSSEnabled = true
+6. Next Steps (later phases)
 
-MaxSignalsPerDay = 42
+Not executed during Phase 3:
 
-MaxSignalsPerCuratorPerDay = 200
+Integrate ParamSubspace into app wiring
 
-Calls k.SetParams(ctx, custom).
+Add real PoSS reserve and mint logic
 
-Then k.GetParams(ctx) and checks that the values match.
+Enforce daily limits in Keeper (reject or accept-without-reward policy)
 
-Test 3 — TestProcessSignalInternal_UpdatesCountersAndGenesis
-Forces a simple PoSS config:
+Expose PoSS gRPC services and CLI commands
 
-PoSSEnabled = true
+Enable PoSS via governance (PoSSEnabled = true)
 
-BaseReward = 10 unur
+Testnet simulation of minting and rewards
 
-All weights = 1
+7. Summary
 
-Before calling:
+This document defines the canonical state of:
 
-Daily count = 0
+PoSS Parameters
 
-TotalSignals = 0
+PoSS Keeper logic
 
-TotalMinted = "0"
+Unit test coverage and behaviour
 
-Calls ProcessSignalInternal once with:
+Test readiness
 
-participant, curator, SignalTypeMicroDonation, date = "2025-01-01"
-
-Checks:
-
-Rewards are positive (PoSS is ON).
-
-Daily counter for participant/date increased by 1.
-
-TotalSignals increased by 1.
-
-TotalMinted increased exactly by participantReward + curatorReward.
-
-4. Impact on Testnet & Phase 4 status
-With these changes:
-
-PoSS Params are stored on-chain via x/params.
-
-Defaults are automatically written to the ParamSubspace at first use.
-
-GetParams is safe even on a fresh testnet (no panic when the store is empty).
-
-The keeper pipeline is covered by unit tests (params + internal signal processing).
-
-PoSS remains economically OFF by design (default PoSSEnabled=false).
-
-Phase 4 progress impact:
-
-4.3 (PoSS Types) → ~100 %
-
-4.4 (PoSS Keeper) → ~80–85 % (basic pipeline + Params + tests)
-
-4.6 (Tests & Build) → progress increased (keeper tests added)
-
-Next steps for Phase 4 / Phase 3 / Testnet:
-
-Use this document as the reference for PoSS Params & Keeper behaviour.
-
-Extend testnet documentation (Phase3_05 / Phase3_06) with:
-
-“How to inspect PoSS Params via CLI / queries”
-
-“How to simulate PoSS signals and read stats (TotalSignals / TotalMinted)”
-
-Only later: connect PoSS to Bank (real mint from a PoSS reserve) and enforce limits.
+It serves as the internal reference for Phase 3, Phase 4, and Testnet behaviour.
