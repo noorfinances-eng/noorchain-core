@@ -1,231 +1,227 @@
-# NOORCHAIN 1.0 — Economic Model  
-### Version 1.1  
-### Last Updated: 2025-12-03  
+NOORCHAIN 1.0 — Economic Model
+Phase 3 — Official Specification
+Version 1.1 (Omega Clean)
+Last Updated: 2025-12-03
+1. Core Economic Principles
 
----
+NOORCHAIN is built on a transparent, non-inflationary and Swiss-compliant economic model.
+Its basic principles are:
 
-# 1. Core Economic Principles
+Fixed Total Supply (immutable)
+Total supply is permanently capped at 299,792,458 NUR, a symbolic reference to the speed of light.
 
-NOORCHAIN adopts a **transparent, non-inflationary, Swiss-compliant economic model**  
-based on the following principles:
+Utility Token (non-financial)
+NUR is exclusively a utility token used for:
+– PoSS participation
+– dApps (NOOR Pay, Curators Hub, CCN Studio)
+– Curator validation
+– Governance interactions
+– Access to ecosystem tools
 
-1. **Fixed Supply (immutable):**  
-   Total supply = **299,792,458 NUR**  
-   (symbolic reference to the speed of light)
+Hybrid Consensus Architecture
+– Cosmos SDK + Ethermint (EVM) for security and flexibility
+– PoSS (Proof of Signal Social) as a controlled social-layer reward mechanism
+PoSS is not mining and not a yield product.
 
-2. **Utility Token (non-financial):**  
-   NUR is a **pure utility token** for the NOORCHAIN ecosystem:  
-   - PoSS participation  
-   - dApps  
-   - Curators validation  
-   - On-chain governance  
-   - Access to ecosystem tools  
+Swiss Legal Light CH Compliance
+– No custody of user funds
+– No promised returns
+– No APR, APY, staking yield or investment language
+– No fiat conversion inside NOORCHAIN
+– Only external PSP partners allowed (e.g., Mt Pelerin, NOWPayments)
+– Strict transparency and governance requirements
 
-3. **Hybrid Consensus Model:**  
-   - Cosmos SDK + Ethermint for security, EVM compatibility and speed  
-   - PoSS (Proof of Signal Social) for social-layer incentives  
-   - PoSS is **not a mining system**, but a reward distribution rule for  
-     verified positive social actions
+Curators as Key Actors
+Curators (Bronze / Silver / Gold) validate PoSS signals and receive 30% of each reward.
 
-4. **Swiss Legal Light CH Compliance:**  
-   - No custody  
-   - No staking APR  
-   - No guaranteed returns  
-   - No financial promotion  
-   - No internal fiat conversion  
-   - External PSP partners only  
-   - Transparent governance  
+2. Genesis Economic Allocation (Immutable)
 
-5. **Curators as central actors:**  
-   Curators (Bronze / Silver / Gold) validate PoSS signals and receive  
-   30% of each PoSS reward.
+The entire token supply is allocated at genesis using the permanent 5 / 5 / 5 / 5 / 80 rule.
 
----
+Allocation Pool	Percentage	Description
+Foundation Reserve	5%	Non-profit governance, public good operations, transparency
+Noor Dev Sàrl	5%	Development, integrations, infrastructure, R&D
+PoSS Stimulus Pool	5%	Early support for NGOs, schools, associations
+Pre-sale Pool	5%	Optional, fully vested, restricted to Swiss investors
+PoSS Mintable Reserve	80%	Long-term PoSS issuance over decades
+2.1 Legal and governance constraints
 
-# 2. Economic Allocation (Genesis — Immutable)
+These percentages are immutable.
 
-The NOORCHAIN economic model is based on a **permanent 5/5/5/5/80 allocation**,  
-validated across all legal, governance and technical documents.
+No reallocation between pools is permitted.
 
-| Allocation Pool     | Percentage | Description |
-|---------------------|------------|-------------|
-| Foundation Reserve  | 5%         | Non-profit, public-good, governance & transparency |
-| Noor Dev Sàrl       | 5%         | Technical development, infrastructure, integrations |
-| PoSS Stimulus Pool  | 5%         | Rewards for NGOs, schools, associations on early phases |
-| Pre-sale Pool       | 5%         | Optional, strictly vested, controlled via multi-sig |
-| PoSS Mintable Pool  | 80%        | Long-term PoSS issuance over decades |
+No new tokens can ever be minted.
 
-### 2.1 Legal Constraints  
-- These percentages are **immutable**.  
-- They cannot be changed by governance.  
-- Funds cannot be moved between pools.  
-- No new tokens can ever be minted.  
+Pre-sale pool may only be used under:
+– strict vesting,
+– multi-sig verification,
+– Swiss investor rules.
 
----
+The economic model must remain strictly non-investment according to Swiss Legal Light CH.
 
-# 3. PoSS Rewards Economic Model
+3. PoSS Rewards Economic Model
 
-PoSS rewards operate under strict **non-financial rules**:
+PoSS ensures fair, capped and non-financial distribution of tokens based on verified positive actions.
 
-### 3.1 Split  
-- **70%** — to the participant sending the positive signal  
-- **30%** — to the curator validating the signal  
+3.1 Reward Split (Immutable)
 
-### 3.2 Halving  
-- **Every 8 years**, PoSS raw reward decreases by 50%.  
-- Halving is purely **mechanical**, not financial.  
+The structural reward split is hard-coded:
 
-### 3.3 Daily Limits  
-- Max signals per day (per participant)  
-- Max signals per curator per day  
-- Max reward per day per participant  
-- All governance-adjustable (except 70/30 split which is structural)
+70% to the participant
 
-### 3.4 Non-financial nature  
-PoSS is legally structured so that rewards are:  
-- symbolic  
-- capped  
-- non-income  
-- non-yield  
-- not investment-related  
+30% to the curator
 
----
+This rule cannot be changed by governance.
 
-# 4. System Emissions Timeline (Non-financial)
+3.2 Halving Schedule
 
-The PoSS 80% pool is expected to last **25–40 years**, depending on the  
-halving schedule and usage patterns.
+Every 8 years, raw PoSS rewards are reduced by half.
+This is purely mechanical and independent of market conditions.
 
-### Simplified timeline:
-- Years 1–8 : High activity (pre-halving)  
-- Years 9–16 : 50% reduced  
-- Years 17–24 : 25% of initial  
-- Years 25–32 : 12.5% of initial  
+3.3 Daily Limits (Governance-adjustable)
 
-This structure ensures long-term sustainability without inflation.
+To ensure fairness and avoid farming:
 
----
+Maximum signals per participant per day
 
-# 5. Value Creation (Allowed Under Legal Light)
+Maximum signals per curator per day
 
-NUR may increase in value because of:  
-- Market demand  
-- Ecosystem adoption  
-- Utility in dApps  
-- Listings on external orderbook exchanges (e.g., MEXC)  
-- Growing network effects  
-- Limited supply  
+Maximum reward per participant per day
 
-**But NOORCHAIN never promises or advertises financial return.**  
-This is core to Swiss Legal Light CH compliance.
+Maximum reward per curator per day
 
----
+These parameters can be updated through on-chain governance, except the 70/30 split, which is permanent.
 
-# 6. Revenue Streams (Years 1 → 3)
+3.4 Non-financial Positioning
 
-The ecosystem may generate revenue **for the Sàrl**, not for token holders.
+PoSS is structured so that rewards are:
 
-### 6.1 dApps (Utility payments)
-- NOOR Pay  
-- Curators Hub  
-- CCN Studio  
-- Merchant Kit  
-- API/SDK access  
+symbolic
 
-### 6.2 Partnerships
-- NGOs  
-- Schools  
-- Social institutions  
-- Municipalities  
+capped
 
-### 6.3 SaaS Tools  
-- Back-office for curators  
-- Reporting dashboards  
-- Compliance modules  
+transparent
 
-### 6.4 Institutional Grants  
-NOORCHAIN (Foundation side) may receive:  
-- Swiss public grants  
-- EU digital innovation funds  
-- ESG/social impact subsidies  
+predictable
 
-### 6.5 Exchange Operations  
-- Listing on MEXC (orderbook, not AMM)  
-- Future CEX integrations  
-- No liquidity manipulation  
-- No speculative incentives  
+not linked to performance or investment
 
-### 6.6 Controlled Founder Wallet  
-Rules:
-- Max **0.5%** sell per month  
-- Transparent reporting  
-- Multi-sig approval recommended for large transfers  
+not marketed as income
 
----
+This ensures strict compliance with FINMA guidelines.
 
-# 7. Market Model (Allowed Activities)
+4. Long-Term Emission Timeline (Non-Inflationary)
 
-NOORCHAIN fully separates:
+The 80% PoSS reserve is expected to last 25 to 40 years, depending on adoption and halving cycles.
 
-### Allowed:
-- Order-book trading  
-- Third-party PSP integrations  
-- Utility payments  
-- Grant-funded programs  
-- On-chain governance  
-- PoSS non-financial rewards  
+Approximate timeline:
 
-### Forbidden:
-- AMM manipulation  
-- Token offers as investment  
-- Internal market-making  
-- Yield farming, staking APR  
-- Custody or user funds management  
+Years 1–8 : initial emission
 
----
+Years 9–16 : 50% reduction
 
-# 8. Sustainability Model
+Years 17–24 : 25% of initial
 
-The NOORCHAIN economic design is optimized for:  
-- 30+ years of PoSS issuance  
-- Zero inflation  
-- Swiss transparency  
-- Long-term adoption  
-- Ethical token distribution  
-- Non-speculative usage  
+Years 25–32 : 12.5% of initial
 
----
+After each halving era, the raw reward per signal decreases accordingly.
 
-# 9. Founder Compensation Model (Transparent)
+5. Market Model (Allowed vs Forbidden)
 
-Founder benefits come exclusively from:
+NOORCHAIN separates what is allowed from what is prohibited to maintain Legal Light status.
 
-1. **The 5% Noor Dev Sàrl allocation (vested)**  
-2. **Optional grants** for development  
-3. **Possible exit in a future acquisition (order-book based)**  
-4. **No extraction from the Foundation**  
-5. **Monthly selling cap of 0.5% of founder wallet**  
+5.1 Allowed
 
-This keeps NOORCHAIN aligned with Swiss ethical blockchain standards.
+Orderbook exchange listing (e.g., MEXC)
 
----
+Free market trading (without market-making by Foundation/Sàrl)
 
-# 10. Summary
+dApps generating utility demand
+
+Integration with external PSPs
+
+Public grants
+
+Ecosystem partnerships
+
+SaaS revenue for the Sàrl
+
+5.2 Forbidden
+
+Any form of yield farming
+
+APR / APY / staking return products
+
+Internal liquidity pools
+
+Market-making by the Foundation
+
+Guaranteed token value
+
+Investment promotion
+
+Custodial services
+
+6. Sustainability & Governance Model
+
+The NOORCHAIN economic architecture is designed for:
+
+Zero inflation
+
+Multi-decade longevity
+
+Transparent governance
+
+Clear separation between Foundation (non-profit) and Sàrl (development)
+
+Ethical distribution of tokens
+
+Sustainable ecosystem growth
+
+7. Founder Compensation (Transparent Model)
+
+The founder’s economic participation is strictly regulated:
+
+5% Dev Sàrl allocation (vested).
+
+Optional public or institutional grants.
+
+Possible exit through market mechanisms (orderbook).
+
+No access to Foundation funds.
+
+Maximum 0.5% per month sale limit (recommended governance rule).
+
+These constraints ensure alignment with long-term sustainability and Swiss transparency norms.
+
+8. Summary
 
 The NOORCHAIN economic model is:
 
-- fixed  
-- transparent  
-- compliant  
-- sustainable  
-- utility-based  
-- non-speculative  
-- long-term oriented  
-- fully aligned with governance and legal architecture  
+fixed
 
-This document serves as the foundation for:  
-- Genesis Pack (Phase 6)  
-- Whitepapers 1.1  
-- Website documentation  
-- Mainnet genesis finalization (Phase 7)
+transparent
 
+legally compliant
+
+sustainable
+
+utility-based
+
+non-speculative
+
+governance-aligned
+
+built for long-term ecosystem growth
+
+This document is a core reference for:
+
+Phase 6 Genesis Pack
+
+Whitepapers v1.1
+
+Legal & Governance integration
+
+Mainnet Genesis (Phase 7)
+
+Website documentation
