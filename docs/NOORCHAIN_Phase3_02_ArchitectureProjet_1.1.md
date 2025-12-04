@@ -1,167 +1,216 @@
-# NOORCHAIN — Phase 3  
-## Fichier 20 — Architecture officielle du projet — v1.1
+NOORCHAIN — Phase 3
+File 20 — Official Project Architecture (v1.1)
+Updated: 2025-XX-XX
+Language: English
+🎯 Document Purpose
 
-### 🎯 Objectif du document
+This document defines the official, stable, and complete architecture
+of the noorchain-core repository for Phases 3 → 9
+(Testnet → Mainnet).
 
-Ce document définit l’architecture **officielle, stable et complète** du projet `noorchain-core`  
-pour les Phases 3 → 9 (Testnet puis Mainnet).
+It acts as the single source of truth for:
 
-Il sert de référence unique pour :
-- organiser les fichiers,
-- éviter le chaos,
-- s’assurer de la cohérence de toute la suite du développement (PoSS, genesis, RPC, CLI, EVM…).
+project structure,
 
----
+file organisation,
 
-# 1. Racine du projet
+module boundaries,
+
+future implementation planning (PoSS, EVM, genesis, CLI, RPC).
+
+Its mission is to prevent architectural drift and maintain long-term structural coherence.
+
+1. Repository Root Structure
+
+The noorchain-core project contains six main directories:
+
 noorchain-core/
 │
-├── app/ → cœur de l’App Cosmos (BaseApp, keepers, modules, config)
-├── cmd/ → commandes CLI (noord)
-├── x/ → modules personnalisés (ex : noorsignal pour le PoSS)
-├── proto/ → définitions Protobuf
-├── testnet/ → fichiers genesis + scripts testnet
-├── docs/ → documentation officielle
-└── go.mod / go.sum → dépendances
+├── app/          → Core Cosmos application (BaseApp, keepers, modules)
+├── cmd/          → CLI binaries (noord)
+├── x/            → Custom modules (including PoSS)
+├── proto/        → Protobuf definitions
+├── testnet/      → Genesis files and testnet configuration
+└── docs/         → Official documentation
 
----
 
-# 2. Détail par dossier
+This structure will remain stable across Testnet and Mainnet.
 
-## 2.1 `app/` — Le cœur de NOORCHAIN
+2. Directory Details
+2.1 app/ — Core Cosmos Application
 
-Contiendra à partir de la Phase 4 :
+This directory contains the heart of NOORCHAIN.
+The files below will be progressively implemented in Phase 4:
+
+app.go — Main application definition
+
+app_builder.go — Extension-ready app builder
+
+config.go — NOORCHAIN configuration (Bech32 prefixes, denom, version)
+
+encoding.go — Codec (Protobuf + Amino)
+
+keepers.go — Global keepers declaration
+
+module_manager.go — Module registration and execution order
+
+params.go — Global parameter handling
+
+types.go — Internal app types
+
+Important Note:
+In Phase 3, we define structure only. No Cosmos logic is implemented yet.
+
+2.2 cmd/noord/ — Node Binary
+
+This directory contains the executable entry point of the blockchain:
+
+main.go — The NOORCHAIN node main function
+
+Future additions (Phase 5+):
+
+initialization commands
+
+genesis tools
+
+unsafe reset
+
+key utilities
+
+node start commands
+
+2.3 x/ — Custom Modules
+
+This is the official location for NOORCHAIN modules.
+
+Current + future content:
+
+noorsignal/ — PoSS (Proof of Signal Social) module
+
+keeper
+
+types
+
+module logic
+
+genesis handlers
+
+message definitions
+
+events
+
+During Phase 4, we will implement a minimal empty skeleton,
+then gradually add PoSS logic.
+
+2.4 proto/ — Protobuf Definitions
+
+All protocol-level .proto files are stored here.
+
+Expected future structure:
+
+proto/noorsignal/tx.proto
+
+proto/noorsignal/query.proto
+
+proto/noorsignal/types.proto
+
+proto/noorsignal/genesis.proto
+
+Proto generation is deferred until Phase 4.
+
+2.5 testnet/ — Testnet & Genesis Configuration
+
+This directory will be populated in Phase 6 with:
+
+genesis.json
+
+genesis_distribution.json
+
+config.toml
+
+addrbook.json
+
+chain-id definition
+
+persistent peer lists
+
+The directory remains empty during Phase 3.
+
+2.6 docs/ — Official Documentation
+
+The /docs directory contains all documentation files,
+versioned 1.1, including:
+
+technical architecture
+
+governance
+
+legal framework
+
+PoSS specifications
+
+genesis constraints
+
+upgrade plans
+
+This architecture document lives in:
+
+docs/NOORCHAIN_Phase3_02_ArchitectureProjet_1.1.md
+
+3. Official Architectural Rules
+3.1 No Unnecessary Cosmos Files
+
+Only add Cosmos-related files in Phase 4.
+Phase 3 remains strictly conceptual.
+
+3.2 PoSS Module Must Be Fully Isolated
+
+PoSS logic must only appear in x/noorsignal/.
+It must not contaminate:
+
 app/
-│
-├── app.go → Définition principale de l’application
-├── app_builder.go → Construction de l'app (extension future)
-├── config.go → Config NOORCHAIN (Bech32, denom, version)
-├── encoding.go → Encodage (Amino + Protobuf)
-├── keepers.go → Déclaration globale des keepers
-├── module_manager.go → Wiring complet des modules
-├── params.go → Paramètres globaux
-└── types.go → Types internes
 
-📌 **Remarque** :  
-Tout reste minimal en Phase 3 — on écrit seulement la structure, pas le contenu Cosmos.
+cmd/
 
----
+runtime/
 
-## 2.2 `cmd/noord/`
+shared stores
 
-Le binaire principal de la blockchain :
-cmd/noord/
-│
-└── main.go → Point d’entrée du node
+3.3 Phase 3 Files Must Stay Simple
 
-Plus tard (Phase 5+) :
-- commandes CLI (init, collect-gentxs, start, unsafe-reset-all)
+No logic, handlers, or keepers are written yet.
+Only structure and future placeholders.
 
----
+3.4 Documentation is the Single Source of Truth
 
-## 2.3 `x/` — Modules personnalisés
+If a file or directory is not described in /docs,
+it must not be created.
 
-Lieu officiel des modules NOORCHAIN.
-x/
-│
-└── noorsignal/ → Module PoSS (Proof of Signal Social)
-├── keeper/
-├── types/
-├── module.go
-├── genesis.go
-├── msgs.go
-└── events.go
+3.5 No Code Generation Without Explicit Approval
 
-En Phase 4 :
-- création du **squelette vide** `x/noorsignal`
+No proto generation, buf setup, or Makefile expansion occurs during Phase 3.
 
----
+4. Executive Summary
 
-## 2.4 `proto/`
+The noorchain-core repository is composed of six stable directories:
 
-Les définitions `.proto` utilisées par :
-- App
-- modules
-- PoSS
+app/ — Cosmos application core
 
-Exemple futur :
-proto/noorsignal/
-├── tx.proto
-├── query.proto
-├── genesis.proto
-└── types.proto
+cmd/noord/ — Node binary
 
----
+x/ — Custom modules (including PoSS)
 
-## 2.5 `testnet/`
+proto/ — Protobuf definitions
 
-En Phase 6 :
-testnet/
-│
-├── genesis.json
-├── genesis_distribution.json
-├── config.toml
-└── addrbook.json
+testnet/ — Network configuration
 
----
+docs/ — Full project documentation
 
-## 2.6 `docs/`
+This architecture is final, approved, and versioned.
+It guarantees order, modularity, and future-proof development.
 
-Contient **toute la documentation officielle**, versionnée en *1.1* :
-docs/
-│
-├── NOORCHAIN_Phase3_01_VersionsBase_1.1.md
-├── NOORCHAIN_Phase3_02_ArchitectureProjet_1.1.md ← ce fichier
-├── NOORCHAIN_Phase3_03_KeepersPlan_1.1.md (à venir)
-├── NOORCHAIN_Phase3_04_ModuleManagerPlan_1.1.md (à venir)
-└── ...
+5. Status
 
----
-
-# 3. Règles architecturales officielles
-
-### 3.1 Pas de fichiers Cosmos non utilisés
-Toute importation Cosmos SDK doit venir **uniquement** lorsque nécessaire en Phase 4.
-
-### 3.2 Le module PoSS (`x/noorsignal`) est **isolé**
-Aucun code PoSS ne sera placé dans :
-- `app/`
-- `cmd/`
-- `runtime/`
-- `store/`
-
-### 3.3 Chaque fichier `.go` doit rester simple en Phase 3
-Les keepers, modules et BaseApp seront remplis **uniquement** en Phase 4.
-
-### 3.4 La documentation (`docs/`) reste la vérité officielle
-Si un fichier n’est pas décrit dans les docs :  
-❌ il n’est pas créé.
-
-### 3.5 Pas de code généré sans décision explicite
-- pas de `buf`
-- pas de compilation proto
-- pas de `makefile`
-… tant que je ne te le demande pas.
-
----
-
-# 4. Résumé exécutif
-
-Le projet `noorchain-core` est organisé en **6 dossiers principaux** :
-
-1. `app/` — cœur de l’application Cosmos  
-2. `cmd/noord/` — binaire node  
-3. `x/` — modules personnalisés (dont PoSS)  
-4. `proto/` — définitions Protobuf  
-5. `testnet/` — configuration réseau  
-6. `docs/` — documentation officielle  
-
-Cette architecture est désormais **officielle**, stable et versionnée.
-
----
-
-# 5. Statut
-
-**Décision validée** :  
-Cette architecture est considérée comme le socle officiel de la Phase 3.
-
+Validated:
+This architecture is officially adopted as Phase 3 baseline
+and will guide all future implementation phases.
