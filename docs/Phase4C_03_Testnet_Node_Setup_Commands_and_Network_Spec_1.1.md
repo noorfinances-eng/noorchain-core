@@ -1,45 +1,44 @@
-Phase4C_03_Testnet_Node_Setup_Commands_and_Network_Spec_1.1.md
-**NOORCHAIN — Phase 4C
+NOORCHAIN — Phase 4C
 
-Testnet 1.0 — Node Setup, CLI Commands & Network Specification**
+Testnet 1.0 — Node Setup, CLI Commands & Network Specification
 Version 1.1 — Architecture Only (No Code)
 
-🔧 1. Purpose of This Document
+1. Purpose of This Document
 
-This document provides the full plan and specification required to:
+This document defines the complete specification required to:
 
 initialize the NOORCHAIN Testnet 1.0 node
 
-create directories
+create configuration directories
 
-generate validator keys
+generate keys for genesis and for the validator
 
-generate genesis & gentx
+create the genesis file and gentx
 
-configure EVM RPC / gRPC / REST
+configure EVM RPC, WebSocket, gRPC, and REST
 
 configure minimum gas prices
 
-configure peers (local-only for now)
+configure peers (local-only for Testnet 1.0)
 
-start the Testnet node
+launch the node
 
-verify correct boot
+verify correct network behavior
 
-This is the final file of Phase 4C and will guide the coding + real commands execution later.
+This file completes Phase 4C and will guide the implementation of the real commands later.
 
-🧩 2. Testnet 1.0 Node Specification
-Chain ID
-noorchain-testnet-1
+2. Testnet 1.0 Node Specification
 
-Binary
-noord
+Chain ID: noorchain-testnet-1
+Binary: noord
 
-Directories
+Directory Structure
+
 ~/.noord/config
+
 ~/.noord/data
 
-Ports (default Ethermint-compatible)
+Default Ports (Ethermint-compatible)
 
 JSON-RPC: 8545
 
@@ -54,221 +53,247 @@ P2P: 26656
 RPC (Tendermint): 26657
 
 Genesis File
+
 ~/.noord/config/genesis.json
 
-🏗️ 3. Testnet Initialization Flow
+3. Testnet Initialization Flow
 
-The node setup for Testnet 1.0 follows these steps:
+The initialization process must follow this strict order:
 
-1. Initialize node (home folder)
-2. Create validator key
-3. Add genesis accounts (5+1)
-4. Add balances
-5. Add staking validator declaration
-6. Generate and collect gentx
-7. Inject PoSS genesis state
-8. Validate genesis
-9. Start node
+Initialize node home directory
 
+Create validator key
 
-These steps will be executed in the coding phase (4C Implementation).
+Create the five genesis allocation wallets
 
-🔐 4. Key Generation Strategy
+Add genesis accounts
 
-Keys created via:
+Add bank balances
+
+Declare validator and generate gentx
+
+Collect gentx into final genesis
+
+Inject PoSS genesis state
+
+Validate the genesis
+
+Start the node
+
+This sequence guarantees deterministic state creation for Testnet 1.0.
+
+4. Key Generation Strategy
+
+Keys are created with:
 
 noord keys add <name>
 
-
-For each of the 5 genesis wallets:
+Required keys:
 
 Foundation
 
-Dev
+Dev (Sàrl)
 
-Stimulus
+PoSS Stimulus
 
-Presale
+Presale (optional)
 
 PoSS Reserve
-
-Plus:
 
 Validator operator key
 
 Validator consensus key
 
-The command outputs:
+Each key produces:
 
-bech32 address (noor1…)
+bech32 account address (noor1…)
 
-hex address (0x…)
+EVM hex address (0x…)
 
 public key
 
-private key (for local use only)
+private key (local use only)
 
-Keys must be copied into Phase4C_01 addresses file.
+These must be stored in the Phase 4C address registry file.
 
-🗂️ 5. Genesis Account & Balance Injection
-Genesis Account
+5. Genesis Account & Balance Injection
 
-Using command later:
+Each genesis wallet is added using the relevant genesis-account command (implementation phase).
 
-noord add-genesis-account <address> <amount>unur
+Wallets and balances (integer-rounded during implementation):
 
+Foundation — 5%
 
-Repeat for:
+Dev Sàrl — 5%
 
-5 genesis wallets
+PoSS Stimulus — 5%
 
-validator account
+Presale Optional — 5%
 
-Genesis Balances
+PoSS Reserve — 80%
 
-Amounts must match the exact distribution:
+Validator account must also be added with sufficient unur for:
 
-Wallet	%	Amount
-Foundation	5	14,989,622.9
-Dev Sàrl	5	14,989,622.9
-Stimulus	5	14,989,622.9
-Presale	5	14,989,622.9
-PoSS Reserve	80	239,833,966.4
+self-delegation
 
-Amounts truncated to integer during implementation.
+gas usage
 
-🏦 6. Staking Validator Initialization
+The total supply must equal exactly 299,792,458 unur.
 
-Using:
+6. Staking Validator Initialization
 
-noord gentx <keyname> 1000000000unur --chain-id noorchain-testnet-1
+A validator declaration is created through a gentx transaction, containing:
 
+validator operator address
 
-Then collect:
+self-delegation amount
 
-noord collect-gentxs
+commission parameters
 
+consensus public key
 
-This will create:
+description metadata
 
-validator operator entry in staking genesis
+After generating the gentx, the node executes a gentx collection step to insert the validator into staking genesis.
 
-self-delegation entry
+7. EVM & RPC Configuration
 
-consensus pubkey entry
+JSON-RPC Configuration
 
-🚀 7. EVM & RPC Configuration
-Enable JSON-RPC
+JSON-RPC enabled
 
-In config file:
+RPC address: 0.0.0.0:8545
 
-json-rpc:
-  enable: true
-  address: "0.0.0.0:8545"
-  ws-address: "0.0.0.0:8546"
-  api: "eth,txpool,web3,net"
+WebSocket address: 0.0.0.0:8546
+
+Enabled APIs: eth, txpool, web3, net
 
 Minimum Gas Price
 
-Set minimum gas price in app config:
+Testnet default:
+0 unur
 
-minimum-gas-prices = "0unur"
+EVM Denomination
 
-EVM Denom
+The EVM module must use:
 
-Must be "unur" as defined in Phase 4A.
+unur
 
-🌐 8. gRPC & REST Configuration
+This is the canonical base denomination defined in Phase 4A.
+
+8. gRPC & REST Configuration
+
 gRPC
 
-Enabled by default on 9090.
+Enabled by default on port 9090.
+Must remain active for CosmJS, dashboards and future NOORCHAIN dApps.
 
-REST
+REST (Legacy)
 
-Legacy REST should stay enabled for completeness.
+Must remain enabled for compatibility with common Cosmos tooling.
 
-🧪 9. Genesis Validation (Before Node Start)
+9. Genesis Validation Requirements
 
-Run the following (in implementation phase):
+Before launching the node, genesis must be validated through:
 
-noord validate-genesis
+noord validate-genesis (implementation phase)
 
+Validation must confirm:
 
-This must validate:
+correct account structures
 
-auth
+correct supply sum
 
-bank
+valid staking entries
 
-staking
+valid governance params
 
-gov
+EVM genesis state consistency
 
-evm
+Feemarket parameters valid
 
-feemarket
+PoSS genesis state valid
 
-noorsignal
+no duplicate accounts
 
-If invalid → Testnet cannot start.
+no malformed entries
 
-🔥 10. Node Start Specification
+If validation fails → the node must not start.
 
-Once genesis is valid:
+10. Node Start Specification
 
-noord start
+Once genesis is valid, the node is started using:
 
+noord start (implementation phase)
 
-Expected output:
+Expected behavior:
 
-block height increasing
+node begins producing blocks
 
-EVM JSON-RPC ready
+RPC and WebSocket endpoints become active
 
-gRPC ready
+gRPC endpoint becomes active
 
-PoSS BeginBlock logic runs (empty at block 1)
+validator shows correct voting power
 
-validator voting power appears in Tendermint output
+PoSS module initializes and runs BeginBlock logic (empty state at block 1)
 
-📡 11. Explorer / Tooling Compatibility
+Proper startup confirms the integrity of Phase 4C work.
+
+11. Explorer / Tooling Compatibility
 
 Testnet 1.0 must support:
 
-MetaMask (via JSON-RPC)
+MetaMask (via JSON-RPC at 8545)
 
-CosmJS (via gRPC)
+CosmJS (via gRPC at 9090)
 
 NOORCHAIN Dashboard (later)
 
-Block explorers (optional at first)
+external block explorers (optional in early testnet)
 
-Nothing special required; Ethermint provides auto-compatibility.
+Ethermint compatibility ensures seamless EVM interactions.
 
-📌 12. Checkpoints Before Confirming Testnet Success
+12. Checkpoints Before Confirming Testnet Success
 
-A Testnet 1.0 is considered valid if:
+A Testnet 1.0 session is considered valid if:
 
-✔️ Node starts without crash
-✔️ Chain produces blocks
-✔️ EVM tx works (eth_call test)
-✔️ bank tx works (cosmos send test)
-✔️ PoSS store loads
-✔️ PoSS keeper initialized
-✔️ validator is bonded
-✔️ noord status returns correct info
-✔️ RPC endpoints live
-🎯 13. Summary
+the node starts without crashing
+
+block height increases continuously
+
+EVM transactions execute successfully
+
+Cosmos bank transfers work
+
+PoSS keeper loads without errors
+
+validator stays bonded
+
+JSON-RPC, gRPC, REST endpoints respond correctly
+
+module parameters load without warnings
+
+Meeting all criteria confirms that Testnet 1.0 is operational.
+
+13. Summary
 
 This document defines:
 
-✔️ full Testnet node setup
-✔️ full command flow
-✔️ full RPC/gRPC/EVM configuration
-✔️ validator init
-✔️ genesis account injection
-✔️ genesis validation
-✔️ node start sequence
-✔️ success criteria
+the full Testnet 1.0 node setup
 
-It is the official guide for implementing Testnet NOORCHAIN 1.0 during coding.
+CLI key and account creation workflows
+
+genesis account and balance initialization
+
+staking validator creation and gentx collection
+
+EVM and RPC configuration
+
+gRPC and REST configuration
+
+genesis validation process
+
+node startup and success criteria
+
+It is the official blueprint for implementing the Testnet 1.0 node during Phase 4C.
