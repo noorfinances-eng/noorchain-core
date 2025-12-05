@@ -34,8 +34,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      {/* Favicon minimal temporaire */}
-    
       <body className="flex flex-col min-h-screen bg-white text-gray-900">
         <NavBar />
         <main className="flex-1">{children}</main>
