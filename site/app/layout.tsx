@@ -24,16 +24,19 @@ export const metadata: Metadata = {
     "Fixed Supply",
     "Transparent Governance"
   ],
-  robots: "index, follow"
+  robots: "index, follow",
 };
 
 export default function RootLayout({
-  children
+  children,
 }: {
   children: React.ReactNode;
 }) {
   return (
     <html lang="en">
+      {/* Favicon minimal temporaire */}
+      <link rel="icon" href="/favicon.svg" />
+
       <body className="flex flex-col min-h-screen bg-white text-gray-900">
         <NavBar />
         <main className="flex-1">{children}</main>
