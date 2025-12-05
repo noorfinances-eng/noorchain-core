@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     url: "https://noorchain-core-lrhx.vercel.app/",
     siteName: "NOORCHAIN",
     type: "website",
-    locale: "en_US"
+    locale: "en_US",
   },
   keywords: [
     "NOORCHAIN",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     "Social Signal Blockchain",
     "Curators",
     "Fixed Supply",
-    "Transparent Governance"
+    "Transparent Governance",
   ],
   robots: "index, follow",
 };
@@ -34,6 +34,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      {/* Favicon from /public */}
+      <link rel="icon" href="/favicon.svg" />
+
       <body className="flex flex-col min-h-screen bg-white text-gray-900">
         <NavBar />
         <main className="flex-1">{children}</main>
