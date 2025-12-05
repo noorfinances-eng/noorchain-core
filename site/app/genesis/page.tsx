@@ -1,16 +1,16 @@
 export default function GenesisPage() {
   return (
-    <main className="px-8 py-16 max-w-3xl">
+    <main className="container py-16">
       <h1 className="text-4xl font-bold mb-6">Genesis Overview</h1>
 
-      <p className="text-lg text-gray-700 mb-6">
+      <p className="text-lg text-gray-700 mb-10 max-w-3xl">
         The NOORCHAIN genesis defines the foundational rules of the network:
         fixed supply, halving schedule, PoSS distribution rules, and the
-        allocation model that structures the chain’s long-term sustainability.
+        allocation model that structures long-term sustainability.
       </p>
 
       {/* Supply */}
-      <section className="mb-10">
+      <section className="mb-10 max-w-3xl">
         <h2 className="text-2xl font-semibold mb-3">Total Supply</h2>
         <p className="text-gray-700">
           The total supply is fixed at <strong>299,792,458 NUR</strong>.  
@@ -19,9 +19,8 @@ export default function GenesisPage() {
       </section>
 
       {/* Distribution */}
-      <section className="mb-10">
+      <section className="mb-10 max-w-3xl">
         <h2 className="text-2xl font-semibold mb-3">Initial Distribution</h2>
-
         <ul className="list-disc pl-6 text-gray-700 space-y-2">
           <li><strong>5%</strong> — NOOR Foundation</li>
           <li><strong>5%</strong> — Dev Pool</li>
@@ -32,12 +31,11 @@ export default function GenesisPage() {
       </section>
 
       {/* Governance Principles */}
-      <section className="mb-10">
+      <section className="mb-10 max-w-3xl">
         <h2 className="text-2xl font-semibold mb-3">Governance Principles</h2>
         <p className="text-gray-700">
           Genesis governance establishes the immutable foundations of the chain:
         </p>
-
         <ul className="list-disc pl-6 text-gray-700 space-y-2">
           <li>Fixed supply cannot be changed.</li>
           <li>Halving occurs every 8 years.</li>
@@ -46,14 +44,13 @@ export default function GenesisPage() {
         </ul>
       </section>
 
-      {/* Downloads */}
-      <section>
+      {/* Download */}
+      <section className="max-w-3xl">
         <h2 className="text-2xl font-semibold mb-3">Genesis Pack</h2>
-        <p className="text-gray-700 mb-3">
+        <p className="text-gray-700 mb-4">
           The full genesis documents, including governance, allocation, and
           institutional structure, will be available here.
         </p>
-
         <a
           href="#"
           className="inline-block px-6 py-3 border border-black rounded-md text-sm"
