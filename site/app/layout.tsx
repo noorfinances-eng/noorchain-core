@@ -25,6 +25,10 @@ export const metadata: Metadata = {
     "Transparent Governance",
   ],
   robots: "index, follow",
+  // 👇 Nouveau : favicon déclaré proprement
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -34,11 +38,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        {/* Favicon correctly placed inside <head> */}
-        <link rel="icon" href="/favicon.svg" />
-      </head>
-
       <body className="flex flex-col min-h-screen bg-white text-gray-900">
         <NavBar />
         <main className="flex-1">{children}</main>
