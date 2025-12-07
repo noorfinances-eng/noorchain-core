@@ -5,33 +5,35 @@ import Image from "next/image";
 
 export default function NavBar() {
   return (
-    <nav className="w-full border-b bg-white">
+    <nav className="w-full bg-white border-b border-gray-soft shadow-sm">
       <div className="container flex items-center justify-between py-4">
 
-        {/* Left: Logo + Name */}
+        {/* LEFT: LOGO + NAME */}
         <Link href="/" className="flex items-center gap-3">
           <Image
             src="/logo.svg"
             alt="NOORCHAIN Logo"
-            width={36}
-            height={36}
-            priority={true}
+            width={40}
+            height={40}
+            priority
           />
-          <span className="text-xl font-bold tracking-tight">NOORCHAIN</span>
+          <span className="text-xl font-bold tracking-tight text-navy">
+            NOORCHAIN
+          </span>
         </Link>
 
-        {/* Right: Menu */}
-        <div className="flex gap-5 text-sm text-gray-700">
-          <Link href="/" className="hover:text-black">Home</Link>
-          <Link href="/technology" className="hover:text-black">Technology</Link>
-          <Link href="/poss" className="hover:text-black">PoSS</Link>
-          <Link href="/curators" className="hover:text-black">Curators</Link>
-          <Link href="/genesis" className="hover:text-black">Genesis</Link>
-          <Link href="/roadmap" className="hover:text-black">Roadmap</Link>
-          <Link href="/docs" className="hover:text-black">Docs</Link>
-          <Link href="/legal" className="hover:text-black">Legal</Link>
+        {/* RIGHT: MENU */}
+        <div className="flex gap-6 text-sm font-medium text-gray-700">
+          <Link href="/" className="hover:text-primary transition">Home</Link>
+          <Link href="/technology" className="hover:text-primary transition">Technology</Link>
+          <Link href="/poss" className="hover:text-primary transition">PoSS</Link>
+          <Link href="/curators" className="hover:text-primary transition">Curators</Link>
+          <Link href="/genesis" className="hover:text-primary transition">Genesis</Link>
+          <Link href="/roadmap" className="hover:text-primary transition">Roadmap</Link>
+          <Link href="/docs" className="hover:text-primary transition">Docs</Link>
+          <Link href="/legal" className="hover:text-primary transition">Legal</Link>
         </div>
-        
+
       </div>
     </nav>
   );
