@@ -2,6 +2,12 @@ import "./globals.css";
 import type { Metadata } from "next";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
+import { Inter } from "next/font/google";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "NOORCHAIN — Social Signal Blockchain",
@@ -25,7 +31,6 @@ export const metadata: Metadata = {
     "Transparent Governance",
   ],
   robots: "index, follow",
-  // 👇 Nouveau : favicon déclaré proprement
   icons: {
     icon: "/favicon.svg",
   },
@@ -38,7 +43,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="flex flex-col min-h-screen bg-white text-gray-900">
+      <body
+        className={`${inter.className} flex flex-col min-h-screen bg-white text-gray-900`}
+      >
         <NavBar />
         <main className="flex-1">{children}</main>
         <Footer />
