@@ -1,7 +1,7 @@
 export default function Footer() {
   return (
-    <footer className="w-full bg-white border-t border-gray-soft mt-16 py-10 text-sm">
-      <div className="container flex flex-col gap-6">
+    <footer className="w-full bg-white border-t border-gray-soft mt-16 py-8 text-sm">
+      <div className="container flex flex-col items-center text-center gap-4">
 
         {/* TITLE */}
         <div className="text-navy font-semibold text-base">
@@ -9,7 +9,7 @@ export default function Footer() {
         </div>
 
         {/* INTERNAL LINKS */}
-        <div className="flex flex-wrap gap-5 text-gray-700">
+        <div className="flex flex-wrap justify-center gap-6 text-gray-700">
           <a href="/legal" className="hover:text-primary transition">
             Legal Notices
           </a>
@@ -22,7 +22,7 @@ export default function Footer() {
         </div>
 
         {/* EXTERNAL LINKS */}
-        <div className="flex flex-wrap gap-5 text-gray-700">
+        <div className="flex flex-wrap justify-center gap-6 text-gray-700">
           <a
             href="https://github.com"
             target="_blank"
@@ -45,11 +45,11 @@ export default function Footer() {
           </a>
         </div>
 
-        {/* BOTTOM LINE */}
-        <div className="h-px w-full bg-gray-soft" />
+        {/* LINE */}
+        <div className="h-px w-32 bg-gray-soft my-2" />
 
         {/* COPYRIGHT */}
-        <div className="text-gray-600">
+        <div className="text-gray-600 text-xs">
           © {new Date().getFullYear()} NOORCHAIN. All rights reserved.
         </div>
       </div>
