@@ -20,9 +20,31 @@ export default function DocsPage() {
           {/* INTRO */}
           <p className="text-lg text-gray-700 leading-relaxed mb-10 border-l-4 border-primary pl-4 bg-white/60 py-3 rounded-r-lg">
             Access the official public documents of NOORCHAIN, including white
-            papers, technical specifications, governance rules, and legal
-            framework.
+            papers, technical specifications, governance rules, legal framework,
+            and branding assets.
           </p>
+
+          {/* BRANDING / BRANDBOOK */}
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+            <h2 className="text-2xl font-semibold text-navy mb-3">
+              Branding
+            </h2>
+            <p className="text-gray-700 leading-relaxed mb-3">
+              The official visual identity of NOORCHAIN, including logo system,
+              color palette, typography, and social assets.
+            </p>
+            <ul className="list-disc pl-6 text-gray-700 leading-relaxed space-y-2">
+              <li>
+                <a
+                  href="/docs/NOORCHAIN_Brandbook_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  NOORCHAIN Brandbook 1.1 (PDF)
+                </a>
+              </li>
+            </ul>
+          </section>
 
           {/* WHITE PAPERS */}
           <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
