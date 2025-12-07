@@ -1,0 +1,50 @@
+<svg width="1280" height="440" viewBox="0 0 1280 440" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Background navy -->
+  <rect width="1280" height="440" fill="#0A2342"/>
+
+  <!-- Subtle radial effect -->
+  <defs>
+    <radialGradient id="radialGitHub" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#1B7FFF" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#0A2342" stop-opacity="1"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="440" fill="url(#radialGitHub)" opacity="0.35"/>
+
+  <!-- Center group -->
+  <g transform="translate(330, 70)">
+
+    <!-- Icon -->
+    <rect x="0" y="0" width="150" height="150" rx="34" ry="34"
+          fill="none" stroke="#FFFFFF" stroke-width="8"/>
+
+    <line x1="52" y1="30" x2="52" y2="150"
+          stroke="#00D1B2" stroke-width="20" stroke-linecap="round"/>
+    <line x1="52" y1="30" x2="102" y2="150"
+          stroke="#1A6AFF" stroke-width="20" stroke-linecap="round"/>
+    <line x1="102" y1="30" x2="102" y2="150"
+          stroke="#1A6AFF" stroke-width="20" stroke-linecap="round"/>
+
+    <!-- Text -->
+    <text x="210" y="100"
+          font-family="Inter, Helvetica, Arial"
+          font-size="78"
+          font-weight="600"
+          fill="#FFFFFF">
+      NOORCHAIN
+    </text>
+
+  </g>
+
+  <!-- Subtitle -->
+  <text x="640" y="330"
+        text-anchor="middle"
+        font-family="Inter, Helvetica, Arial"
+        font-size="32"
+        fill="#E8F1FF"
+        opacity="0.85">
+    A Social Signal Blockchain
+  </text>
+
+</svg>
