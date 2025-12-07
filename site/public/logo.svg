@@ -1,0 +1,17 @@
+<svg width="180" height="180" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cadre arrondi -->
+  <rect x="30" y="30" width="140" height="140" rx="28" ry="28"
+        fill="none" stroke="#0C2D48" stroke-width="8"/>
+
+  <!-- Jambe gauche (NOOR) -->
+  <line x1="80" y1="60" x2="80" y2="140"
+        stroke="#00D1B2" stroke-width="16" stroke-linecap="round"/>
+
+  <!-- Diagonale -->
+  <line x1="80" y1="60" x2="120" y2="140"
+        stroke="#1A6AFF" stroke-width="16" stroke-linecap="round"/>
+
+  <!-- Jambe droite -->
+  <line x1="120" y1="60" x2="120" y2="140"
+        stroke="#1A6AFF" stroke-width="16" stroke-linecap="round"/>
+</svg>
