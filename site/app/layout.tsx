@@ -34,8 +34,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      {/* Favicon from /public */}
-      <link rel="icon" href="/favicon.svg" />
+      <head>
+        {/* Favicon correctly placed inside <head> */}
+        <link rel="icon" href="/favicon.svg" />
+      </head>
 
       <body className="flex flex-col min-h-screen bg-white text-gray-900">
         <NavBar />
