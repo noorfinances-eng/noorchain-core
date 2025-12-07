@@ -35,7 +35,6 @@ export default function HomePage() {
 
             {/* Boutons — version premium NOORCHAIN */}
             <div className="flex flex-wrap gap-4">
-              {/* Bouton principal : bleu NOORCHAIN */}
               <a
                 href="/technology"
                 className="px-6 py-3 bg-primary text-white rounded-md text-sm md:text-base font-medium hover:bg-blue-700 transition"
@@ -43,7 +42,6 @@ export default function HomePage() {
                 Explore Technology
               </a>
 
-              {/* Bouton secondaire : bordure blanche */}
               <a
                 href="/genesis"
                 className="px-6 py-3 border border-white text-white rounded-md text-sm md:text-base font-medium hover:bg-white/10 transition"
@@ -55,26 +53,19 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* BANDEAU TURQUOISE — test de bg-light */}
-      <section className="container py-8">
-        <div className="bg-light text-white px-6 py-4 rounded-md">
-          NOORCHAIN focuses on real-world social participation, curators, and
-          mission-driven signals — not on speculative trading or financial promises.
-        </div>
-      </section>
-
-      {/* SECTION PREMIUM — test de bg-indigo-deep */}
-      <section className="container pb-16">
-        <div className="bg-indigo-deep text-white py-12 px-6 rounded-xl">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">
-            What makes NOORCHAIN different?
+      {/* SECTION ÉPURÉE — BLANCHE + TITRE + TEXTE (classe et sobre) */}
+      <section className="container py-20">
+        <div className="max-w-3xl">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+            A New Approach to Blockchain Design
           </h2>
-          <p className="text-white/90 max-w-2xl leading-relaxed">
-            NOORCHAIN is built as a Social Signal Blockchain: participants and
-            curators are rewarded for verifiable social actions instead of
-            energy-intensive mining. With a fixed supply, transparent governance
-            and Legal Light compliance, NOORCHAIN is designed as a long-term public
-            infrastructure rather than a short-term speculative asset.
+
+          <p className="text-gray-700 leading-relaxed text-lg">
+            NOORCHAIN introduces a mission-driven blockchain architecture focused
+            on verified social participation rather than financial speculation. 
+            Powered by the PoSS protocol and aligned with Legal Light CH, it
+            provides a transparent and sustainable digital infrastructure for
+            curators, participants, institutions and communities.
           </p>
         </div>
       </section>
