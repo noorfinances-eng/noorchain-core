@@ -10,8 +10,8 @@
 
   <rect width="1600" height="600" fill="url(#diagGrad)" />
 
-  <!-- Logo NL-B (blanc) -->
-  <g transform="translate(200,150) scale(1.8)">
+  <!-- Logo NL-B (blanc) — position corrigée -->
+  <g transform="translate(200,110) scale(1.8)">
     <rect x="30" y="30" width="140" height="140" rx="28" ry="28"
           fill="none" stroke="white" stroke-width="8"/>
 
@@ -26,11 +26,11 @@
   </g>
 
   <!-- Texte -->
-  <text x="550" y="260" font-family="Inter, sans-serif" font-size="72" fill="white" font-weight="700">
+  <text x="550" y="245" font-family="Inter, sans-serif" font-size="72" fill="white" font-weight="700">
     NOORCHAIN
   </text>
 
-  <text x="550" y="340" font-family="Inter, sans-serif" font-size="34" fill="white" opacity="0.9">
+  <text x="550" y="325" font-family="Inter, sans-serif" font-size="34" fill="white" opacity="0.9">
     A Human-Centered Blockchain for Social Signals
   </text>
 
