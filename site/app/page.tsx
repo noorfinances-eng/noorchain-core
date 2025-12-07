@@ -3,12 +3,13 @@ import Image from "next/image";
 export default function HomePage() {
   return (
     <main className="w-full">
-      {/* HERO SECTION — gradient + logo + texte + boutons */}
+      {/* HERO SECTION — gradient + logo + tagline + texte + boutons */}
       <section className="w-full bg-gradient-to-br from-[#1A6AFF] to-[#00D1B2]">
         <div className="container py-16 md:py-20 text-white">
           <div className="max-w-3xl">
-            {/* Logo + nom NOORCHAIN */}
-            <div className="flex items-center gap-3 mb-6">
+
+            {/* Logo + nom + tagline */}
+            <div className="flex items-center gap-3 mb-4">
               <Image
                 src="/logo-white.svg"
                 alt="NOORCHAIN Logo"
@@ -21,8 +22,13 @@ export default function HomePage() {
               </h1>
             </div>
 
-            {/* Texte PoSS */}
-            <p className="text-lg md:text-xl text-white/90 leading-relaxed mb-8">
+            {/* Tagline officielle */}
+            <p className="text-lg md:text-xl text-white/90 mb-6 font-medium">
+              A Human-Centered Blockchain for Social Signals
+            </p>
+
+            {/* Paragraphe explicatif */}
+            <p className="text-base md:text-lg text-white/85 leading-relaxed mb-8">
               A Social Signal Blockchain powered by PoSS. Designed for transparent
               participation, curator validation, and a fixed-supply digital model
               free from financial speculation.
@@ -44,6 +50,7 @@ export default function HomePage() {
                 Genesis Overview
               </a>
             </div>
+
           </div>
         </div>
       </section>
