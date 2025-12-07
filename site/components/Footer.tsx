@@ -1,7 +1,7 @@
 export default function Footer() {
   return (
-    <footer className="w-full bg-white border-t border-gray-soft mt-16 py-8 text-sm">
-      <div className="container flex flex-col items-center text-center gap-4">
+    <footer className="w-full bg-white border-t border-gray-soft mt-12 py-6 text-sm">
+      <div className="container flex flex-col items-center text-center gap-3">
 
         {/* TITLE */}
         <div className="text-navy font-semibold text-base">
@@ -9,7 +9,7 @@ export default function Footer() {
         </div>
 
         {/* INTERNAL LINKS */}
-        <div className="flex flex-wrap justify-center gap-6 text-gray-700">
+        <div className="flex flex-wrap justify-center gap-4 text-gray-700">
           <a href="/legal" className="hover:text-primary transition">
             Legal Notices
           </a>
@@ -22,7 +22,7 @@ export default function Footer() {
         </div>
 
         {/* EXTERNAL LINKS */}
-        <div className="flex flex-wrap justify-center gap-6 text-gray-700">
+        <div className="flex flex-wrap justify-center gap-4 text-gray-700">
           <a
             href="https://github.com"
             target="_blank"
@@ -46,7 +46,7 @@ export default function Footer() {
         </div>
 
         {/* LINE */}
-        <div className="h-px w-32 bg-gray-soft my-2" />
+        <div className="h-px w-24 bg-gray-soft my-1" />
 
         {/* COPYRIGHT */}
         <div className="text-gray-600 text-xs">
