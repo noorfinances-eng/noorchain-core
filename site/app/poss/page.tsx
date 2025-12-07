@@ -1,55 +1,81 @@
 export default function PoSSPage() {
   return (
-    <main className="container py-16">
-      <h1 className="text-4xl font-bold mb-6">
-        Proof of Signal Social (PoSS)
-      </h1>
+    <main className="w-full bg-paper">
+      <section className="container py-16 md:py-20">
+        <div className="max-w-3xl">
 
-      <p className="text-lg text-gray-700 mb-6 max-w-3xl">
-        PoSS is a participation-based mechanism designed to reward meaningful
-        social signals without financial speculation or yield promises. It
-        focuses on transparent social contribution and curator validation.
-      </p>
+          {/* LABEL */}
+          <div className="inline-flex items-center gap-2 rounded-full bg-white border border-gray-soft px-3 py-1 mb-6">
+            <span className="h-2 w-2 rounded-full bg-primary" />
+            <span className="text-xs font-medium uppercase tracking-wide text-gray-700">
+              Consensus Layer
+            </span>
+          </div>
 
-      {/* Types of Signals */}
-      <section className="mb-10 max-w-3xl">
-        <h2 className="text-2xl font-semibold mb-3">Types of Social Signals</h2>
-        <ul className="list-disc pl-6 text-gray-700 space-y-2">
-          <li>Micro-donations</li>
-          <li>Verified participation</li>
-          <li>Certified content</li>
-          <li>CCN (Communication Network) signals</li>
-        </ul>
-      </section>
+          {/* TITLE */}
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-navy mb-4">
+            Proof of Signal Social (PoSS)
+          </h1>
 
-      {/* Reward Model */}
-      <section className="mb-10 max-w-3xl">
-        <h2 className="text-2xl font-semibold mb-3">Reward Distribution</h2>
-        <p className="text-gray-700 mb-3">
-          Rewards are allocated according to a clear fixed rule:
-        </p>
-        <ul className="list-disc pl-6 text-gray-700 space-y-2">
-          <li>70% to the participant generating the signal</li>
-          <li>30% to the curator validating the signal</li>
-        </ul>
+          {/* INTRO */}
+          <p className="text-lg text-gray-700 leading-relaxed mb-10 border-l-4 border-primary pl-4 bg-white/60 py-3 rounded-r-lg">
+            PoSS is a participation-based consensus mechanism rewarding verified
+            social signals instead of computational work or financial staking.
+            It aligns blockchain rewards with real-world contribution and
+            curator validation.
+          </p>
 
-        <p className="text-gray-700 mt-4">
-          A halving mechanism applies every 8 years, and daily limits ensure
-          fairness and protection against abuse.
-        </p>
-      </section>
+          {/* TYPES OF SIGNALS */}
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+            <h2 className="text-2xl font-semibold text-navy mb-3">
+              Types of Social Signals
+            </h2>
+            <ul className="list-disc pl-6 text-gray-700 leading-relaxed space-y-2">
+              <li>Micro-donations</li>
+              <li>Verified participation</li>
+              <li>Certified content</li>
+              <li>CCN (Communication Network) signals</li>
+            </ul>
+          </section>
 
-      {/* Transparency */}
-      <section className="max-w-3xl">
-        <h2 className="text-2xl font-semibold mb-3">
-          Transparency & Parameters
-        </h2>
-        <p className="text-gray-700">
-          All PoSS parameters are public and adjustable through governance.
-          No financial guarantees or yield expectations are communicated or
-          implied. The mechanism is designed to remain aligned with the
-          long-term mission of the project.
-        </p>
+          {/* REWARD DISTRIBUTION */}
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+            <h2 className="text-2xl font-semibold text-navy mb-3">
+              Reward Distribution
+            </h2>
+
+            <p className="text-gray-700 leading-relaxed mb-3">
+              Rewards follow a strictly defined and transparent allocation rule:
+            </p>
+
+            <ul className="list-disc pl-6 text-gray-700 leading-relaxed space-y-2">
+              <li>70% to the participant generating the signal</li>
+              <li>30% to the curator validating the signal</li>
+            </ul>
+
+            <p className="text-gray-700 leading-relaxed mt-4">
+              PoSS includes an 8-year halving cycle and daily limits to ensure
+              fairness, stability, and protection against abuse.
+            </p>
+          </section>
+
+          {/* TRANSPARENCY */}
+          <section className="p-6 border border-gray-soft rounded-xl bg-white shadow-sm mb-10">
+            <h2 className="text-2xl font-semibold text-navy mb-3">
+              Transparency & Parameters
+            </h2>
+
+            <p className="text-gray-700 leading-relaxed">
+              All PoSS parameters are publicly visible and adjustable through
+              governance. The mechanism provides no yield promises and remains
+              aligned with the long-term mission of the project, ensuring
+              accountability and auditability at every stage.
+            </p>
+          </section>
+
+          {/* END LINE */}
+          <div className="h-px w-full bg-gray-soft" />
+        </div>
       </section>
     </main>
   );
