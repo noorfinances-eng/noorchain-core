@@ -1,51 +1,52 @@
 export default function TechnologyPage() {
   return (
     <main className="w-full">
+      {/* Intro section légèrement mise en valeur */}
       <section className="container py-16 md:py-20">
         <div className="max-w-3xl">
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900 mb-6">
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-navy mb-4">
             Technology
           </h1>
 
-          <p className="text-lg text-gray-700 leading-relaxed mb-10">
-            NOORCHAIN is built using a clear, modular blockchain architecture
+          <p className="text-lg text-gray-700 leading-relaxed mb-10 border-l-4 border-primary pl-4">
+            NOORCHAIN is built using a modular blockchain architecture 
             designed for security, transparency, and verifiable social value.
           </p>
 
-          <section className="mb-10">
-            <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-3">
+          {/* Section 1 */}
+          <section className="mb-12 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+            <h2 className="text-2xl font-semibold text-navy mb-3">
               Core Stack
             </h2>
             <p className="text-gray-700 leading-relaxed">
-              The network combines a robust core ledger, an EVM-compatible
-              execution layer, and a dedicated social signal module (PoSS).
-              This structure allows developers to build applications while the
-              protocol enforces transparent rules for participation and
-              accounting.
+              The network combines a core ledger, an EVM-compatible execution
+              layer, and a dedicated PoSS module. This structure ensures 
+              transparent participation rules while allowing developers to 
+              build applications on top of a robust foundation.
             </p>
           </section>
 
-          <section className="mb-10">
-            <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-3">
-            PoSS Integration
+          {/* Section 2 */}
+          <section className="mb-12 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+            <h2 className="text-2xl font-semibold text-navy mb-3">
+              PoSS Integration
             </h2>
             <p className="text-gray-700 leading-relaxed">
-              Proof of Signal Social is integrated as a native module
-              responsible for handling social signals, applying daily limits,
-              and computing rewards according to public parameters. The logic
-              focuses on participation and curatorship, not on financial yield.
+              Proof of Signal Social is natively embedded into the protocol.
+              It applies daily limits, computes rewards, and validates 
+              participant–curator interactions according to public parameters.
             </p>
           </section>
 
-          <section>
-            <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-3">
-              Security &amp; Governance
+          {/* Section 3 */}
+          <section className="p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+            <h2 className="text-2xl font-semibold text-navy mb-3">
+              Security & Governance
             </h2>
             <p className="text-gray-700 leading-relaxed">
-              Governance mechanisms and multi-sig structures protect critical
-              parameters and institutional allocations. Changes to the protocol
-              are controlled, auditable, and aligned with the long-term mission
-              of the project.
+              Governance mechanisms and multi-sig frameworks protect critical 
+              parameters and institutional allocations. All changes are auditable 
+              and aligned with NOORCHAIN’s mission-driven, long-term vision.
             </p>
           </section>
         </div>
