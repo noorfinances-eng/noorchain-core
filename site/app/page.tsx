@@ -1,56 +1,57 @@
+import Image from "next/image";
+
 export default function HomePage() {
   return (
     <main className="w-full">
+      {/* HERO SECTION — gradient CSS + logo + texte */}
+      <section className="w-full bg-gradient-to-br from-[#1A6AFF] to-[#00D1B2]">
+        <div className="container py-14 md:py-18 text-white">
+          <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+            
+            {/* Texte principal */}
+            <div className="max-w-xl">
+              <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-5">
+                NOORCHAIN
+              </h1>
 
-      {/* HERO SECTION — image seulement */}
-      <section
-        className="w-full"
-        style={{
-          backgroundImage: "url('/hero.svg')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
-        {/* Hauteur réduite pour un rendu plus sobre */}
-        <div className="py-12 md:py-20" />
-      </section>
+              <p className="text-lg md:text-xl text-white/90 leading-relaxed mb-8">
+                A Social Signal Blockchain powered by PoSS. Designed for transparent
+                participation, curator validation, and a fixed-supply digital model
+                free from financial speculation.
+              </p>
 
-      {/* SECTION CONTENU — texte + boutons */}
-      <section className="container py-14 md:py-16">
-        <div className="max-w-3xl">
+              <div className="flex flex-wrap gap-4">
+                {/* Bouton principal */}
+                <a
+                  href="/technology"
+                  className="px-6 py-3 bg-white text-gray-900 rounded-md text-sm md:text-base font-medium hover:bg-gray-100 transition"
+                >
+                  Explore Technology
+                </a>
 
-          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-5 text-gray-900">
-            NOORCHAIN
-          </h1>
+                {/* Bouton secondaire */}
+                <a
+                  href="/genesis"
+                  className="px-6 py-3 border border-white text-white rounded-md text-sm md:text-base font-medium hover:bg-white/10 transition"
+                >
+                  Genesis Overview
+                </a>
+              </div>
+            </div>
 
-          <p className="text-lg md:text-xl text-gray-600 leading-relaxed mb-10">
-            A Social Signal Blockchain powered by PoSS. Designed for transparent
-            participation, curator validation, and a fixed-supply digital model
-            free from financial speculation.
-          </p>
-
-          <div className="flex flex-wrap gap-4">
-
-            {/* Bouton principal — premium blue */}
-            <a
-              href="/technology"
-              className="px-6 py-3 bg-[#1A6AFF] text-white rounded-md text-sm md:text-base font-medium hover:bg-blue-700 transition"
-            >
-              Explore Technology
-            </a>
-
-            {/* Bouton secondaire — border blue */}
-            <a
-              href="/genesis"
-              className="px-6 py-3 border border-[#1A6AFF] text-[#1A6AFF] rounded-md text-sm md:text-base font-medium hover:bg-blue-50 transition"
-            >
-              Genesis Overview
-            </a>
-
+            {/* Logo à droite (uniquement sur desktop) */}
+            <div className="hidden md:block">
+              <Image
+                src="/logo-white.svg"
+                alt="NOORCHAIN Logo"
+                width={140}
+                height={140}
+                priority
+              />
+            </div>
           </div>
         </div>
       </section>
-
     </main>
   );
 }
