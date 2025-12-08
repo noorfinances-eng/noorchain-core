@@ -3,7 +3,6 @@ export default function DocsPage() {
     <main className="w-full bg-paper">
       <section className="container py-16 md:py-20">
         <div className="max-w-3xl">
-
           {/* LABEL */}
           <div className="inline-flex items-center gap-2 rounded-full bg-white border border-gray-soft px-3 py-1 mb-6">
             <span className="h-2 w-2 rounded-full bg-primary" />
@@ -43,6 +42,15 @@ export default function DocsPage() {
                   NOORCHAIN Brandbook 1.1 (PDF)
                 </a>
               </li>
+              <li>
+                <a
+                  href="/docs/NOORCHAIN_Press_Kit_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  NOORCHAIN Press Kit 1.1 (PDF)
+                </a>
+              </li>
             </ul>
           </section>
 
@@ -53,23 +61,57 @@ export default function DocsPage() {
             </h2>
             <ul className="list-disc pl-6 text-gray-700 leading-relaxed space-y-2">
               <li>
-                <a href="#" className="text-primary hover:underline">
-                  Investor White Paper
+                <a
+                  href="/docs/NOORCHAIN_Whitepaper_Investor_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Investor Whitepaper 1.1 (PDF)
                 </a>
               </li>
               <li>
-                <a href="#" className="text-primary hover:underline">
-                  Storytelling White Paper
+                <a
+                  href="/docs/NOORCHAIN_Whitepaper_Storytelling_EN_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Storytelling Whitepaper EN 1.1 (PDF)
                 </a>
               </li>
               <li>
-                <a href="#" className="text-primary hover:underline">
-                  Public White Paper
+                <a
+                  href="/docs/NOORCHAIN_Whitepaper_Storytelling_FR_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Storytelling Whitepaper FR 1.1 (PDF)
                 </a>
               </li>
               <li>
-                <a href="#" className="text-primary hover:underline">
-                  Long Version (20 pages)
+                <a
+                  href="/docs/NOORCHAIN_Whitepaper_Public_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Public Whitepaper 1.1 (PDF)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/docs/NOORCHAIN_Whitepaper_Long_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Long Whitepaper 1.1 (PDF)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/docs/Tokenomics_Public_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Tokenomics Public 1.1 (PDF)
                 </a>
               </li>
             </ul>
@@ -78,22 +120,52 @@ export default function DocsPage() {
           {/* TECHNICAL DOCS */}
           <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
             <h2 className="text-2xl font-semibold text-navy mb-3">
-              Technical Documents
+              Technical & Genesis Documents
             </h2>
             <ul className="list-disc pl-6 text-gray-700 leading-relaxed space-y-2">
               <li>
-                <a href="#" className="text-primary hover:underline">
-                  NOORCHAIN Master Summary 1.1
+                <a
+                  href="/docs/NOORCHAIN_Genesis_Pack_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  NOORCHAIN Genesis Pack 1.1 (PDF)
                 </a>
               </li>
               <li>
-                <a href="#" className="text-primary hover:underline">
-                  Core Architecture & EVM Overview
+                <a
+                  href="/docs/NOORCHAIN_Genesis_Allocation_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Genesis Allocation 1.1 (PDF)
                 </a>
               </li>
               <li>
-                <a href="#" className="text-primary hover:underline">
-                  PoSS Module Documentation
+                <a
+                  href="/docs/NOORCHAIN_Genesis_Parameters_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Genesis Parameters 1.1 (PDF)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/docs/NOORCHAIN_Genesis_Governance_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Genesis Governance 1.1 (PDF)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/docs/NOORCHAIN_Economic_Model_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Economic Model 1.1 (PDF)
                 </a>
               </li>
             </ul>
@@ -106,28 +178,57 @@ export default function DocsPage() {
             </h2>
             <ul className="list-disc pl-6 text-gray-700 leading-relaxed space-y-2">
               <li>
-                <a href="#" className="text-primary hover:underline">
-                  Legal Light Framework 2025
+                <a
+                  href="/docs/Legal_Light_Framework_Public_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Legal Light Framework 2025 (Public 1.1, PDF)
                 </a>
               </li>
               <li>
-                <a href="#" className="text-primary hover:underline">
-                  Legal Architecture
+                <a
+                  href="/docs/NOORCHAIN_Legal_Architecture_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  NOORCHAIN Legal Architecture 1.1 (PDF)
                 </a>
               </li>
               <li>
-                <a href="#" className="text-primary hover:underline">
-                  Foundation Statutes
+                <a
+                  href="/docs/NOORCHAIN_Foundation_Statutes_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Foundation Statutes 1.1 (PDF)
                 </a>
               </li>
               <li>
-                <a href="#" className="text-primary hover:underline">
-                  Governance Charter
+                <a
+                  href="/docs/NOORCHAIN_Compliance_Framework_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Compliance Framework 1.1 (PDF)
                 </a>
               </li>
               <li>
-                <a href="#" className="text-primary hover:underline">
-                  MultiSig Committee Rules
+                <a
+                  href="/docs/NOORCHAIN_Multisig_Charter_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Multisig Committee Charter 1.1 (PDF)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/docs/NOORCHAIN_Legal_Notices_1.1.pdf"
+                  target="_blank"
+                  className="text-primary hover:underline"
+                >
+                  Legal Notices & Disclaimers 1.1 (PDF)
                 </a>
               </li>
             </ul>
