@@ -278,8 +278,6 @@ The Foundation:
 
 # 13. Compliance Checklist (Public)
 
-A compliance checklist will be added to the website, including:
-
 1. Non-custodial ✔  
 2. No investment offering ✔  
 3. No promised returns ✔  
@@ -311,4 +309,3 @@ Prepared by:
 **NOORCHAIN Foundation**  
 Governance & Legal Phase  
 Version 1.1  
-
