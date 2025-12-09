@@ -1,7 +1,15 @@
 NOORCHAIN — Legal Architecture
 Version 1.1
-Last Updated: 2025-XX-XX
-________________________________________
+Last Updated: 09.12.2025
+
+Document Classification
+This document describes the structural legal architecture of NOORCHAIN, including the roles of the Foundation, Noor Dev Sàrl, the Multisig Committee, and the governance rules defined in the Genesis Pack.
+It is primarily an internal reference document, but includes sections intended for public transparency. In case of discrepancy, the Foundation Statutes, Multisig Charter, and Legal Light Framework take precedence.
+
+Non-Custodial Architecture
+NOORCHAIN does not provide custody services. All user wallets remain fully self-managed.
+The Foundation oversees governance and transparency; Noor Dev Sàrl executes technical operations; the Multisig Committee enforces on-chain decisions. No entity has unilateral control over user funds.
+
 1. Purpose of this Document
 The purpose of this Legal Architecture is to define a clear, transparent, and compliant legal structure for the NOORCHAIN blockchain ecosystem.
 This document establishes:
@@ -12,7 +20,7 @@ This document establishes:
 •	risk limitations
 •	interaction between on-chain and off-chain entities
 Its objective is to ensure long-term regulatory safety, mission alignment, and structural integrity.
-________________________________________
+
 2. Legal Context (Switzerland – Legal Light Framework)
 NOORCHAIN operates under Swiss association law (Articles 60–79 CC) and the Legal Light CH model, characterized by:
 •	non-profit orientation
@@ -26,7 +34,7 @@ Under this framework, NOORCHAIN is not classified as:
 •	a PSP
 •	a custodial provider
 •	an investment product
-________________________________________
+
 3. Institutional Architecture Overview
 NOORCHAIN’s legal structure includes four independent entities:
 1.	NOORCHAIN Foundation (non-profit governance)
@@ -34,7 +42,7 @@ NOORCHAIN’s legal structure includes four independent entities:
 3.	Curators (NGOs, schools, social actors)
 4.	Noor Dev Sàrl (technical development unit)
 Each entity has strict boundaries to preserve neutrality, safety, and Legal Light compliance.
-________________________________________
+
 4. NOORCHAIN Foundation (Non-Profit Association)
 The Foundation is the legal anchor and guardian of the NOORCHAIN ecosystem.
 Responsibilities:
@@ -51,7 +59,7 @@ Restrictions:
 •	no financial products
 •	no wallet management for third parties
 The Foundation acts as steward and compliance guardian — not as a financial operator.
-________________________________________
+
 5. Multi-sig Committee (3/5)
 The Multi-sig Committee serves as the on-chain executive of the Foundation.
 Responsibilities:
@@ -67,7 +75,7 @@ Restrictions:
 •	cannot bypass governance
 •	cannot operate commercially
 All actions must be documented through public reports.
-________________________________________
+
 6. Curators (Social Validators)
 Curators include NGOs, schools, community institutions, and verified social actors.
 Roles:
@@ -81,7 +89,7 @@ Restrictions:
 •	no custody of user funds
 •	no exploitation or reward farming
 Curators receive 30% of PoSS rewards (non-financial, protocol-driven) for validated actions.
-________________________________________
+
 7. Noor Dev Sàrl (Technical Development Unit)
 This entity represents the development-side allocation (5%) defined at genesis.
 Responsibilities:
@@ -95,7 +103,7 @@ Restrictions:
 •	no custody of user funds
 •	no role in financial activities
 The Sàrl operates independently from the Foundation to preserve separation of powers.
-________________________________________
+
 8. Separation of Powers
 NOORCHAIN enforces permanent separation to prevent conflicts of interest.
 Entity	Authority	Limitations
@@ -103,7 +111,7 @@ Foundation	Governance, mission stewardship	No custody, no financial services
 Multi-sig	On-chain execution	Cannot alter immutable rules
 Curators	Validate PoSS actions	Advisory only, no governance
 Noor Dev Sàrl	Technical development	No governance, no custody
-________________________________________
+
 9. On-Chain Governance Architecture
 On-chain governance covers:
 •	parameter updates (PoSS, limits, module settings)
@@ -121,7 +129,7 @@ Any action requires:
 4.	Multi-sig approval
 5.	Public announcement
 This ensures transparency and institutional safety.
-________________________________________
+
 10. Risk Boundaries & Compliance
 10.1 Technical Risks
 •	vulnerabilities
@@ -142,7 +150,7 @@ Mitigation: education and non-custodial guidance.
 •	centralization
 •	misuse of authority
 Mitigation: multi-sig requirements and public reporting.
-________________________________________
+
 11. Interaction with External Entities
 NOORCHAIN does not:
 •	provide financial services
@@ -154,7 +162,7 @@ Partners (NGOs, schools, etc.) must respect:
 •	ethical use
 •	transparency
 •	no financial exploitation
-________________________________________
+
 Diagram — Legal Architecture Overview
                  +-----------------------------+
                  |       NOORCHAIN Foundation  |
@@ -178,7 +186,7 @@ Diagram — Legal Architecture Overview
       |   Users     |
       | (Self-cust) |
       +-------------+
-________________________________________
+
 13. Document Integration
 This Legal Architecture is included in:
 •	Genesis Governance Pack
@@ -189,7 +197,7 @@ This Legal Architecture is included in:
 •	Foundation Statutes
 •	Website Legal Section (Phase 6)
 It is a core structural component of NOORCHAIN’s legal framework.
-________________________________________
+
 14. Signature
 Prepared by:
 NOORCHAIN Foundation — Legal & Governance Division
