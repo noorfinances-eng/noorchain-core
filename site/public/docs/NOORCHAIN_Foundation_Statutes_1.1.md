@@ -1,265 +1,315 @@
-# NOORCHAIN FOUNDATION  
-## Foundation Statutes — Version 1.1  
-### Swiss Tech Foundation Format  
-### Last Updated: 2025-XX-XX  
+Foundation Statutes — Version 1.1
+Swiss Non-Profit Association (CC Art. 60–79)
+Last Updated: 09.12.2025
+1. Name, Form, and Headquarters
+1.1 Name
 
----
+The association is named NOORCHAIN Foundation (“the Foundation”).
 
-## 1. Name, Form, and Headquarters
+1.2 Legal Form
 
-### 1.1 Name  
-The association is named **NOORCHAIN Foundation** (“the Foundation”).
+The Foundation is established as a non-profit association under Articles 60–79 of the Swiss Civil Code (ZGB/CC).
 
-### 1.2 Form  
-The Foundation is established as a **non-profit association** under Articles 60–79 of the Swiss Civil Code.
+1.3 Headquarters
 
-### 1.3 Headquarters  
-The Foundation is headquartered in Switzerland. The exact canton and registered address may be defined by the Board.
+The Foundation is headquartered in Switzerland. The specific canton and registered address may be designated by the Board.
 
-### 1.4 Legal Personality  
-The Foundation obtains legal personality upon the adoption of these statutes by the founding members.
+1.4 Legal Personality
 
----
+The Foundation acquires legal personality upon adoption of these statutes by the founding members.
 
-## 2. Purpose of the Foundation
+2. Purpose of the Foundation
+2.1 Mission
 
-### 2.1  
-The purpose of the Foundation is to support, maintain, and steward the **NOORCHAIN blockchain ecosystem**, including its technologies, documentation, governance framework, and long-term integrity.
+The purpose of the Foundation is to support, maintain, and steward the NOORCHAIN blockchain ecosystem, including technology, governance, security, documentation, and long-term integrity.
 
-### 2.2  
-The Foundation shall promote and safeguard the **Proof of Signal Social (PoSS)** mechanism as an ethical, non-extractive, socially aligned model for blockchain validation.
+2.2 Ethical Blockchain Governance
 
-### 2.3  
-The Foundation ensures compliance with the **Swiss Legal Light framework**, including:
-- no custody of user assets  
-- no guaranteed or promised returns  
-- no speculative or investment-oriented narrative  
-- full transparency in governance and funding  
+The Foundation shall uphold and promote the Proof of Signal Social (PoSS) mechanism as an ethical, non-extractive, socially aligned validation model.
 
-### 2.4  
-The Foundation manages and oversees the **5% Foundation Allocation** defined in the NOORCHAIN Genesis, including budgets for:
-- audits  
-- security and research  
-- educational and NGO partnerships  
-- open-source development  
-- governance and transparency initiatives  
+2.3 Swiss Legal Light Compliance
 
-### 2.5  
-The Foundation acts as the neutral, long-term guardian of the NOORCHAIN vision.
+The Foundation ensures strict adherence to the Swiss “Legal Light” framework, including:
 
----
+no custody of user assets
 
-## 3. Activities
+no guaranteed or promised returns
 
-To fulfil its purpose, the Foundation may undertake the following activities:
+no financial product offering
 
-### 3.1  
-Fund, coordinate, or support open-source development of NOORCHAIN.
+no investment solicitation
 
-### 3.2  
-Maintain documentation, governance rules, and technical specifications.
+full transparency in governance and reporting
 
-### 3.3  
-Coordinate relationships with partners, NGOs, schools, and curators participating in PoSS.
+2.4 Management of the Foundation Allocation (5%)
 
-### 3.4  
-Conduct or finance security reviews and audits.
+The Foundation oversees the 5% Genesis Foundation Allocation, dedicated to:
 
-### 3.5  
-Facilitate workshops, events, and outreach promoting ethical blockchain usage.
+audits and security
 
-### 3.6  
-Operate communication channels, transparency portals, and reporting systems.
+research and development
 
-### 3.7  
-Maintain the on-chain multi-sig wallet and ensure proper governance of the Foundation allocation.
+educational and NGO partnerships
 
----
+open-source initiatives
 
-## 4. Independence & Neutrality
+governance operations and transparency
 
-### 4.1  
+2.5 Public-Interest Role
+
+The Foundation acts as the neutral, long-term guardian of the NOORCHAIN vision, exclusively serving the public interest and not pursuing commercial profit.
+
+3. Activities
+
+To fulfil its mission, the Foundation may:
+
+3.1
+
+Support and coordinate open-source development of NOORCHAIN.
+
+3.2
+
+Maintain governance rules, documentation, specifications, and public reports.
+
+3.3
+
+Develop and maintain relationships with NGOs, schools, curators, and partners participating in PoSS.
+
+3.4
+
+Conduct or finance security audits and technical assessments.
+
+3.5
+
+Organize or support events, workshops, and educational initiatives.
+
+3.6
+
+Publish transparency reports, PoSS updates, and governance decisions.
+
+3.7
+
+Oversee the on-chain multisig wallet and enforce transparency in fund usage.
+
+4. Independence & Neutrality
+4.1 Institutional Neutrality
+
 The Foundation is politically, financially, and religiously neutral.
 
-### 4.2  
+4.2 Prohibited Conduct
+
 The Foundation must avoid:
-- speculative behaviour  
-- deceptive marketing  
-- market manipulation  
-- any activity conflicting with Swiss transparency standards  
 
-### 4.3  
-Members must act independently and in the public interest.
+speculative or price-influencing behaviour
 
----
+deceptive or aggressive marketing
 
-## 5. Values & Principles
+market manipulation
 
-### 5.1 Open Source by Default  
-Technologies and documentation should be publicly developed under appropriate open-source licenses.
+activities inconsistent with Swiss public-interest standards
 
-### 5.2 Swiss Integrity & Neutrality  
-The Foundation follows Swiss norms of governance and stewardship.
+4.3 Duty of Loyalty
 
-### 5.3 Ethical Innovation  
-PoSS must remain human-centric, non-extractive, and socially aligned.
+All members act independently and exclusively in the public interest.
 
-### 5.4 Transparency in Governance  
-Decisions, audits, and budgets must be published regularly.
+5. Values & Principles
+5.1 Open-Source Priority
 
-### 5.5 Social Impact Priority  
-NOORCHAIN supports communities, NGOs, schools, and social actors.
+The NOORCHAIN ecosystem must remain open-source whenever feasible.
 
-### 5.6 No Custody & No Promised Returns  
-The Foundation must not hold user assets or guarantee returns.
+5.2 Swiss Stewardship
 
-### 5.7 Long-Term Sustainability  
-Governance and development must prioritise resilience and public utility.
+Governance must follow Swiss standards of transparency, accountability, and neutrality.
 
----
+5.3 Ethical Innovation
 
-## 6. Membership
+PoSS must remain human-centric, fair, and socially meaningful.
 
-### 6.1  
+5.4 Transparency
+
+Budgets, governance decisions, audits, and updates must be published regularly.
+
+5.5 Social Impact
+
+The Foundation prioritizes support to NGOs, schools, and public-benefit actors.
+
+5.6 No Custody & No Promised Returns
+
+The Foundation must not hold user assets or provide any form of financial return.
+
+5.7 Long-Term Sustainability
+
+All decisions must support resilience, neutrality, and public utility.
+
+6. Membership
+6.1 Eligibility
+
 Members may be individuals or institutions aligned with the Foundation’s mission.
 
-### 6.2 Minimum Membership  
-At least 3 members at all times.
+6.2 Minimum Membership
 
-### 6.3 Admission  
-New members may be admitted by decision of the General Assembly or delegated to the Board.
+The Foundation maintains a minimum of three members.
 
-### 6.4 Resignation  
+6.3 Admission
+
+New members are admitted by General Assembly (GA) decision or by Board delegation.
+
+6.4 Resignation
+
 Members may resign by written notice; prior obligations remain.
 
-### 6.5 Membership Register  
-A register of members shall be maintained and updated yearly.
+6.5 Membership Register
 
----
+A membership register is maintained and updated yearly.
 
-## 7. Governing Bodies
+7. Governing Bodies
 
-The Foundation comprises:
+The Foundation includes:
 
-### 7.1 General Assembly (GA)
-- Supreme governing body  
-- Meets at least once per year  
-- Approves annual reports and accounts  
-- Elects and dismisses Board members  
-- Amends statutes  
-- Validates governance updates  
+7.1 General Assembly (GA)
 
-### 7.2 Foundation Board
-- 3 to 5 members  
-- Responsible for long-term direction  
-- Ensures Legal Light compliance  
-- Oversees budgets  
-- Represents the Foundation legally  
+supreme governing authority
 
-### 7.3 Multi-sig Committee (3/5)
-The on-chain executive organ.
+elects and dismisses Board members
 
-**Recommended Composition:**  
-- Founder / Project Lead  
-- NGO / Curator Representative  
-- Technical Expert  
-- Legal / Compliance Observer  
-- Educational or Community Representative  
+approves annual accounts
 
-**Responsibilities:**  
-- Secure Foundation Allocation  
-- Co-sign governance changes  
-- Publish transparency reports  
-- Rotate signers per Governance Charter  
+amends statutes
 
----
+validates governance updates
 
-## 8. On-Chain Governance
+7.2 Foundation Board
 
-### 8.1  
-The Foundation oversees, but does not control, the governance system.
+3 to 5 members
 
-### 8.2  
+ensures long-term strategy
+
+ensures compliance with Legal Light
+
+oversees budgets and reports
+
+represents the Foundation legally
+
+7.3 Multisig Committee (3/5)
+
+The on-chain executive arm.
+
+Recommended composition:
+
+Founder / Project Lead
+
+NGO or Curator Representative
+
+Technical Expert
+
+Legal or Compliance Observer
+
+Community / Educational Representative
+
+Responsibilities:
+
+Execute approved governance decisions
+
+Secure and manage the Foundation Allocation
+
+Publish periodic transparency reports
+
+Rotate signers according to the Multisig Charter
+
+8. On-Chain Governance
+8.1 Oversight Role
+
+The Foundation oversees (but does not control) on-chain governance.
+
+8.2 No Custody Rule
+
 The Foundation must not hold user tokens or provide custodial services.
 
-### 8.3  
-PoSS parameters may be updated through governance proposals.
+8.3 Governance Updates
 
-### 8.4  
-Genesis allocations cannot be changed after mainnet launch.
+PoSS parameters and governance settings may be updated through community-approved proposals.
 
----
+8.4 Immutable Genesis
 
-## 9. Financial Resources
+Genesis allocations are permanent after mainnet launch.
 
-### 9.1  
-The Foundation’s resources include:
-- optional membership fees  
-- donations & grants  
-- the 5% Foundation Allocation  
-- lawful, non-speculative income  
+9. Financial Resources
+9.1 Sources of Funding
 
-### 9.2  
-The Foundation does not distribute profits.
+Foundation resources include:
 
-### 9.3  
-Annual financial statements must be prepared and approved by the GA.
+optional membership fees
 
----
+donations and grants
 
-## 10. Liability
+the 5% Foundation Allocation
 
-### 10.1  
+lawful, non-speculative income
+
+9.2 Non-Profit Rule
+
+The Foundation does not distribute profits or dividends.
+
+9.3 Annual Reporting
+
+Financial statements are approved annually by the GA.
+
+10. Liability
+10.1 Limited Liability
+
 Only Foundation assets are liable for obligations.
 
-### 10.2  
-Members and Board members are not personally liable.
+10.2 No Personal Liability
 
-### 10.3  
-The Foundation assumes no liability for:
-- smart contract risks  
-- user operations  
-- third-party tools or applications  
+Members and Board members assume no personal liability.
 
----
+10.3 No Operational Liability
 
-## 11. Transparency & Reporting
+The Foundation is not liable for smart contract bugs, user activity, or third-party tools.
 
-### 11.1  
+11. Transparency & Reporting
+11.1 Mandatory Publications
+
 The Foundation must publish:
-- annual activity report  
-- financial statements  
-- governance updates  
-- PoSS parameter changes  
-- audit results  
 
-### 11.2  
+annual report
+
+financial statements
+
+governance updates
+
+PoSS parameter changes
+
+audit results
+
+11.2 Public Access
+
 Reports must be publicly accessible.
 
----
+12. Dissolution
+12.1 Dissolution Conditions
 
-## 12. Dissolution
-
-### 12.1  
 The Foundation may be dissolved by:
-- GA decision  
-- judicial ruling under Swiss law  
 
-### 12.2  
+decision of the General Assembly
+
+judicial ruling under Swiss law
+
+12.2 Allocation of Assets (Swiss Law Requirement)
+
 Upon dissolution:
-- assets go to a Swiss non-profit with similar objectives  
-- on-chain funds are sent to a public reserve or burn address  
 
----
+All remaining assets shall be transferred to one or more Swiss non-profit organizations pursuing a purpose similar to that of NOORCHAIN Foundation.
 
-## 13. Signature & Adoption
+Assets may not be returned to members, founders, Board members, Multisig members, or any private individual.
+
+On-chain funds that cannot be repurposed legally shall be sent to a public reserve address or irreversible burn address, ensuring no private benefit.
+
+13. Signature & Adoption
 
 These statutes were adopted on:
 
-**Date:** ___________________________  
-**Place:** __________________________  
+Date: ___________________________
+Place: __________________________
 
-### Founding Members (Signatures)
-1. _________________________________  
-2. _________________________________  
-3. _________________________________  
+Founding Members — Signatures
