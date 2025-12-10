@@ -31,14 +31,14 @@ export default function Footer() {
             GitHub
           </a>
           <a
-            href="https://x.com"
+            href="https://x.com/noorchainOrg"
             target="_blank"
             className="hover:text-primary transition"
           >
             X (Twitter)
           </a>
           <a
-            href="mailto:contact@noorchain.org"
+            href="mailto:contact@noorchain.io"
             className="hover:text-primary transition"
           >
             Contact
