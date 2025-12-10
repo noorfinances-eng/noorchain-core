@@ -1,5 +1,4 @@
 NOORCHAIN — Compliance Framework
-Phase 5 — D3
 Version 1.1
 Last Updated: 10.12.2025
 
