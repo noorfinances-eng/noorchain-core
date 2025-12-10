@@ -345,21 +345,3 @@ A human-centered, ethical, non-financial participation protocol.
 By recognizing positive actions transparently and responsibly, NOORCHAIN provides a durable foundation for communities, educators, institutions, and public organizations worldwide.
 
 It is designed for public good, ethical technology, and transparent participation — not for speculation or financial incentives.
-
-✔ Whitepaper Public 1.1 — FINAL VERSION
-
-Ce fichier est maintenant :
-
-juridiquement sûr
-
-compatible Legal Light CH
-
-cohérent avec Genesis Pack / Economic Model
-
-propre pour PDF
-
-propre pour le site /docs
-
-compréhensible pour institutions & ONG
-
-neutre, non-financial, non-speculatif
