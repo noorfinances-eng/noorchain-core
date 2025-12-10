@@ -87,15 +87,19 @@ export default function DocsPage() {
                   Storytelling Whitepaper FR 1.1 (PDF)
                 </a>
               </li>
+
+              {/* >>> ADDED LINK HERE <<< */}
               <li>
                 <a
-                  href="/docs/NOORCHAIN_Whitepaper_Public_1.1.pdf"
+                  href="/docs/NOORCHAIN_Public_Whitepaper_1.1.pdf"
                   target="_blank"
                   className="text-primary hover:underline"
                 >
                   Public Whitepaper 1.1 (PDF)
                 </a>
               </li>
+              {/* >>> END ADDITION <<< */}
+
               <li>
                 <a
                   href="/docs/NOORCHAIN_Whitepaper_Long_1.1.pdf"
