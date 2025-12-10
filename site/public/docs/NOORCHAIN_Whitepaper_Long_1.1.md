@@ -3405,10 +3405,10 @@ However, structural rules (supply, model 5/5/5/5/80, halving, 70/30 split) will 
 NOORCHAIN Foundation
 Non-profit entity responsible for governance and transparency.
 
-Contact (placeholder): foundation@noorchain.org
+Contact (placeholder): foundation@noorchain.io
 
 Official Website:
-https://noorchain.org
+https://noorchain.io
 
 Documentation Portal (Phase 6.6):
 Provided as part of the public Genesis Pack.
