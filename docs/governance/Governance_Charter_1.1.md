@@ -1,269 +1,449 @@
-# NOORCHAIN FOUNDATION  
-## Governance Charter  
-### Phase 5 — C2  
-### Version 1.1  
-### Last Updated: 2025-XX-XX  
+NOORCHAIN_Governance_Charter_1.1.md
 
----
+Governance Charter — NOORCHAIN Foundation
+Phase 5 — C2
+Version 1.1
+Last Updated: 10.12.2025
 
-# 1. Purpose of the Governance Charter
+1. Purpose of the Governance Charter
 
-The **NOORCHAIN Governance Charter** establishes the governance principles,  
-decision-making mechanisms, and responsibilities of all entities involved in  
-the NOORCHAIN ecosystem.
+The NOORCHAIN Governance Charter defines the governance structure,
+decision-making mechanisms, and operational responsibilities of all entities
+within the NOORCHAIN ecosystem.
 
-It ensures:
-- Transparency  
-- Independence  
-- Accountability  
-- Compliance with Swiss Legal Light CH  
-- Alignment with the project's ethical mission  
-- Protection of stakeholders (users, curators, NGOs, developers)
+Its objectives are to ensure:
 
-This Charter governs:
-- The NOORCHAIN Foundation  
-- The Multi-sig Committee  
-- The Curators  
-- Governance processes  
-- Protocol evolution  
+Transparency
 
----
+Ethical alignment with the NOORCHAIN mission
 
-# 2. Core Governance Principles
+Accountability and integrity
 
-## 2.1 Ethical & Social Mission
-NOORCHAIN is a **Swiss ethical blockchain** designed to reward positive social  
-actions via the PoSS mechanism (Proof of Signal Social).
+Swiss Legal Light CH compliance
 
-Governance decisions must always:
-- Protect the mission  
-- Maintain social impact  
-- Encourage transparency  
-- Prevent abuse  
+Protection of users, curators, developers, partners and institutions
 
-## 2.2 Legal Light Compliance
-The Foundation and all governance bodies must follow **Swiss Legal Light CH**,  
-including:
-- No custody of user assets  
-- No investment products  
-- No promised financial returns  
-- Transparent and non-speculative operations  
-- Public documentation  
+Stability and predictability of protocol evolution
 
-## 2.3 Transparency & Accountability
-All governance actions must be:
-- Publicly disclosed  
-- Documented  
-- Justified  
-- Recorded in periodic reports  
+This Charter applies to:
 
-## 2.4 Independence
-The Foundation must maintain independence from:
-- Private interests  
-- Commercial entities  
-- Speculative actors  
+The NOORCHAIN Foundation
 
-## 2.5 Decentralization
-Governance evolves toward increasing decentralization while ensuring:
-- Safety  
-- Stability  
-- Non-profit alignment  
+The Multi-sig Committee
 
----
+Curators
 
-# 3. Governance Entities
+Technical contributors
 
-## 3.1 The NOORCHAIN Foundation
-The Foundation:
-- Holds the mission and vision  
-- Oversees governance  
-- Manages the Foundation Allocation (5%)  
-- Supervises Curators and the PoSS ecosystem  
-- Maintains legal compliance  
-- Executes decisions through the Multi-sig Committee  
-- Publishes transparency reports  
+Governance processes and protocol upgrades
 
-## 3.2 The Multi-sig Committee (3/5)
-Defined in C1.
+It forms part of the Genesis Governance Pack (Phase 5).
+
+2. Core Governance Principles
+2.1 Ethical & Mission-Driven Governance
+
+NOORCHAIN is a Swiss ethical blockchain recognizing positive human actions
+through the PoSS mechanism. All governance decisions must:
+
+Protect the social mission
+
+Ensure ethical use of the protocol
+
+Maintain transparency and auditability
+
+Prevent misuse or abuse
+
+Support NGOs, educators, public institutions and communities
+
+2.2 Swiss Legal Light CH Compliance
+
+Governance must strictly respect Swiss Legal Light CH requirements:
+
+No custody of user assets
+
+No financial products or returns
+
+No speculative messaging
+
+Non-profit stewardship of the protocol
+
+Transparent operations and documentation
+
+2.3 Transparency & Accountability
+
+Governance bodies must ensure:
+
+Public documentation
+
+Published decisions
+
+Annual and biannual reporting
+
+Traceability of multi-sig actions
+
+Clear justification of protocol changes
+
+2.4 Independence & Neutrality
+
+The Foundation must remain independent from:
+
+Private interests
+
+Financial actors
+
+Speculative markets
+
+Centralized economic influence
+
+2.5 Secure & Progressive Decentralization
+
+NOORCHAIN governance evolves gradually toward decentralization while preserving:
+
+Protocol safety
+
+Legal compliance
+
+Long-term mission protection
+
+3. Governance Entities
+3.1 The NOORCHAIN Foundation
+
+The Foundation is the primary governance entity.
 
 Responsibilities:
-- Execute approved governance decisions  
-- Manage Foundation on-chain operations  
-- Apply PoSS parameter changes  
-- Manage infrastructure expenses  
-- Ensure compliance  
 
-## 3.3 Curators (Bronze, Silver, Gold)
-Curators validate PoSS signals.
+Uphold mission and vision
 
-They:
-- Are approved by the Foundation  
-- Are public partners (NGOs, schools, associations)  
-- Must follow strict rules  
-- Earn 30% of PoSS rewards  
-- Can be suspended for abuse  
+Oversee protocol governance
 
-## 3.4 Technical Contributors
-Developers may propose:
-- Improvements  
-- Bug fixes  
-- PoSS changes  
-- New modules  
-- Security upgrades  
+Manage the 5% Foundation allocation (non-profit)
 
-They operate under:
-- Open-source guidelines  
-- No ownership of protocol  
-- No financial rights unless voted  
+Supervise Curators and PoSS operations
 
----
+Maintain Legal Light compliance
 
-# 4. Governance Processes
+Publish governance and transparency reports
 
-## 4.1 Proposal Types
+Approve administrative or institutional decisions
 
-### Type A — Administrative
+Delegate technical execution to the Multi-sig Committee
+
+The Foundation cannot custody user assets or engage in financial operations.
+
+3.2 The Multi-sig Committee (3/5)
+
+Execution body of governance decisions.
+
+Responsibilities:
+
+Execute Foundation-approved decisions
+
+Manage on-chain Foundation address (3/5 threshold)
+
+Apply PoSS parameter adjustments
+
+Approve emergency actions
+
+Deploy protocol upgrades
+
+Publish biannual multi-sig reports
+
+The multi-sig cannot modify:
+
+supply
+
+allocation percentages
+
+PoSS 70/30 rule
+
+halving period
+
+Legal Light CH boundaries
+
+3.3 Curators (Bronze, Silver, Gold)
+
+Curators validate PoSS signals and act as trust anchors.
+
+They must:
+
+Follow ethical validation processes
+
+Represent NGOs, schools, associations, institutions
+
+Comply with privacy and ethical rules
+
+Avoid conflicts of interest
+
+Uphold non-financial mission
+
+Curators receive 30% of PoSS rewards, on-chain and protocol-controlled.
+
+3.4 Technical Contributors
+
+Developers contribute voluntarily or via the Development Entity.
+
+They may:
+
+Propose improvements
+
+Submit module updates
+
+Fix vulnerabilities
+
+Suggest PoSS refinements
+
+They do not receive governance power or protocol ownership.
+
+4. Governance Processes
+4.1 Proposal Types
+A — Administrative Proposals
+
 Examples:
-- Partnership additions  
-- Curator onboarding  
-- Branding updates  
-- Documentation updates  
-Approval: **Foundation Board**
 
-### Type B — Technical
+Curator onboarding
+
+Partnerships
+
+Documentation updates
+
+Public communication standards
+
+Approval: Foundation Board
+
+B — Technical Proposals
+
 Examples:
-- Parameter updates (PoSS, limits, halving)  
-- Module upgrades  
-- Security patches  
-Approval: **Technical Review + Multi-sig Committee**
 
-### Type C — Economic
+PoSS parameter changes (limits, weights, base reward)
+
+Module upgrades
+
+Security patches
+
+Validator configuration
+
+Approval:
+
+Technical Review
+
+Multi-sig (3/5)
+
+C — Economic Proposals
+
 Examples:
-- Allocation usage  
-- Grants  
-- Funding audits  
-Approval: **Foundation Board + Multi-sig 3/5**
 
-### Type D — Protocol Evolution
+Grants
+
+Use of Foundation allocation
+
+Audits and compliance budgets
+
+Approval:
+
+Foundation Board (2/3)
+
+Multi-sig (3/5)
+
+D — Protocol Evolution
+
 Examples:
-- Major code changes  
-- Forks  
-- Consensus adjustments  
-Approval: **Multi-sig 3/5 + Public Review**
 
----
+Major upgrades
 
-# 5. Voting Rules
+Consensus changes
 
-## 5.1 Foundation Board Voting
-- Simple majority for administrative actions  
-- 2/3 majority for economic decisions  
-- Unanimous approval for mission changes  
+Fork decisions
 
-## 5.2 Multi-sig Voting
-- 3 signatures required  
-- Signers must publish explanations for major decisions  
+Approval:
 
-## 5.3 Curator Voting (Advisory)
-Curators may vote on:
-- Social priorities  
-- Educational programs  
-- Impact initiatives  
+Public review
 
-Their votes are **advisory**, not binding.
+Multi-sig (3/5)
 
----
+Foundation confirmation
 
-# 6. Transparency Requirements
+5. Voting Rules
+5.1 Foundation Board
+
+Simple majority for administrative actions
+
+2/3 majority for economic actions
+
+Unanimous approval for mission changes
+
+5.2 Multi-sig Committee
+
+Minimum 3 out of 5 signatures required
+
+Signers must provide public justification for important decisions
+
+5.3 Curator Advisory Voting
+
+Curators may vote on social-impact matters.
+Their votes are advisory only.
+
+6. Transparency Requirements
 
 The Foundation must publish:
-- Annual governance report  
-- Biannual multi-sig operation summaries  
-- Public list of Curators  
-- Codebase updates  
-- Changes in PoSS parameters  
-- Any significant governance decision  
 
----
+Annual Governance Report
 
-# 7. Compliance Requirements
+Biannual Multi-sig Operations Report
 
-## 7.1 No Custody
+Public Curator Registry
+
+Protocol upgrade records
+
+PoSS parameter changes
+
+Partnership and institutional updates
+
+All governance actions must remain public and auditable.
+
+7. Compliance Requirements
+7.1 No Custody
+
+The Foundation and governance bodies cannot:
+
+Hold user assets
+
+Recover private keys
+
+Co-manage wallets
+
+Operate custodial services
+
+7.2 No Investment Offering
+
 The Foundation cannot:
-- Hold user assets  
-- Delegate asset management  
-- Interfere with user balances  
 
-## 7.2 No Investment Offering
-The Foundation cannot:
-- Offer returns  
-- Sell tokens as investment products  
-- Guarantee yields  
+Sell tokens as investments
 
-## 7.3 Legal Light CH Conformity
-All governance must follow:
-- FINMA guidance  
-- Swiss non-profit rules  
-- Transparency obligations  
+Promise financial returns
 
----
+Market NUR as an investment product
 
-# 8. Protocol Evolution
+Introduce APR/APY-like features
 
-Upgrades follow this sequence:
-1. Technical Proposal  
-2. Documentation  
-3. Public Review  
-4. Multi-sig Approval (3/5)  
-5. Release Notes  
-6. Deployment  
+7.3 Swiss Legal Light Conformity
 
-For major updates (breaking changes):
-- A public review period of 10–30 days is required  
-- Curators may provide advisory feedback  
+Governance must always comply with:
 
----
+FINMA guidance
 
-# 9. Emergency Procedures
+Swiss non-profit standards
 
-In case of:
-- Security breach  
-- Bug affecting PoSS  
-- Critical failure  
-- Infrastructure compromise  
+Public transparency duties
 
-The Multi-sig may:
-- Pause PoSS  
-- Disable modules  
-- Approve rapid patch  
-- Communicate emergency status  
+Documentation requirements
 
-All actions must be:
-- Documented  
-- Justified  
-- Published to the public  
+8. Protocol Evolution
 
----
+Standard update process:
 
-# 10. Amendments
+Technical Proposal
 
-The Governance Charter may be amended if:
-- Foundation Board approves (2/3)  
-- Multi-sig Committee signs (3/5)  
-- Public notice is provided  
+Documentation
 
----
+Public Review (10–30 days for major updates)
 
-# 11. Adoption
+Multi-sig Approval
 
-This Governance Charter is adopted by the  
-**NOORCHAIN Foundation** as part of Phase 5.
+Release Notes
+
+Deployment & communication
+
+Curators may provide feedback during review.
+
+9. Emergency Procedures
+
+Triggered in case of:
+
+Critical vulnerability
+
+Exploit affecting PoSS
+
+Network instability
+
+Security breach
+
+Infrastructure failure
+
+The Multi-sig Committee may:
+
+Pause PoSS
+
+Disable affected modules
+
+Approve urgent patches
+
+Publish emergency status
+
+All actions must be documented and publicly disclosed.
+
+10. Amendments to This Charter
+
+Amendments require:
+
+Foundation Board approval (2/3)
+
+Multi-sig approval (3/5)
+
+Public notice and updated documentation
+
+Immutable rules (cannot be amended):
+
+Total supply
+
+Allocation percentages
+
+PoSS 70/30 split
+
+8-year halving
+
+Swiss Legal Light CH boundaries
+
+11. Adoption
+
+This Governance Charter is formally adopted by the
+NOORCHAIN Foundation
+as part of Phase 5 — Governance & Legal Completion.
 
 Signatures:
 
-_________________________  
-_________________________  
-_________________________  
+Version 1.1 — Governance & Legal Phase
 
-Version 1.1 — Governance & Legal Phase  
-Prepared for the NOORCHAIN Foundation
+✔ Corrections & Improvements Applied
+
+I corrected and harmonized:
+
+1. Alignment with Genesis Governance
+
+– Added immutable rules
+– Clarified Multi-sig restrictions
+– Unified roles with C1, C3, Compliance, and Economic Model
+
+2. Legal Light CH reinforcement
+
+– Removed ambiguities
+– Added explicit prohibitions
+– Strengthened transparency rules
+
+3. Governance structure consistency
+
+– Consolidated with PoSS logic (70/30, no-custody)
+– Reintroduced public review
+– Clarified advisory nature of Curators
+
+4. Protocol evolution
+
+– Reorganized update sequence
+– Added release & communication duties
+
+5. Emergency handling
+
+– Added auditability and disclosure requirements
+
+6. Formatting and structure
+
+– Fully aligned with the professional style of the other 1.1 documents
