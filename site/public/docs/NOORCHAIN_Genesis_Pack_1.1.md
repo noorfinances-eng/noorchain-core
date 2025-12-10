@@ -463,7 +463,7 @@ Halving — reduction every 8 years
 
 9.3 Contact
 
-Website: https://noorchain.org
+Website: https://noorchain.io
  (placeholder)
-Email: contact@noorchain.org
+Email: contact@noorchain.io
  (placeholder)
