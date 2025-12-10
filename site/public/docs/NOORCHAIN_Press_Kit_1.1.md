@@ -185,10 +185,10 @@ Key Use Cases	Education, NGOs, Municipalities, Culture, Community
 
 NOORCHAIN Foundation
 Public Relations — Communication & Institutional Outreach
-Email: press@noorchain.org
+Email: press@noorchain.io
  (placeholder until Phase 6.6)
 
-Website: https://noorchain.org
+Website: https://noorchain.io
 
 13. Version History
 
