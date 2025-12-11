@@ -24,7 +24,7 @@ export default function Footer() {
         {/* EXTERNAL LINKS */}
         <div className="flex flex-wrap justify-center gap-4 text-gray-700">
           <a
-            href="https://github.com"
+            href="https://github.com/noorfinances-eng/noorchain-core/tree/main/site"
             target="_blank"
             className="hover:text-primary transition"
           >
