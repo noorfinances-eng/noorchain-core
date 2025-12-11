@@ -86,7 +86,7 @@ export default function LegalPage() {
                 href="mailto:contact@noorchain.io"
                 className="text-primary hover:underline"
               >
-                contact@noorchain.org
+                contact@noorchain.io
               </a>
             </p>
           </section>
