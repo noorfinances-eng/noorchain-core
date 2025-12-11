@@ -5,7 +5,7 @@ Document for Institutional Partners & Foundations
 2025
 
 1. Executive Overview
-NOORCHAIN is a Swiss-built blockchain designed to do one thing très clairement:
+NOORCHAIN is a Swiss-built blockchain designed to do one thing :
 recognise, record and protect positive human participation.
 Unlike traditional blockchains, NOORCHAIN:
 •	does not reward capital, staking or speculative behaviour
