@@ -167,7 +167,7 @@ Available in SVG + PNG formats (provided in Brandbook 1.1)
 “NOORCHAIN was created to fill a missing piece in today’s digital world: a trusted infrastructure that recognises human participation rather than financial power.
 Our goal is to offer institutions a transparent, ethical, and durable platform that respects Swiss principles and empowers communities.”
 
-— Walid, Founder of NOORCHAIN
+— The Founder.
 
 11. Fact Sheet (Quick Summary)
 Category	Details
