@@ -83,7 +83,7 @@ export default function LegalPage() {
               For governance, compliance, or administrative matters, please
               contact:{" "}
               <a
-                href="mailto:contact@noorchain.org"
+                href="mailto:contact@noorchain.io"
                 className="text-primary hover:underline"
               >
                 contact@noorchain.org
