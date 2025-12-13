@@ -1,5 +1,3 @@
-CONTENU FINAL — À COLLER TEL QUEL DANS LE REPO
-
 NOORCHAIN — Testnet (Public)
 
 NOORCHAIN is a Swiss social blockchain built on the Proof of Signal Social (PoSS) model.
