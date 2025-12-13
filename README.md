@@ -19,6 +19,28 @@ The NOORCHAIN Core includes:
 
 The network uses a fixed supply model and does not rely on inflationary mining or yield-based incentives.
 
+Testnet Status
+
+NOORCHAIN Core is currently running in a controlled testnet and local development environment.
+
+The testnet is intended for:
+
+• protocol inspection
+• module-level testing
+• governance and PoSS validation
+• institutional and pilot experimentation
+
+At this stage:
+
+• the testnet is not publicly advertised
+• no public RPC endpoints are exposed
+• no public block explorer is provided
+• access is limited to internal testing and selected pilot programs
+
+A public testnet and related endpoints may be exposed at a later stage, once protocol stability and governance parameters are fully validated.
+
+This controlled approach is intentional and aligned with the non-financial, compliance-first positioning of the project.
+
 Build
 
 The node is compiled using Go.
