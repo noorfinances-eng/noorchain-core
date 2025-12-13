@@ -22,8 +22,13 @@ export default function HomePage() {
             </div>
 
             {/* Tagline officielle */}
-            <p className="text-base sm:text-lg md:text-xl text-white/90 mb-4 sm:mb-6 font-medium">
+            <p className="text-base sm:text-lg md:text-xl text-white/90 mb-2 font-medium">
               A Human-Centered Blockchain for Social Signals
+            </p>
+
+            {/* Testnet status — discreet */}
+            <p className="text-xs sm:text-sm text-white/80 mb-4 font-medium">
+              Testnet phase ongoing — controlled, experimental, non-financial.
             </p>
 
             {/* Paragraphe explicatif */}
@@ -53,7 +58,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* SECTION ÉPURÉE — BLANCHE + TITRE + TEXTE (classe et sobre) */}
+      {/* SECTION ÉPURÉE — BLANCHE + TITRE + TEXTE */}
       <section className="container py-12 md:py-20">
         <div className="max-w-3xl">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-4">
