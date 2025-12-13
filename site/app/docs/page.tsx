@@ -136,6 +136,20 @@ export default function DocsPage() {
                   NOORCHAIN Genesis Pack 1.1 (PDF)
                 </a>
               </li>
+
+              {/* >>> ADDED LINK HERE (TESTNET MD) <<< */}
+              <li>
+                <a
+                  href="https://github.com/noorfinances-eng/noorchain-core/blob/main/NOORCHAIN_Testnet_Public_1.1.md"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  NOORCHAIN Testnet (Public 1.1, MD)
+                </a>
+              </li>
+              {/* >>> END ADDITION <<< */}
+
               <li>
                 <a
                   href="/docs/NOORCHAIN_Genesis_Allocation_1.1.pdf"
