@@ -5,19 +5,17 @@ import (
 	"io"
 
 	dbm "github.com/tendermint/tm-db"
-	tmlog "github.com/tendermint/tendermint/libs/log"
 	abci "github.com/tendermint/tendermint/abci/types"
+	tmlog "github.com/tendermint/tendermint/libs/log"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
 	auth "github.com/cosmos/cosmos-sdk/x/auth"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
@@ -28,21 +26,23 @@ import (
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+
+	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
+	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
+
 	staking "github.com/cosmos/cosmos-sdk/x/staking"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
-
 	// Ethermint EVM
-	evmkeeper "github.com/evmos/ethermint/x/evm/keeper"
 	evmmodule "github.com/evmos/ethermint/x/evm"
+	evmkeeper "github.com/evmos/ethermint/x/evm/keeper"
 	evmtypes "github.com/evmos/ethermint/x/evm/types"
 
 	// Ethermint FeeMarket
-	feemarketkeeper "github.com/evmos/ethermint/x/feemarket/keeper"
 	feemarketmodule "github.com/evmos/ethermint/x/feemarket"
+	feemarketkeeper "github.com/evmos/ethermint/x/feemarket/keeper"
 	feemarkettypes "github.com/evmos/ethermint/x/feemarket/types"
 
 	// NOORSIGNAL (PoSS)
@@ -50,6 +50,12 @@ import (
 	noorsignalkeeper "github.com/noorfinances-eng/noorchain-core/x/noorsignal/keeper"
 	noorsignalmodule "github.com/noorfinances-eng/noorchain-core/x/noorsignal"
 	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
+)
+
+const (
+	// Keep transient store names unique (cannot match KV store names).
+	feeMarketTransientKeyName = "feemarket/transient"
+	evmTransientKeyName       = "evm/transient"
 )
 
 // NoorchainApp is the minimal Cosmos SDK application for NOORCHAIN.
@@ -128,10 +134,12 @@ func NewNoorchainApp(
 	// --- Transient store keys ---
 	// Params transient store
 	app.tkeys[paramstypes.TStoreKey] = storetypes.NewTransientStoreKey(paramstypes.TStoreKey)
-	// FeeMarket transient store (uses same name as module store key)
-	app.tkeys["feemarket/transient"] = storetypes.NewTransientStoreKey("feemarket/transient")
-	// EVM transient store
-	app.tkeys["evm/transient"] = storetypes.NewTransientStoreKey("evm/transient")
+
+	// FeeMarket transient store (MUST have unique name, not "feemarket")
+	app.tkeys[feemarkettypes.StoreKey] = storetypes.NewTransientStoreKey(feeMarketTransientKeyName)
+
+	// EVM transient store (MUST have unique name, not "evm")
+	app.tkeys[evmtypes.StoreKey] = storetypes.NewTransientStoreKey(evmTransientKeyName)
 
 	// Mount KV stores
 	for _, key := range app.keys {
@@ -168,6 +176,34 @@ func NewNoorchainApp(
 	// PoSS / NoorSignal subspace (pour les Params PoSS, plus tard)
 	noorsignalSubspace := app.ParamsKeeper.Subspace(noorsignaltypes.ModuleName)
 
+	// ------------------------------------------------------
+	// Module accounts permissions (CRITICAL for staking pools)
+	// Fixes: "bonded_tokens_pool module account has not been set"
+	// ------------------------------------------------------
+	maccPerms := map[string][]string{
+		authtypes.FeeCollectorName: nil,
+
+		// Staking pools (required by x/staking)
+		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
+		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
+
+		// Ethermint modules (safe minimal)
+		evmtypes.ModuleName:      nil,
+		feemarkettypes.ModuleName: nil,
+
+		// Local PoSS module
+		noorsignaltypes.ModuleName: nil,
+
+		// Placeholder gov module address used as authority in this phase
+		govtypes.ModuleName: nil,
+	}
+
+	// Block external sends to module accounts (safe default).
+	blockedAddrs := map[string]bool{}
+	for name := range maccPerms {
+		blockedAddrs[authtypes.NewModuleAddress(name).String()] = true
+	}
+
 	// --- Base Cosmos keepers ---
 
 	// Accounts
@@ -176,7 +212,7 @@ func NewNoorchainApp(
 		app.keys[authtypes.StoreKey],
 		authSubspace,
 		authtypes.ProtoBaseAccount,
-		map[string][]string{},
+		maccPerms,
 		"noorchain", // bech32 prefix / name
 	)
 
@@ -186,7 +222,7 @@ func NewNoorchainApp(
 		app.keys[banktypes.StoreKey],
 		app.AccountKeeper,
 		bankSubspace,
-		map[string]bool{},
+		blockedAddrs,
 	)
 
 	// Staking
@@ -199,7 +235,7 @@ func NewNoorchainApp(
 	)
 
 	// --- Ethermint FeeMarket keeper (avec vrai subspace params) ---
-	feeAuthority := authtypes.NewModuleAddress("gov")
+	feeAuthority := authtypes.NewModuleAddress(govtypes.ModuleName)
 
 	app.FeeMarketKeeper = feemarketkeeper.NewKeeper(
 		app.appCodec,
