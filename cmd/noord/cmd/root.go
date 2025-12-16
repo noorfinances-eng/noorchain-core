@@ -1,0 +1,134 @@
+package cmd
+
+import (
+	"io"
+	"os"
+
+	"github.com/spf13/cobra"
+
+	tmcfg "github.com/tendermint/tendermint/config"
+	tmlog "github.com/tendermint/tendermint/libs/log"
+	dbm "github.com/tendermint/tm-db"
+
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/config"
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdkserver "github.com/cosmos/cosmos-sdk/server"
+	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
+	servertypes "github.com/cosmos/cosmos-sdk/server/types"
+	"github.com/cosmos/cosmos-sdk/types/module"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
+	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/noorfinances-eng/noorchain-core/app"
+)
+
+// EnvPrefix is used by viper/env for server flags.
+const EnvPrefix = "NOORCHAIN"
+
+// MakeEncodingConfig builds a minimal encoding config compatible with init/genesis.
+func MakeEncodingConfig(bm module.BasicManager) (codec.Codec, codectypes.InterfaceRegistry, client.TxConfig, *codec.LegacyAmino) {
+	amino := codec.NewLegacyAmino()
+	interfaceRegistry := codectypes.NewInterfaceRegistry()
+
+	// Register module interfaces + legacy amino.
+	bm.RegisterInterfaces(interfaceRegistry)
+	bm.RegisterLegacyAminoCodec(amino)
+
+	cdc := codec.NewProtoCodec(interfaceRegistry)
+	txCfg := authtx.NewTxConfig(cdc, authtx.DefaultSignModes)
+
+	return cdc, interfaceRegistry, txCfg, amino
+}
+
+// NewRootCmd wires the real Cosmos SDK CLI for NOORCHAIN.
+func NewRootCmd() *cobra.Command {
+	cdc, interfaceRegistry, txCfg, amino := MakeEncodingConfig(app.ModuleBasics)
+	_ = interfaceRegistry
+	_ = amino
+
+	initClientCtx := client.Context{}.
+		WithCodec(cdc).
+		WithInterfaceRegistry(interfaceRegistry).
+		WithTxConfig(txCfg).
+		WithLegacyAmino(amino).
+		WithInput(os.Stdin).
+		WithHomeDir(app.DefaultNodeHome)
+
+	rootCmd := &cobra.Command{
+		Use:   "noord",
+		Short: "NOORCHAIN node daemon (public testnet)",
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			cmd.SetOut(cmd.OutOrStdout())
+			cmd.SetErr(cmd.ErrOrStderr())
+
+			var err error
+			initClientCtx, err = client.ReadPersistentCommandFlags(initClientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			initClientCtx, err = config.ReadFromClientConfig(initClientCtx)
+			if err != nil {
+				return err
+			}
+
+			if err := client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
+				return err
+			}
+
+			// Use Cosmos SDK default server config template/config.
+			return sdkserver.InterceptConfigsPreRunHandler(
+				cmd,
+				serverconfig.DefaultConfigTemplate,
+				serverconfig.DefaultConfig(),
+				tmcfg.DefaultConfig(),
+			)
+		},
+	}
+
+	// --- Minimal commands required for init/start ---
+	rootCmd.AddCommand(
+		genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
+	)
+
+	// Start command (server)
+	creator := appCreator{}
+	sdkserver.AddCommands(
+		rootCmd,
+		sdkserver.NewDefaultStartOptions(creator.newApp, app.DefaultNodeHome),
+		creator.appExport,
+	)
+
+	// Basic flags
+	rootCmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
+
+	// Ensure SDK config is sealed (safe default)
+	cfg := sdk.GetConfig()
+	cfg.Seal()
+
+	return rootCmd
+}
+
+type appCreator struct{}
+
+func (a appCreator) newApp(logger tmlog.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) servertypes.Application {
+	return app.NewApp(logger, db, traceStore, appOpts)
+}
+
+// appExport is not used for this phase (public testnet proof). Keep it safe and explicit.
+func (a appCreator) appExport(
+	logger tmlog.Logger,
+	db dbm.DB,
+	traceStore io.Writer,
+	height int64,
+	forZeroHeight bool,
+	jailAllowedAddrs []string,
+	appOpts servertypes.AppOptions,
+) (servertypes.ExportedApp, error) {
+	return servertypes.ExportedApp{}, nil
+}
