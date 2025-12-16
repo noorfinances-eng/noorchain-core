@@ -24,8 +24,8 @@ import (
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 
-	// ✅ v0.46.11: add-genesis-account is implemented in simapp/simd/cmd
-	simdcmd "github.com/cosmos/cosmos-sdk/simapp/simd/cmd"
+	// IMPORTANT (v0.46): use bank GenesisBalancesIterator{} for gentx/collect-gentxs
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	"github.com/noorfinances-eng/noorchain-core/app"
 )
@@ -48,9 +48,17 @@ func MakeEncodingConfig(bm module.BasicManager) (codec.Codec, codectypes.Interfa
 	return cdc, interfaceRegistry, txCfg, amino
 }
 
-// NewRootCmd wires the Cosmos SDK CLI for NOORCHAIN (init + start minimal).
+// NewRootCmd wires the Cosmos SDK CLI for NOORCHAIN (init + keys + gentx + collect-gentxs + start).
 func NewRootCmd() *cobra.Command {
 	cdc, interfaceRegistry, txCfg, amino := MakeEncodingConfig(app.ModuleBasics)
+
+	// v0.46 wants client.TxEncodingConfig (NOT just client.TxConfig) for genutilcli.GenTxCmd
+	txEncCfg := client.TxEncodingConfig{
+		InterfaceRegistry: interfaceRegistry,
+		Marshaler:         cdc,
+		TxConfig:          txCfg,
+		Amino:             amino,
+	}
 
 	initClientCtx := client.Context{}.
 		WithCodec(cdc).
@@ -63,7 +71,7 @@ func NewRootCmd() *cobra.Command {
 
 	rootCmd := &cobra.Command{
 		Use:   "noord",
-		Short: "NOORCHAIN node daemon (public testnet) — init + start minimal",
+		Short: "NOORCHAIN node daemon (public testnet) — minimal CLI",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			cmd.SetOut(cmd.OutOrStdout())
 			cmd.SetErr(cmd.ErrOrStderr())
@@ -93,22 +101,42 @@ func NewRootCmd() *cobra.Command {
 		},
 	}
 
+	// ---------------------------------------------------------------------
 	// init (writes config/, genesis.json, node keys)
+	// ---------------------------------------------------------------------
 	rootCmd.AddCommand(
 		genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
 	)
 
-	// keys (Cosmos SDK v0.46): use client/keys
+	// ---------------------------------------------------------------------
+	// keys (Cosmos SDK v0.46): enables `noord keys add ...`
+	// ---------------------------------------------------------------------
 	rootCmd.AddCommand(
 		keys.Commands(app.DefaultNodeHome),
 	)
 
-	// ✅ add-genesis-account (Cosmos SDK v0.46.11): simapp/simd/cmd
+	// ---------------------------------------------------------------------
+	// gentx + collect-gentxs (Cosmos SDK v0.46)
+	// NOTE:
+	// - We use banktypes.GenesisBalancesIterator{} (exists in v0.46)
+	// - This makes `noord gentx ...` available at root level (no "genesis" parent)
+	// ---------------------------------------------------------------------
 	rootCmd.AddCommand(
-		simdcmd.AddGenesisAccountCmd(app.DefaultNodeHome),
+		genutilcli.GenTxCmd(
+			app.ModuleBasics,
+			txEncCfg,
+			banktypes.GenesisBalancesIterator{},
+			app.DefaultNodeHome,
+		),
+		genutilcli.CollectGenTxsCmd(
+			banktypes.GenesisBalancesIterator{},
+			app.DefaultNodeHome,
+		),
 	)
 
+	// ---------------------------------------------------------------------
 	// start + server commands (Cosmos SDK v0.46.x signature)
+	// ---------------------------------------------------------------------
 	creator := appCreator{}
 	sdkserver.AddCommands(
 		rootCmd,
