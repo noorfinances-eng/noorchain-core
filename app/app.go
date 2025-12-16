@@ -131,7 +131,7 @@ func NewNoorchainApp(
 	// FeeMarket transient store (uses same name as module store key)
 	app.tkeys["feemarket/transient"] = storetypes.NewTransientStoreKey("feemarket/transient")
 	// EVM transient store
-	app.tkeys[evmtypes.StoreKey] = storetypes.NewTransientStoreKey(evmtypes.StoreKey)
+	app.tkeys["evm/transient"] = storetypes.NewTransientStoreKey("evm/transient")
 
 	// Mount KV stores
 	for _, key := range app.keys {
