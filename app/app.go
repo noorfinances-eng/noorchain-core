@@ -161,8 +161,6 @@ func NewNoorchainApp(
 	// ------------------------------------------------------
 	// CRITICAL (Cosmos SDK v0.46):
 	// BaseApp needs a ParamStore configured for consensus params
-	// otherwise start/init panics with:
-	// "cannot store consensus params with no params store set"
 	// ------------------------------------------------------
 	consensusParamsSubspace := app.ParamsKeeper.Subspace(baseapp.Paramspace).
 		WithKeyTable(paramstypes.ConsensusParamsKeyTable())
@@ -188,7 +186,6 @@ func NewNoorchainApp(
 
 	// ------------------------------------------------------
 	// Module accounts permissions (CRITICAL for staking pools)
-	// Fixes: "bonded_tokens_pool module account has not been set"
 	// ------------------------------------------------------
 	maccPerms := map[string][]string{
 		authtypes.FeeCollectorName: nil,
@@ -244,7 +241,7 @@ func NewNoorchainApp(
 		stakingSubspace,
 	)
 
-	// --- Ethermint FeeMarket keeper (avec vrai subspace params) ---
+	// --- Ethermint FeeMarket keeper ---
 	feeAuthority := authtypes.NewModuleAddress(govtypes.ModuleName)
 
 	app.FeeMarketKeeper = feemarketkeeper.NewKeeper(
@@ -255,7 +252,7 @@ func NewNoorchainApp(
 		feemarketSubspace,
 	)
 
-	// --- EVM Keeper (sans precompiles custom pour l’instant) ---
+	// --- EVM Keeper ---
 	evmAuthority := authtypes.NewModuleAddress(evmtypes.ModuleName)
 
 	evmKeeper := evmkeeper.NewKeeper(
@@ -319,13 +316,12 @@ func NewNoorchainApp(
 		noorsignaltypes.ModuleName,
 	)
 
+	// Register Msg services + gRPC
 	app.mm.RegisterServices(
 		module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter()),
 	)
 
-	// ------------------------------------------------------
 	// Legacy router — enable PoSS MsgCreateSignal
-	// ------------------------------------------------------
 	app.Router().
 		AddRoute(
 			sdk.NewRoute(
@@ -334,12 +330,12 @@ func NewNoorchainApp(
 			),
 		)
 
-	// 🔗 ABCI handlers
+	// ABCI handlers
 	app.SetInitChainer(app.InitChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
 
-	// 🔗 AnteHandler (chaîne EVM/cosmos câblée dans ante.go)
+	// AnteHandler (EVM/cosmos)
 	app.SetupAnteHandler()
 
 	if loadLatest {
@@ -398,6 +394,13 @@ type EncodingConfig struct {
 func MakeEncodingConfig() EncodingConfig {
 	amino := codec.NewLegacyAmino()
 	interfaceRegistry := codectypes.NewInterfaceRegistry()
+
+	// IMPORTANT:
+	// Register all module interfaces BEFORE the app registers services.
+	// This prevents: "type_url /cosmos.bank.v1beta1.MsgSend has not been registered yet"
+	ModuleBasics.RegisterInterfaces(interfaceRegistry)
+	ModuleBasics.RegisterLegacyAminoCodec(amino)
+
 	cdc := codec.NewProtoCodec(interfaceRegistry)
 	txCfg := authtx.NewTxConfig(cdc, authtx.DefaultSignModes)
 
