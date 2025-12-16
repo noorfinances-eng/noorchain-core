@@ -21,8 +21,6 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-
-	authcli "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 
@@ -98,15 +96,14 @@ func NewRootCmd() *cobra.Command {
 	)
 
 	// keys (Cosmos SDK v0.46): use client/keys
-	// This enables: `noord keys add ...`
 	rootCmd.AddCommand(
 		keys.Commands(app.DefaultNodeHome),
 	)
 
-	// add-genesis-account (Cosmos SDK v0.46): from x/auth/client/cli
-	// Enables: `noord add-genesis-account <key_or_address> <coins>`
+	// add-genesis-account (Cosmos SDK v0.46): from genutil CLI
+	// NOTE: This cmd reads/writes the genesis file directly.
 	rootCmd.AddCommand(
-		authcli.AddGenesisAccountCmd(app.DefaultNodeHome),
+		genutilcli.AddGenesisAccountCmd(app.DefaultNodeHome),
 	)
 
 	// start + server commands (Cosmos SDK v0.46.x signature)
