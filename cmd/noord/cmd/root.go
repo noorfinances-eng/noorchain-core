@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"io"
 	"os"
 
@@ -22,12 +21,8 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
 	"github.com/noorfinances-eng/noorchain-core/app"
 )
@@ -50,54 +45,9 @@ func MakeEncodingConfig(bm module.BasicManager) (codec.Codec, codectypes.Interfa
 	return cdc, interfaceRegistry, txCfg, amino
 }
 
-// -----------------------------------------------------------------------------
-// GenesisBalancesIterator (Cosmos SDK v0.46)
-// Required by: gentx / collect-gentxs commands.
-// -----------------------------------------------------------------------------
-
-type noorGenesisBalancesIterator struct{}
-
-func (noorGenesisBalancesIterator) IterateGenesisBalances(
-	cdc codec.JSONCodec,
-	appState map[string]json.RawMessage,
-	cb func(addr sdk.AccAddress, coins sdk.Coins) (stop bool),
-) error {
-	raw, ok := appState[banktypes.ModuleName]
-	if !ok || len(raw) == 0 {
-		return nil
-	}
-
-	var bankGen banktypes.GenesisState
-	if err := cdc.UnmarshalJSON(raw, &bankGen); err != nil {
-		return err
-	}
-
-	for _, b := range bankGen.Balances {
-		addr, err := sdk.AccAddressFromBech32(b.Address)
-		if err != nil {
-			// ignore invalid bech32 in genesis to stay robust
-			continue
-		}
-		if cb(addr, b.Coins) {
-			break
-		}
-	}
-	return nil
-}
-
-// NewRootCmd wires the Cosmos SDK CLI for NOORCHAIN (init + start + genesis tooling).
+// NewRootCmd wires the Cosmos SDK CLI for NOORCHAIN (init + start minimal).
 func NewRootCmd() *cobra.Command {
 	cdc, interfaceRegistry, txCfg, amino := MakeEncodingConfig(app.ModuleBasics)
-
-	// v0.46 expects this struct for genutil commands
-	txEncCfg := client.TxEncodingConfig{
-		InterfaceRegistry: interfaceRegistry,
-		Marshaler:         cdc,
-		TxConfig:          txCfg,
-		Amino:             amino,
-	}
-
-	genBalIterator := noorGenesisBalancesIterator{}
 
 	initClientCtx := client.Context{}.
 		WithCodec(cdc).
@@ -110,7 +60,7 @@ func NewRootCmd() *cobra.Command {
 
 	rootCmd := &cobra.Command{
 		Use:   "noord",
-		Short: "NOORCHAIN node daemon (public testnet) — init/start + genesis tools (SDK v0.46)",
+		Short: "NOORCHAIN node daemon (public testnet) — init + start minimal",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			cmd.SetOut(cmd.OutOrStdout())
 			cmd.SetErr(cmd.ErrOrStderr())
@@ -140,25 +90,15 @@ func NewRootCmd() *cobra.Command {
 		},
 	}
 
-	// -------------------
-	// Core CLI commands
-	// -------------------
-
 	// init (writes config/, genesis.json, node keys)
 	rootCmd.AddCommand(
 		genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
 	)
 
-	// keys (enables: `noord keys add ...`)
+	// keys (Cosmos SDK v0.46): use client/keys
+	// This enables: `noord keys add ...`
 	rootCmd.AddCommand(
 		keys.Commands(app.DefaultNodeHome),
-	)
-
-	// add-genesis-account / gentx / collect-gentxs (SDK v0.46 needs a balances iterator)
-	rootCmd.AddCommand(
-		genutilcli.AddGenesisAccountCmd(app.DefaultNodeHome),
-		genutilcli.GenTxCmd(app.ModuleBasics, txEncCfg, genBalIterator, app.DefaultNodeHome),
-		genutilcli.CollectGenTxsCmd(app.ModuleBasics, genBalIterator, app.DefaultNodeHome),
 	)
 
 	// start + server commands (Cosmos SDK v0.46.x signature)
@@ -206,12 +146,5 @@ func (a appCreator) appExport(
 	jailAllowedAddrs []string,
 	appOpts servertypes.AppOptions,
 ) (servertypes.ExportedApp, error) {
-	// Minimal safe export (unused here)
-	return servertypes.ExportedApp{
-		AppState: nil,
-		Height:  height,
-	}, nil
+	return servertypes.ExportedApp{}, nil
 }
-
-// Ensure we satisfy genutiltypes.GenesisBalancesIterator at compile-time.
-var _ genutiltypes.GenesisBalancesIterator = noorGenesisBalancesIterator{}
