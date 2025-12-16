@@ -35,6 +35,9 @@ import (
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	// ✅ CRITICAL: genutil must be in ModuleManager so gen_txs are executed at InitGenesis
+	genutil "github.com/cosmos/cosmos-sdk/x/genutil"
+
 	// Ethermint EVM
 	evmmodule "github.com/evmos/ethermint/x/evm"
 	evmkeeper "github.com/evmos/ethermint/x/evm/keeper"
@@ -48,7 +51,6 @@ import (
 	// NOORSIGNAL (PoSS)
 	noorsignal "github.com/noorfinances-eng/noorchain-core/x/noorsignal"
 	noorsignalkeeper "github.com/noorfinances-eng/noorchain-core/x/noorsignal/keeper"
-	noorsignalmodule "github.com/noorfinances-eng/noorchain-core/x/noorsignal"
 	noorsignaltypes "github.com/noorfinances-eng/noorchain-core/x/noorsignal/types"
 )
 
@@ -292,9 +294,16 @@ func NewNoorchainApp(
 		feemarketSubspace,
 	)
 
-	noorsignalAppModule := noorsignalmodule.NewAppModule(
+	noorsignalAppModule := noorsignal.NewAppModule(
 		app.appCodec,
 		app.NoorSignalKeeper,
+	)
+
+	// ✅ CRITICAL: genutil AppModule executes gen_txs (gentx) at InitGenesis
+	genutilAppModule := genutil.NewAppModule(
+		app.AccountKeeper,
+		app.StakingKeeper,
+		app.BaseApp.DeliverTx,
 	)
 
 	// --- Module manager ---
@@ -302,6 +311,10 @@ func NewNoorchainApp(
 		auth.NewAppModule(app.appCodec, app.AccountKeeper, nil),
 		bank.NewAppModule(app.appCodec, app.BankKeeper, app.AccountKeeper),
 		staking.NewAppModule(app.appCodec, app.StakingKeeper, app.AccountKeeper, app.BankKeeper),
+
+		// ✅ add genutil (this is what you were missing)
+		genutilAppModule,
+
 		evmAppModule,
 		feemarketAppModule,
 		noorsignalAppModule,
@@ -311,6 +324,10 @@ func NewNoorchainApp(
 		authtypes.ModuleName,
 		banktypes.ModuleName,
 		stakingtypes.ModuleName,
+
+		// ✅ genutil must run after staking so it can create the validator
+		genutil.ModuleName,
+
 		evmtypes.ModuleName,
 		feemarkettypes.ModuleName,
 		noorsignaltypes.ModuleName,
