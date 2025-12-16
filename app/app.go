@@ -129,7 +129,7 @@ func NewNoorchainApp(
 	// Params transient store
 	app.tkeys[paramstypes.TStoreKey] = storetypes.NewTransientStoreKey(paramstypes.TStoreKey)
 	// FeeMarket transient store (uses same name as module store key)
-	app.tkeys[feemarkettypes.StoreKey] = storetypes.NewTransientStoreKey(feemarkettypes.StoreKey)
+	app.tkeys["feemarket/transient"] = storetypes.NewTransientStoreKey("feemarket/transient")
 	// EVM transient store
 	app.tkeys[evmtypes.StoreKey] = storetypes.NewTransientStoreKey(evmtypes.StoreKey)
 
