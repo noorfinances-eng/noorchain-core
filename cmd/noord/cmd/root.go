@@ -90,13 +90,22 @@ func NewRootCmd() *cobra.Command {
 		},
 	}
 
-	// init (writes config/, genesis.json, node keys)
+	// --------------------------------------------
+	// Genesis / genutil commands (CRITICAL)
+	// Enables:
+	// - add-genesis-account
+	// - gentx
+	// - collect-gentxs
+	// --------------------------------------------
 	rootCmd.AddCommand(
 		genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
+		genutilcli.CollectGenTxsCmd(app.ModuleBasics, app.DefaultNodeHome),
+		genutilcli.GenTxCmd(app.ModuleBasics, app.DefaultNodeHome),
+		genutilcli.AddGenesisAccountCmd(app.DefaultNodeHome),
 	)
 
 	// keys (Cosmos SDK v0.46): use client/keys
-	// This enables: `noord keys add ...`
+	// Enables: `noord keys add ...`
 	rootCmd.AddCommand(
 		keys.Commands(app.DefaultNodeHome),
 	)
