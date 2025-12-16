@@ -27,6 +27,9 @@ import (
 	// v0.46: iterator for balances used by gentx/collect-gentxs
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
+	// v0.46: add-genesis-account lives here (simd)
+	simdcmd "github.com/cosmos/cosmos-sdk/simapp/simd/cmd"
+
 	"github.com/noorfinances-eng/noorchain-core/app"
 )
 
@@ -48,7 +51,7 @@ func MakeEncodingConfig(bm module.BasicManager) (codec.Codec, codectypes.Interfa
 	return cdc, interfaceRegistry, txCfg, amino
 }
 
-// NewRootCmd wires the Cosmos SDK CLI for NOORCHAIN (init + keys + gentx + collect-gentxs + start).
+// NewRootCmd wires the Cosmos SDK CLI for NOORCHAIN (init + keys + add-genesis-account + gentx + collect-gentxs + start).
 func NewRootCmd() *cobra.Command {
 	cdc, interfaceRegistry, txCfg, amino := MakeEncodingConfig(app.ModuleBasics)
 
@@ -103,8 +106,12 @@ func NewRootCmd() *cobra.Command {
 		keys.Commands(app.DefaultNodeHome),
 	)
 
+	// add-genesis-account (Cosmos SDK v0.46): provided by simd command package
+	rootCmd.AddCommand(
+		simdcmd.AddGenesisAccountCmd(app.DefaultNodeHome),
+	)
+
 	// gentx + collect-gentxs (Cosmos SDK v0.46)
-	// IMPORTANT: pass txCfg directly (v0.46 has no client.TxEncodingConfig type)
 	rootCmd.AddCommand(
 		genutilcli.GenTxCmd(
 			app.ModuleBasics,
