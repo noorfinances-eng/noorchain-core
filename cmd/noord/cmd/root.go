@@ -13,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/config"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
@@ -20,7 +21,6 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 
@@ -93,7 +93,12 @@ func NewRootCmd() *cobra.Command {
 	// init (writes config/, genesis.json, node keys)
 	rootCmd.AddCommand(
 		genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
-		authcmd.GetKeyCommands(), // ✅ adds `noord keys ...`
+	)
+
+	// keys (Cosmos SDK v0.46): use client/keys
+	// This enables: `noord keys add ...`
+	rootCmd.AddCommand(
+		keys.Commands(app.DefaultNodeHome),
 	)
 
 	// start + server commands (Cosmos SDK v0.46.x signature)
