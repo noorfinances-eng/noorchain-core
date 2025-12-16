@@ -24,7 +24,7 @@ import (
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 
-	// IMPORTANT (v0.46): use bank GenesisBalancesIterator{} for gentx/collect-gentxs
+	// v0.46: iterator for balances used by gentx/collect-gentxs
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	"github.com/noorfinances-eng/noorchain-core/app"
@@ -51,14 +51,6 @@ func MakeEncodingConfig(bm module.BasicManager) (codec.Codec, codectypes.Interfa
 // NewRootCmd wires the Cosmos SDK CLI for NOORCHAIN (init + keys + gentx + collect-gentxs + start).
 func NewRootCmd() *cobra.Command {
 	cdc, interfaceRegistry, txCfg, amino := MakeEncodingConfig(app.ModuleBasics)
-
-	// v0.46 wants client.TxEncodingConfig (NOT just client.TxConfig) for genutilcli.GenTxCmd
-	txEncCfg := client.TxEncodingConfig{
-		InterfaceRegistry: interfaceRegistry,
-		Marshaler:         cdc,
-		TxConfig:          txCfg,
-		Amino:             amino,
-	}
 
 	initClientCtx := client.Context{}.
 		WithCodec(cdc).
@@ -101,30 +93,22 @@ func NewRootCmd() *cobra.Command {
 		},
 	}
 
-	// ---------------------------------------------------------------------
 	// init (writes config/, genesis.json, node keys)
-	// ---------------------------------------------------------------------
 	rootCmd.AddCommand(
 		genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
 	)
 
-	// ---------------------------------------------------------------------
 	// keys (Cosmos SDK v0.46): enables `noord keys add ...`
-	// ---------------------------------------------------------------------
 	rootCmd.AddCommand(
 		keys.Commands(app.DefaultNodeHome),
 	)
 
-	// ---------------------------------------------------------------------
 	// gentx + collect-gentxs (Cosmos SDK v0.46)
-	// NOTE:
-	// - We use banktypes.GenesisBalancesIterator{} (exists in v0.46)
-	// - This makes `noord gentx ...` available at root level (no "genesis" parent)
-	// ---------------------------------------------------------------------
+	// IMPORTANT: pass txCfg directly (v0.46 has no client.TxEncodingConfig type)
 	rootCmd.AddCommand(
 		genutilcli.GenTxCmd(
 			app.ModuleBasics,
-			txEncCfg,
+			txCfg,
 			banktypes.GenesisBalancesIterator{},
 			app.DefaultNodeHome,
 		),
@@ -134,9 +118,7 @@ func NewRootCmd() *cobra.Command {
 		),
 	)
 
-	// ---------------------------------------------------------------------
 	// start + server commands (Cosmos SDK v0.46.x signature)
-	// ---------------------------------------------------------------------
 	creator := appCreator{}
 	sdkserver.AddCommands(
 		rootCmd,
