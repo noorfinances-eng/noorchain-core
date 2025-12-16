@@ -14,10 +14,10 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/noorfinances-eng/noorchain-core/app"
 )
@@ -50,7 +50,8 @@ func NewRootCmd() *cobra.Command {
 		WithTxConfig(txCfg).
 		WithLegacyAmino(amino).
 		WithInput(os.Stdin).
-		WithHomeDir(app.DefaultNodeHome)
+		WithHomeDir(app.DefaultNodeHome).
+		WithViper(EnvPrefix) // CRITICAL: avoid nil viper in ReadFromClientConfig
 
 	rootCmd := &cobra.Command{
 		Use:   "noord",
