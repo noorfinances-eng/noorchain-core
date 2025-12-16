@@ -9,8 +9,10 @@ import (
 // SetupAnteHandler configure le vrai AnteHandler Ethermint (EVM + Cosmos)
 // pour NoorchainApp, en utilisant les keepers déjà initialisés dans app.go.
 //
-// Si quelque chose d’important manque (txConfig ou EvmKeeper), on tombe
-// proprement sur un ante handler NO-OP pour ne jamais casser la compilation.
+// IMPORTANT (v0.46 + Ethermint v0.22):
+// Pendant InitGenesis -> DeliverGenTxs, le ctx utilisé par DeliverTx peut ne pas porter
+// MinGasPrices correctement. On injecte donc systématiquement app.minGasPricesDec dans ctx
+// avant d'exécuter l'AnteHandler Ethermint, pour éviter le panic dans MinGasPriceDecorator.
 func (app *NoorchainApp) SetupAnteHandler() {
 	if app == nil {
 		return
@@ -24,35 +26,38 @@ func (app *NoorchainApp) SetupAnteHandler() {
 		return
 	}
 
-	// Options Ethermint 0.22.0
 	options := ethermintante.HandlerOptions{
 		AccountKeeper:   app.AccountKeeper,
 		BankKeeper:      app.BankKeeper,
-		IBCKeeper:       nil, // Pas d’IBC pour l’instant
+		IBCKeeper:       nil,
 		FeeMarketKeeper: app.FeeMarketKeeper,
 		EvmKeeper:       app.EvmKeeper,
-		FeegrantKeeper:  nil, // Pas de feegrant au début
+		FeegrantKeeper:  nil,
 
 		SignModeHandler: app.txConfig.SignModeHandler(),
 		SigGasConsumer:  ethermintante.DefaultSigVerificationGasConsumer,
 
-		// 0 = pas de hard cap custom sur le gas demandé
 		MaxTxGasWanted: 0,
 
-		// Pas encore de logique spéciale ici
 		ExtensionOptionChecker: nil,
 		TxFeeChecker:           nil,
 
-		// On ne désactive aucun type de Msg authz pour l’instant
 		DisabledAuthzMsgs: []string{},
 	}
 
-	anteHandler, err := ethermintante.NewAnteHandler(options)
+	innerAnte, err := ethermintante.NewAnteHandler(options)
 	if err != nil {
-		// Si la config est invalide, on panique au démarrage plutôt
-		// que d’avoir un noeud incohérent.
 		panic(err)
 	}
 
-	app.SetAnteHandler(anteHandler)
+	// ✅ Critical wrapper: always inject min gas prices into ctx before running Ethermint ante.
+	wrappedAnte := func(ctx sdk.Context, tx sdk.Tx, simulate bool) (sdk.Context, error) {
+		// Ensure ctx has proper MinGasPrices (also covers DeliverGenTxs at height=0).
+		if app.minGasPricesDec != nil && len(app.minGasPricesDec) > 0 {
+			ctx = ctx.WithMinGasPrices(app.minGasPricesDec)
+		}
+		return innerAnte(ctx, tx, simulate)
+	}
+
+	app.SetAnteHandler(wrappedAnte)
 }

@@ -22,38 +22,29 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
-	// IMPORTANT: register standard SDK + crypto interfaces (fix keyring decode/migration issues)
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/std"
 
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 
-	// v0.46: iterator for balances used by gentx/collect-gentxs
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-
-	// ✅ v0.46: AddGenesisAccountCmd exists here (simd)
 	simdcmd "github.com/cosmos/cosmos-sdk/simapp/simd/cmd"
 
 	"github.com/noorfinances-eng/noorchain-core/app"
 )
 
-// EnvPrefix is used by viper/env for server flags.
 const EnvPrefix = "NOORCHAIN"
 
-// MakeEncodingConfig builds an encoding config compatible with v0.46 CLI, keyring, and msg services.
 func MakeEncodingConfig(bm module.BasicManager) (codec.Codec, codectypes.InterfaceRegistry, client.TxConfig, *codec.LegacyAmino) {
 	amino := codec.NewLegacyAmino()
 	interfaceRegistry := codectypes.NewInterfaceRegistry()
 
-	// 1) Register SDK standard interfaces (Msg, Tx, crypto pubkeys, etc.)
 	std.RegisterLegacyAminoCodec(amino)
 	std.RegisterInterfaces(interfaceRegistry)
 
-	// 2) Ensure crypto interfaces are registered (secp256k1 pubkey decoding in keyring)
 	cryptocodec.RegisterInterfaces(interfaceRegistry)
 
-	// 3) Register module interfaces + legacy amino from all modules you include
 	bm.RegisterInterfaces(interfaceRegistry)
 	bm.RegisterLegacyAminoCodec(amino)
 
@@ -63,7 +54,6 @@ func MakeEncodingConfig(bm module.BasicManager) (codec.Codec, codectypes.Interfa
 	return cdc, interfaceRegistry, txCfg, amino
 }
 
-// NewRootCmd wires the Cosmos SDK CLI for NOORCHAIN (init + keys + gentx + collect-gentxs + start).
 func NewRootCmd() *cobra.Command {
 	cdc, interfaceRegistry, txCfg, amino := MakeEncodingConfig(app.ModuleBasics)
 
@@ -98,7 +88,6 @@ func NewRootCmd() *cobra.Command {
 				return err
 			}
 
-			// Cosmos SDK default server config
 			return sdkserver.InterceptConfigsPreRunHandler(
 				cmd,
 				serverconfig.DefaultConfigTemplate,
@@ -108,23 +97,18 @@ func NewRootCmd() *cobra.Command {
 		},
 	}
 
-	// init (writes config/, genesis.json, node keys)
 	rootCmd.AddCommand(
 		genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
 	)
 
-	// keys (Cosmos SDK v0.46): enables `noord keys ...`
 	rootCmd.AddCommand(
 		keys.Commands(app.DefaultNodeHome),
 	)
 
-	// ✅ add-genesis-account
 	rootCmd.AddCommand(
 		simdcmd.AddGenesisAccountCmd(app.DefaultNodeHome),
 	)
 
-	// gentx + collect-gentxs (Cosmos SDK v0.46)
-	// IMPORTANT: pass txCfg directly (v0.46 has no client.TxEncodingConfig type)
 	rootCmd.AddCommand(
 		genutilcli.GenTxCmd(
 			app.ModuleBasics,
@@ -138,7 +122,6 @@ func NewRootCmd() *cobra.Command {
 		),
 	)
 
-	// start + server commands (Cosmos SDK v0.46.x signature)
 	creator := appCreator{}
 	sdkserver.AddCommands(
 		rootCmd,
@@ -148,19 +131,15 @@ func NewRootCmd() *cobra.Command {
 		addModuleInitFlags,
 	)
 
-	// Basic flags
 	rootCmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 
-	// Seal SDK config (safe default)
 	cfg := sdk.GetConfig()
 	cfg.Seal()
 
 	return rootCmd
 }
 
-func addModuleInitFlags(startCmd *cobra.Command) {
-	// Keep empty for Phase 8.A minimal
-}
+func addModuleInitFlags(startCmd *cobra.Command) {}
 
 type appCreator struct{}
 
@@ -173,7 +152,6 @@ func (a appCreator) newApp(
 	return app.NewApp(logger, db, traceStore, appOpts)
 }
 
-// appExport keeps command compatibility; not used in Phase 8.A.
 func (a appCreator) appExport(
 	logger tmlog.Logger,
 	db dbm.DB,
