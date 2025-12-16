@@ -94,6 +94,7 @@ func NewRootCmd() *cobra.Command {
 	// init (writes config/, genesis.json, node keys)
 	rootCmd.AddCommand(
 		genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
+		authcmd.GetKeyCommands(),
 	)
 
 	// start + server commands (Cosmos SDK v0.46.x signature)
