@@ -1,11 +1,14 @@
 package cmd
 
 import (
+	"io"
 	"os"
 
 	"github.com/spf13/cobra"
 
 	tmcfg "github.com/tendermint/tendermint/config"
+	tmlog "github.com/tendermint/tendermint/libs/log"
+	dbm "github.com/tendermint/tm-db"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/config"
@@ -14,6 +17,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
+	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
@@ -40,7 +44,7 @@ func MakeEncodingConfig(bm module.BasicManager) (codec.Codec, codectypes.Interfa
 	return cdc, interfaceRegistry, txCfg, amino
 }
 
-// NewRootCmd wires a minimal Cosmos SDK CLI for NOORCHAIN (init only).
+// NewRootCmd wires the Cosmos SDK CLI for NOORCHAIN (init + start minimal).
 func NewRootCmd() *cobra.Command {
 	cdc, interfaceRegistry, txCfg, amino := MakeEncodingConfig(app.ModuleBasics)
 
@@ -51,11 +55,11 @@ func NewRootCmd() *cobra.Command {
 		WithLegacyAmino(amino).
 		WithInput(os.Stdin).
 		WithHomeDir(app.DefaultNodeHome).
-		WithViper(EnvPrefix) // CRITICAL: avoid nil viper in ReadFromClientConfig
+		WithViper(EnvPrefix)
 
 	rootCmd := &cobra.Command{
 		Use:   "noord",
-		Short: "NOORCHAIN node daemon (public testnet) — CLI minimal (init)",
+		Short: "NOORCHAIN node daemon (public testnet) — init + start minimal",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			cmd.SetOut(cmd.OutOrStdout())
 			cmd.SetErr(cmd.ErrOrStderr())
@@ -75,7 +79,7 @@ func NewRootCmd() *cobra.Command {
 				return err
 			}
 
-			// Cosmos SDK default server config (no start wiring in Phase 8.A)
+			// Cosmos SDK default server config
 			return sdkserver.InterceptConfigsPreRunHandler(
 				cmd,
 				serverconfig.DefaultConfigTemplate,
@@ -85,9 +89,19 @@ func NewRootCmd() *cobra.Command {
 		},
 	}
 
-	// Minimal command required now: init (writes config/, genesis.json, node keys).
+	// init (writes config/, genesis.json, node keys)
 	rootCmd.AddCommand(
 		genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
+	)
+
+	// start + server commands (Cosmos SDK v0.46.x signature)
+	creator := appCreator{}
+	sdkserver.AddCommands(
+		rootCmd,
+		app.DefaultNodeHome,
+		creator.newApp,
+		creator.appExport,
+		addModuleInitFlags,
 	)
 
 	// Basic flags
@@ -98,4 +112,32 @@ func NewRootCmd() *cobra.Command {
 	cfg.Seal()
 
 	return rootCmd
+}
+
+func addModuleInitFlags(startCmd *cobra.Command) {
+	// Keep empty for Phase 8.A minimal
+}
+
+type appCreator struct{}
+
+func (a appCreator) newApp(
+	logger tmlog.Logger,
+	db dbm.DB,
+	traceStore io.Writer,
+	appOpts servertypes.AppOptions,
+) servertypes.Application {
+	return app.NewApp(logger, db, traceStore, appOpts)
+}
+
+// appExport keeps command compatibility; not used in Phase 8.A.
+func (a appCreator) appExport(
+	logger tmlog.Logger,
+	db dbm.DB,
+	traceStore io.Writer,
+	height int64,
+	forZeroHeight bool,
+	jailAllowedAddrs []string,
+	appOpts servertypes.AppOptions,
+) (servertypes.ExportedApp, error) {
+	return servertypes.ExportedApp{}, nil
 }
