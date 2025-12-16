@@ -24,6 +24,8 @@ import (
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 
 	"github.com/noorfinances-eng/noorchain-core/app"
+	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
+
 )
 
 // EnvPrefix is used by viper/env for server flags.
