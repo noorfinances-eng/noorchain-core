@@ -20,12 +20,11 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 
 	"github.com/noorfinances-eng/noorchain-core/app"
-	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
-
 )
 
 // EnvPrefix is used by viper/env for server flags.
@@ -94,7 +93,8 @@ func NewRootCmd() *cobra.Command {
 	// init (writes config/, genesis.json, node keys)
 	rootCmd.AddCommand(
 		genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
-		)
+		authcmd.GetKeyCommands(), // ✅ adds `noord keys ...`
+	)
 
 	// start + server commands (Cosmos SDK v0.46.x signature)
 	creator := appCreator{}
