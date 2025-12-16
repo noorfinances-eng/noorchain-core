@@ -13,3 +13,4 @@ data-testnet/
 
 # Logs
 *.log
+.noor-public-testnet/
