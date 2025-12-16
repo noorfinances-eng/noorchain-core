@@ -24,6 +24,9 @@ import (
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 
+	// ✅ v0.46.11: add-genesis-account is implemented in simapp/simd/cmd
+	simdcmd "github.com/cosmos/cosmos-sdk/simapp/simd/cmd"
+
 	"github.com/noorfinances-eng/noorchain-core/app"
 )
 
@@ -100,10 +103,9 @@ func NewRootCmd() *cobra.Command {
 		keys.Commands(app.DefaultNodeHome),
 	)
 
-	// add-genesis-account (Cosmos SDK v0.46): from genutil CLI
-	// NOTE: This cmd reads/writes the genesis file directly.
+	// ✅ add-genesis-account (Cosmos SDK v0.46.11): simapp/simd/cmd
 	rootCmd.AddCommand(
-		genutilcli.AddGenesisAccountCmd(app.DefaultNodeHome),
+		simdcmd.AddGenesisAccountCmd(app.DefaultNodeHome),
 	)
 
 	// start + server commands (Cosmos SDK v0.46.x signature)
