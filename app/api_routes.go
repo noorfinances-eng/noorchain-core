@@ -3,7 +3,7 @@ package app
 import (
 	"github.com/cosmos/cosmos-sdk/server/api"
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
-	tmservice "github.com/cosmos/cosmos-sdk/server/grpc/tmservice"
+	"google.golang.org/grpc"
 )
 
 // RegisterAPIRoutes is required by the Cosmos SDK server interface.
@@ -18,7 +18,7 @@ func (app *NoorchainApp) RegisterAPIRoutes(
 // RegisterTendermintService is required by Cosmos SDK v0.46.
 // Phase 8.A: minimal implementation (no gRPC exposure).
 func (app *NoorchainApp) RegisterTendermintService(
-	_ tmservice.ServiceServer,
+	_ *grpc.Server,
 ) {
 	// no-op
 }
