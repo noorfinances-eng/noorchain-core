@@ -16,8 +16,16 @@ func (app *NoorchainApp) RegisterAPIRoutes(
 }
 
 // RegisterTendermintService is required by Cosmos SDK v0.46.
-// IMPORTANT: signature uses client.Context (NOT grpc).
+// Signature uses client.Context.
 func (app *NoorchainApp) RegisterTendermintService(
+	_ client.Context,
+) {
+	// no-op
+}
+
+// RegisterTxService is required by Cosmos SDK v0.46.
+// Phase 8.A: minimal, do not expose tx service.
+func (app *NoorchainApp) RegisterTxService(
 	_ client.Context,
 ) {
 	// no-op
