@@ -158,6 +158,16 @@ func NewNoorchainApp(
 		app.tkeys[paramstypes.TStoreKey],
 	)
 
+	// ------------------------------------------------------
+	// CRITICAL (Cosmos SDK v0.46):
+	// BaseApp needs a ParamStore configured for consensus params
+	// otherwise start/init panics with:
+	// "cannot store consensus params with no params store set"
+	// ------------------------------------------------------
+	consensusParamsSubspace := app.ParamsKeeper.Subspace(baseapp.Paramspace).
+		WithKeyTable(paramstypes.ConsensusParamsKeyTable())
+	app.BaseApp.SetParamStore(consensusParamsSubspace)
+
 	// Subspaces par module
 	authSubspace := app.ParamsKeeper.Subspace(authtypes.ModuleName)
 	bankSubspace := app.ParamsKeeper.Subspace(banktypes.ModuleName)
@@ -388,14 +398,6 @@ type EncodingConfig struct {
 func MakeEncodingConfig() EncodingConfig {
 	amino := codec.NewLegacyAmino()
 	interfaceRegistry := codectypes.NewInterfaceRegistry()
-
-	// ------------------------------------------------------
-	// CRITICAL: register all interfaces + msg service descs
-	// Fixes: type_url /cosmos.bank.v1beta1.MsgSend not registered
-	// ------------------------------------------------------
-	ModuleBasics.RegisterInterfaces(interfaceRegistry)
-	ModuleBasics.RegisterLegacyAminoCodec(amino)
-
 	cdc := codec.NewProtoCodec(interfaceRegistry)
 	txCfg := authtx.NewTxConfig(cdc, authtx.DefaultSignModes)
 
