@@ -32,6 +32,9 @@ import (
 	// v0.46: iterator for balances used by gentx/collect-gentxs
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
+	// ✅ v0.46: AddGenesisAccountCmd exists here (simd)
+	simdcmd "github.com/cosmos/cosmos-sdk/simapp/simd/cmd"
+
 	"github.com/noorfinances-eng/noorchain-core/app"
 )
 
@@ -113,6 +116,11 @@ func NewRootCmd() *cobra.Command {
 	// keys (Cosmos SDK v0.46): enables `noord keys ...`
 	rootCmd.AddCommand(
 		keys.Commands(app.DefaultNodeHome),
+	)
+
+	// ✅ add-genesis-account
+	rootCmd.AddCommand(
+		simdcmd.AddGenesisAccountCmd(app.DefaultNodeHome),
 	)
 
 	// gentx + collect-gentxs (Cosmos SDK v0.46)
