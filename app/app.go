@@ -188,7 +188,7 @@ func NewNoorchainApp(
 		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
 
 		// Ethermint modules (safe minimal)
-		evmtypes.ModuleName:      nil,
+		evmtypes.ModuleName:       nil,
 		feemarkettypes.ModuleName: nil,
 
 		// Local PoSS module
@@ -388,6 +388,14 @@ type EncodingConfig struct {
 func MakeEncodingConfig() EncodingConfig {
 	amino := codec.NewLegacyAmino()
 	interfaceRegistry := codectypes.NewInterfaceRegistry()
+
+	// ------------------------------------------------------
+	// CRITICAL: register all interfaces + msg service descs
+	// Fixes: type_url /cosmos.bank.v1beta1.MsgSend not registered
+	// ------------------------------------------------------
+	ModuleBasics.RegisterInterfaces(interfaceRegistry)
+	ModuleBasics.RegisterLegacyAminoCodec(amino)
+
 	cdc := codec.NewProtoCodec(interfaceRegistry)
 	txCfg := authtx.NewTxConfig(cdc, authtx.DefaultSignModes)
 
