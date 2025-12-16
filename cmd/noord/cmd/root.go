@@ -21,8 +21,10 @@ import (
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
+	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
 	"github.com/noorfinances-eng/noorchain-core/app"
 )
@@ -30,12 +32,16 @@ import (
 // EnvPrefix is used by viper/env for server flags.
 const EnvPrefix = "NOORCHAIN"
 
-// MakeEncodingConfig builds a minimal encoding config compatible with init/genesis.
-func MakeEncodingConfig(bm module.BasicManager) (codec.Codec, codectypes.InterfaceRegistry, client.TxConfig, *codec.LegacyAmino) {
+// Encoding config compatible Cosmos SDK v0.46
+func MakeEncodingConfig(bm module.BasicManager) (
+	codec.Codec,
+	codectypes.InterfaceRegistry,
+	client.TxConfig,
+	*codec.LegacyAmino,
+) {
 	amino := codec.NewLegacyAmino()
 	interfaceRegistry := codectypes.NewInterfaceRegistry()
 
-	// Register module interfaces + legacy amino.
 	bm.RegisterInterfaces(interfaceRegistry)
 	bm.RegisterLegacyAminoCodec(amino)
 
@@ -45,7 +51,6 @@ func MakeEncodingConfig(bm module.BasicManager) (codec.Codec, codectypes.Interfa
 	return cdc, interfaceRegistry, txCfg, amino
 }
 
-// NewRootCmd wires the Cosmos SDK CLI for NOORCHAIN (init + start minimal).
 func NewRootCmd() *cobra.Command {
 	cdc, interfaceRegistry, txCfg, amino := MakeEncodingConfig(app.ModuleBasics)
 
@@ -60,7 +65,7 @@ func NewRootCmd() *cobra.Command {
 
 	rootCmd := &cobra.Command{
 		Use:   "noord",
-		Short: "NOORCHAIN node daemon (public testnet) — init + start minimal",
+		Short: "NOORCHAIN node daemon (public testnet)",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			cmd.SetOut(cmd.OutOrStdout())
 			cmd.SetErr(cmd.ErrOrStderr())
@@ -80,7 +85,6 @@ func NewRootCmd() *cobra.Command {
 				return err
 			}
 
-			// Cosmos SDK default server config
 			return sdkserver.InterceptConfigsPreRunHandler(
 				cmd,
 				serverconfig.DefaultConfigTemplate,
@@ -90,27 +94,36 @@ func NewRootCmd() *cobra.Command {
 		},
 	}
 
-	// --------------------------------------------
-	// Genesis / genutil commands (CRITICAL)
-	// Enables:
-	// - add-genesis-account
-	// - gentx
-	// - collect-gentxs
-	// --------------------------------------------
+	/* ----------------------------------------------------
+	   GENESIS / GENUTIL — Cosmos SDK v0.46 COMPATIBLE
+	   ---------------------------------------------------- */
+
 	rootCmd.AddCommand(
 		genutilcli.InitCmd(app.ModuleBasics, app.DefaultNodeHome),
-		genutilcli.CollectGenTxsCmd(app.ModuleBasics, app.DefaultNodeHome),
-		genutilcli.GenTxCmd(app.ModuleBasics, app.DefaultNodeHome),
-		genutilcli.AddGenesisAccountCmd(app.DefaultNodeHome),
+		genutilcli.GenTxCmd(
+			app.ModuleBasics,
+			txCfg,
+			genutiltypes.NewGenesisBalancesIterator(),
+			app.DefaultNodeHome,
+		),
+		genutilcli.CollectGenTxsCmd(
+			app.DefaultNodeHome,
+			genutiltypes.NewGenesisBalancesIterator(),
+		),
 	)
 
-	// keys (Cosmos SDK v0.46): use client/keys
-	// Enables: `noord keys add ...`
+	/* ----------------------------------------------------
+	   KEYS
+	   ---------------------------------------------------- */
+
 	rootCmd.AddCommand(
 		keys.Commands(app.DefaultNodeHome),
 	)
 
-	// start + server commands (Cosmos SDK v0.46.x signature)
+	/* ----------------------------------------------------
+	   START / SERVER
+	   ---------------------------------------------------- */
+
 	creator := appCreator{}
 	sdkserver.AddCommands(
 		rootCmd,
@@ -120,19 +133,15 @@ func NewRootCmd() *cobra.Command {
 		addModuleInitFlags,
 	)
 
-	// Basic flags
 	rootCmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 
-	// Seal SDK config (safe default)
 	cfg := sdk.GetConfig()
 	cfg.Seal()
 
 	return rootCmd
 }
 
-func addModuleInitFlags(startCmd *cobra.Command) {
-	// Keep empty for Phase 8.A minimal
-}
+func addModuleInitFlags(startCmd *cobra.Command) {}
 
 type appCreator struct{}
 
@@ -145,7 +154,6 @@ func (a appCreator) newApp(
 	return app.NewApp(logger, db, traceStore, appOpts)
 }
 
-// appExport keeps command compatibility; not used in Phase 8.A.
 func (a appCreator) appExport(
 	logger tmlog.Logger,
 	db dbm.DB,
