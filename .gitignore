@@ -20,3 +20,9 @@ testnet/genesis.json
 .noor-public-testnet/
 .noorchain/
 .noor-local/
+
+# local node data
+.noor-public-testnet/
+
+# local node home
+.noor-public-testnet/
