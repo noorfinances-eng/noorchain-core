@@ -26,3 +26,6 @@ testnet/genesis.json
 
 # local node home
 .noor-public-testnet/
+
+# local node home
+.noor-public-testnet/
