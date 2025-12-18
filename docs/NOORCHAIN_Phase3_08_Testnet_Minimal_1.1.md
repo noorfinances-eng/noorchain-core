@@ -12,7 +12,7 @@ Last Updated: 2025-12-03
 
 1. Scope
 
-This document defines the minimal local testnet setup currently available in noorchain-core, and explains how PoSS behaves on this testnet in its economic OFF configuration.
+This document defines the minimal local Testnet has no economic purpose.
 
 It complements:
 
@@ -227,7 +227,7 @@ Phase 7 → NOORCHAIN Testnet 1.0
 
 Phase 8 → Testnet expansion
 
-Phase 9 → Public audits / Mainnet readiness
+Phase 9 → Public audits / Testnet (when applicable) readiness
 
 9. Next Steps (After This Document)
 

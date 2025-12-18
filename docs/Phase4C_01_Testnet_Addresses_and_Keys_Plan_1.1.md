@@ -23,7 +23,7 @@ the genesis account models
 
 the rules for deterministic key generation
 
-the mapping between Cosmos and Ethermint formats
+the mapping between Cosmos and Evmos (EVM) formats
 
 This specification is required before creating the real genesis during Phase 4C_02.
 
@@ -39,7 +39,7 @@ Validator consensus: noorvalcons1…
 
 Public keys: noorpub1…
 
-Dual Address Model (Ethermint)
+Dual Address Model (Evmos (EVM))
 
 Every NOORCHAIN account has:
 
@@ -77,7 +77,7 @@ Used for early PoSS incentives during testing phases.
 
 4. Presale Optional Address — 5%
 
-Reserved for private investors, with vesting in Mainnet 1.0.
+Reserved for private investors, with vesting in Testnet (when applicable) 1.0.
 
 5. PoSS Reserve Address — 80%
 
@@ -140,7 +140,7 @@ must hold sufficient NUR for self-delegation
 
 must define minimum gas prices
 
-must be compatible with Ethermint RPC
+must be compatible with Evmos (EVM) RPC
 
 5. Address Generation Rules
 
@@ -228,7 +228,7 @@ amount: exact integer allocation
 
 The amounts must follow:
 
-Testnet supply = Mainnet supply
+Testnet supply = Testnet (when applicable) supply
 
 5% Foundation
 

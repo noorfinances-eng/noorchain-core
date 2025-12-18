@@ -344,7 +344,7 @@ This document freezes the **PoSS Logic 1–26** stage:
 
 - PoSS is wired, parametrized, and safe (no minting).
 - Rewards and daily counters are in place, but only used internally.
-- Testnet scenarios are defined to validate the behaviour without any economic impact.
+- Testnet has no economic purpose.
 
 **Future PoSS phases will focus on:**
 

@@ -17,7 +17,7 @@ initial token distribution
 
 PoSS reserve configuration
 
-EVM / Ethermint settings
+EVM / Evmos (EVM) settings
 
 fees, gas, staking
 
@@ -164,7 +164,7 @@ dynamic base fee
 
 priority fee for validators
 
-inherits Ethermint defaults
+inherits Evmos (EVM) defaults
 
 6.3 Global gas configuration
 
@@ -172,7 +172,7 @@ maxGas = 20,000,000
 
 Node operators may override in config.
 
-7. EVM Configuration (Ethermint)
+7. EVM Configuration (Evmos (EVM))
 7.1 JSON-RPC Enabled
 
 Full Ethereum compatibility:

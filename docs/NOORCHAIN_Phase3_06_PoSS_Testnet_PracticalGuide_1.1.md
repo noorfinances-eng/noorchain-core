@@ -336,7 +336,7 @@ It does not mint real NUR
 
 It does not configure the real PoSS Reserve
 
-It does not describe Mainnet setup
+It does not describe Testnet (when applicable) setup
 
 It does not modify economic or legal parameters
 

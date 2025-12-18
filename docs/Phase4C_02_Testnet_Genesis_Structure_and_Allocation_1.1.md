@@ -24,7 +24,7 @@ staking validator configuration
 
 PoSS reserve setup
 
-Ethermint EVM genesis configuration
+Evmos (EVM) EVM genesis configuration
 
 Feemarket configuration
 
@@ -171,7 +171,7 @@ shorter voting period is recommended
 
 deposit threshold may be minimal
 
-8. EVM Genesis State (Ethermint)
+8. EVM Genesis State (Evmos (EVM))
 
 The EVM module requires initialization similar to an Ethereum genesis:
 
@@ -209,7 +209,7 @@ block gas target
 
 elasticity multiplier
 
-Defaults used in Ethermint/Evmos are acceptable.
+Defaults used in Evmos (EVM)/Evmos are acceptable.
 
 10. PoSS Module Genesis State
 

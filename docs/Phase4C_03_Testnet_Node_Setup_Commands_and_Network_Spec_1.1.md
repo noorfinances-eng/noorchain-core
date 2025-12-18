@@ -43,7 +43,7 @@ Directory Structure
 
 ~/.noord/data
 
-Default Ports (Ethermint-compatible)
+Default Ports (Evmos (EVM)-compatible)
 
 JSON-RPC: 8545
 
@@ -257,7 +257,7 @@ NOORCHAIN Dashboard (later)
 
 external block explorers (optional in early testnet)
 
-Ethermint compatibility ensures seamless EVM interactions.
+Evmos (EVM) compatibility ensures seamless EVM interactions.
 
 12. Checkpoints Before Confirming Testnet Success
 
