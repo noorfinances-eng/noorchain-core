@@ -1,3 +1,8 @@
+> ⚠️ **Status: TECH MIGRATION**  
+> This document is being realigned to the **NOORCHAIN 2.0 Technical Baseline**.  
+> Reference: `NOORCHAIN_Tech_Baseline_2.0_1.1.md`  
+> Branch: `main-3` — Date: 2025-12-18
+
 NOORCHAIN_Phase3_08_MinimalTestnet_and_PoSSStatus_1.1.md
 NOORCHAIN 1.0 — Minimal Local Testnet & PoSS Status
 

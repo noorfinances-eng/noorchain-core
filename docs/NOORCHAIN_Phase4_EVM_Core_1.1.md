@@ -1,3 +1,8 @@
+> ⚠️ **Status: TECH MIGRATION**  
+> This document is being realigned to the **NOORCHAIN 2.0 Technical Baseline**.  
+> Reference: `NOORCHAIN_Tech_Baseline_2.0_1.1.md`  
+> Branch: `main-3` — Date: 2025-12-18
+
 # NOORCHAIN 1.0 — Phase 4 — EVM & Core Cosmos (v0.46.11) — Version 1.1
 
 **Objectif**  

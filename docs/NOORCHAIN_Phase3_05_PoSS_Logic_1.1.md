@@ -1,3 +1,8 @@
+> ⚠️ **Status: TECH MIGRATION**  
+> This document is being realigned to the **NOORCHAIN 2.0 Technical Baseline**.  
+> Reference: `NOORCHAIN_Tech_Baseline_2.0_1.1.md`  
+> Branch: `main-3` — Date: 2025-12-18
+
 NOORCHAIN — PoSS Logic (End-to-End)
 Phase 3.05 — Target Behaviour Specification
 Version 1.1

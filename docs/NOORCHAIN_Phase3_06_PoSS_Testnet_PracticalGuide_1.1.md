@@ -1,3 +1,8 @@
+> ⚠️ **Status: TECH MIGRATION**  
+> This document is being realigned to the **NOORCHAIN 2.0 Technical Baseline**.  
+> Reference: `NOORCHAIN_Tech_Baseline_2.0_1.1.md`  
+> Branch: `main-3` — Date: 2025-12-18
+
 NOORCHAIN 1.0 — PoSS Testnet Practical Guide (v1.1)
 Practical scenarios for testing PoSS on a development testnet
 

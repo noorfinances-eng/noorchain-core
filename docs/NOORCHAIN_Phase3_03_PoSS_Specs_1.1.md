@@ -1,3 +1,8 @@
+> ⚠️ **Status: TECH MIGRATION**  
+> This document is being realigned to the **NOORCHAIN 2.0 Technical Baseline**.  
+> Reference: `NOORCHAIN_Tech_Baseline_2.0_1.1.md`  
+> Branch: `main-3` — Date: 2025-12-18
+
 NOORCHAIN 1.0 — Phase 3
 PoSS Module Specifications (x/noorsignal) — Version 1.1
 0. Scope of this document

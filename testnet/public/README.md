@@ -1,1 +1,0 @@
-# NOORCHAIN Public Testnet
