@@ -1,3 +1,8 @@
+> ⚠️ **GENESIS CONCEPT ONLY (NOORCHAIN 2.0)**  
+> **No final addresses, no final allocations, no production genesis.**  
+> All bech32 addresses, final UNUR distribution and any sensitive genesis parameters are handled **only in Phase 7 (Pre-Mainnet)**.  
+> This document is a conceptual specification aligned with `NOORCHAIN_Tech_Baseline_2.0_1.1.md`.
+
 FONDATION NOORCHAIN
 Gouvernance du Genesis
 Phase 5 — C3

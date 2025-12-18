@@ -1,3 +1,8 @@
+> ⚠️ **GENESIS CONCEPT ONLY (NOORCHAIN 2.0)**  
+> **No final addresses, no final allocations, no production genesis.**  
+> All bech32 addresses, final UNUR distribution and any sensitive genesis parameters are handled **only in Phase 7 (Pre-Mainnet)**.  
+> This document is a conceptual specification aligned with `NOORCHAIN_Tech_Baseline_2.0_1.1.md`.
+
 NOORCHAIN — Genesis Security Overview
 
 Version 1.1
@@ -105,7 +110,7 @@ This ensures PoSS cannot be abused or exploited during the early stages of mainn
 
 6. EVM Security Measures
 
-Ethermint genesis integrates:
+Evmos (EVM) genesis integrates:
 
 EIP-1559 base fee disabled initially
 

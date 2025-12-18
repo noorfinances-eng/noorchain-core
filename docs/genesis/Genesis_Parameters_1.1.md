@@ -1,3 +1,8 @@
+> ⚠️ **GENESIS CONCEPT ONLY (NOORCHAIN 2.0)**  
+> **No final addresses, no final allocations, no production genesis.**  
+> All bech32 addresses, final UNUR distribution and any sensitive genesis parameters are handled **only in Phase 7 (Pre-Mainnet)**.  
+> This document is a conceptual specification aligned with `NOORCHAIN_Tech_Baseline_2.0_1.1.md`.
+
 NOORCHAIN — Genesis Parameters
 
 Version 1.1
@@ -20,7 +25,7 @@ the 5/5/5/5/80 economic model
 
 These parameters are part of the immutable Genesis Pack.
 
-2. Core Chain Parameters (Cosmos / Ethermint)
+2. Core Chain Parameters (Cosmos / Evmos (EVM))
 2.1 Chain Identity
 
 Chain Name: noorchain
@@ -106,7 +111,7 @@ No discretionary minting
 
 Base Fee (EIP-1559): 0
 Min Gas Price: 0
-ChainConfig: Ethermint default (compatible with Ethereum Shanghai fork)
+ChainConfig: Evmos (EVM) default (compatible with Ethereum Shanghai fork)
 EVM StateDB: initialized empty
 
 7. Staking Parameters
