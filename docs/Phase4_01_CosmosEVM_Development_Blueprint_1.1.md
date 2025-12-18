@@ -19,7 +19,7 @@ This blueprint governs the implementation of:
 
 Cosmos SDK integration
 
-Ethermint EVM integration
+Evmos (EVM) EVM integration
 
 NOORCHAIN parameters
 
@@ -38,15 +38,15 @@ PoSS compatibility hooks (but no PoSS code here)
 🧩 2. Versions & Compatibility (strict)
 Component	Version
 Cosmos SDK	0.50.x
-CometBFT	0.37.x
-Ethermint	0.27.x
+CometBFT v0.38.x.x
+Evmos (EVM)	0.27.x
 IAVL	0.21+
 Go	1.22+
 CosmJS (later, for dApps)	0.33+
 
 Compatibility was validated in Phase 3:
-→ Cosmos SDK 0.50.x requires CometBFT 0.37.x
-→ Ethermint 0.27.x requires Cosmos SDK 0.50.x
+→ Cosmos SDK 0.50.x requires CometBFT v0.38.x.x
+→ Evmos (EVM) 0.27.x requires Cosmos SDK 0.50.x
 → All components build together correctly.
 
 🏗️ 3. High-Level Architecture
@@ -65,7 +65,7 @@ gov
 
 params (implicit through config.go)
 
-3.2 EVM Layer (Ethermint)
+3.2 EVM Layer (Evmos (EVM))
 
 evm
 
@@ -112,9 +112,9 @@ StakingKeeper (staking)
 
 GovKeeper (gov)
 
-EVMKeeper (Ethermint)
+EVMKeeper (Evmos (EVM))
 
-FeeMarketKeeper (Ethermint)
+FeeMarketKeeper (Evmos (EVM))
 
 SlashingKeeper (later optional)
 
@@ -172,7 +172,7 @@ InitGenesis
 
 ExportGenesis
 
-6.2 Standard Order (Cosmos + Ethermint)
+6.2 Standard Order (Cosmos + Evmos (EVM))
 BeginBlock:   feemarket → evm → staking → noorsignal → gov
 EndBlock:     staking → gov
 InitGenesis:  auth → bank → staking → gov → evm → feemarket → noorsignal
@@ -300,7 +300,7 @@ eth_estimateGas
 
 web3_clientVersion
 
-All via Ethermint RPC API.
+All via Evmos (EVM) RPC API.
 
 🔨 11. Development Steps (Ordered, No Code)
 Step 1 — Finalize store keys
@@ -309,7 +309,7 @@ Define all keys in app.go.
 
 Step 2 — Create keepers
 
-Instantiate all Cosmos + Ethermint keepers.
+Instantiate all Cosmos + Evmos (EVM) keepers.
 
 Step 3 — Wire keeper dependencies
 

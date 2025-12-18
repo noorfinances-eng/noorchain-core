@@ -12,9 +12,9 @@ NOORCHAIN 1.0 is a sovereign Swiss blockchain built with a hybrid Cosmos/EVM fou
 
 Core design elements:
 
-Cosmos SDK v0.46.11
+Cosmos SDK v0.50.x
 
-Ethermint v0.22.0 (full EVM compatibility)
+Evmos (EVM) v0.22.0 (full EVM compatibility)
 
 CometBFT/Tendermint v0.34.27
 
@@ -38,7 +38,7 @@ bank	Complete	Balances, transfers, supply tracking
 staking	Complete	Validators, delegations, baseline staking logic
 gov	Store ready	Governance store and params subspace present (keeper wiring planned)
 params	Complete	Global parameters, per-module subspaces
-evm	Complete	Full EVM execution through Ethermint
+evm	Complete	Full EVM execution through Evmos (EVM)
 feemarket	Complete	EIP-1559 dynamic fee system
 noorsignal	Structural skeleton	Base PoSS module scaffolding, no active logic yet
 
@@ -74,7 +74,7 @@ This configuration ensures a fully operational blockchain even before PoSS activ
 
 4. AnteHandler
 
-NOORCHAIN uses Ethermint’s NewAnteHandler, supporting both Cosmos and Ethereum-style transactions.
+NOORCHAIN uses Evmos (EVM)’s NewAnteHandler, supporting both Cosmos and Ethereum-style transactions.
 
 Capabilities include:
 

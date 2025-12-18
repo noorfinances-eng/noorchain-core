@@ -4,7 +4,7 @@
 > Branch: `main-3` — Date: 2025-12-18
 
 # NOORCHAIN — Phase 4A  
-## App Initialization Flow (Cosmos SDK + Ethermint + PoSS)  
+## App Initialization Flow (Cosmos SDK + Evmos (EVM) + PoSS)  
 ### Version 1.1 — Architecture Only (No Code)  
 ### Last Updated: 2025-12-03  
 
@@ -131,7 +131,7 @@ Establish all state managers with correct dependency order.
 Connect keepers and hooks, for example:
 
 - `staking.SetHooks(...)`  
-- `evm.SetStakingKeeper(...)` (or equivalent Ethermint wiring)  
+- `evm.SetStakingKeeper(...)` (or equivalent Evmos (EVM) wiring)  
 - `poss.SetStakingKeeper(...)`  
 - `poss.SetBankKeeper(...)`  
 - PoSS keeper gets its params subspace via `ParamsKeeper`  

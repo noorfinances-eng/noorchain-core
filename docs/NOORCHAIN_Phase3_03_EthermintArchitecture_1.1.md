@@ -4,16 +4,16 @@
 > Branch: `main-3` — Date: 2025-12-18
 
 NOORCHAIN 1.0 — Phase 3.03
-Ethermint Architecture (EVM Integration)
+Evmos (EVM) Architecture (EVM Integration)
 Version 1.1 — English
 Purpose of this Document
 
-This document provides the complete technical specification of the Ethermint (EVM) architecture inside NOORCHAIN.
+This document provides the complete technical specification of the Evmos (EVM) (EVM) architecture inside NOORCHAIN.
 It defines:
 
 what the EVM layer is,
 
-how Ethermint integrates with the Cosmos SDK,
+how Evmos (EVM) integrates with the Cosmos SDK,
 
 how Ethereum transactions behave inside NOORCHAIN,
 
@@ -23,9 +23,9 @@ how JSON-RPC exposes NOORCHAIN as an EVM-compatible chain.
 
 This document is the official reference for EVM integration before implementation begins in Phase 4.
 
-1. Role of Ethermint in NOORCHAIN
+1. Role of Evmos (EVM) in NOORCHAIN
 
-NOORCHAIN integrates Ethermint to provide:
+NOORCHAIN integrates Evmos (EVM) to provide:
 
 full EVM compatibility
 
@@ -39,15 +39,15 @@ EIP-1559 fee market support
 
 Ethereum account & storage model
 
-Ethermint enables NOORCHAIN to function simultaneously as:
+Evmos (EVM) enables NOORCHAIN to function simultaneously as:
 
 a Cosmos SDK chain
 
 an EVM chain
 
-2. High-Level Architecture (Cosmos ↔ Ethermint)
+2. High-Level Architecture (Cosmos ↔ Evmos (EVM))
 
-Ethermint is implemented through two Cosmos SDK modules:
+Evmos (EVM) is implemented through two Cosmos SDK modules:
 
 2.1 evm module
 
@@ -81,7 +81,7 @@ CometBFT Consensus
 → Cosmos State Stores
 
 
-Ethermint extends Cosmos SDK without replacing it.
+Evmos (EVM) extends Cosmos SDK without replacing it.
 
 3. EVM Account Model in NOORCHAIN
 3.1 Dual-Account Structure
@@ -135,7 +135,7 @@ Smart contract execution
 
 Node receives a signed Ethereum-style tx
 
-AnteHandler (Ethermint) validates:
+AnteHandler (Evmos (EVM)) validates:
 
 signature (ECDSA secp256k1)
 
@@ -161,7 +161,7 @@ Exposed via JSON-RPC
 
 4.2 Supported Ethereum Tx Types
 
-Ethermint supports:
+Evmos (EVM) supports:
 
 Legacy (gasPrice)
 
@@ -176,7 +176,7 @@ Each EVM account keeps its own evm_nonce, separate from Cosmos sequence.
 5. EVM Execution Environment
 Components
 
-Ethermint provides:
+Evmos (EVM) provides:
 
 Opcode interpreter
 
@@ -251,7 +251,7 @@ unur
 
 7. JSON-RPC Endpoints (Web3 Compatibility)
 
-Ethermint exposes full Ethereum RPC API:
+Evmos (EVM) exposes full Ethereum RPC API:
 
 7.1 Supported Namespaces
 
@@ -297,7 +297,7 @@ gas fields
 
 Example RPC identification:
 
-client: "Noorchain-Ethermint"
+client: "Noorchain-Evmos (EVM)"
 protocolVersion: evmos-compatible
 networkVersion: <chain_id>
 
@@ -310,7 +310,7 @@ Gas model	Cosmos	Ethereum / EIP-1559
 Execution	Module handler	EVM bytecode VM
 9. State Storage Model
 
-Ethermint stores EVM state inside Cosmos stores.
+Evmos (EVM) stores EVM state inside Cosmos stores.
 
 EVM Storage Includes:
 
@@ -326,7 +326,7 @@ Logs
 
 Merkle Proof Support
 
-Ethermint maintains Ethereum-compatible Merkle proof structure for:
+Evmos (EVM) maintains Ethereum-compatible Merkle proof structure for:
 
 RPC proof queries
 
@@ -383,7 +383,7 @@ storage changes
 
 12. Summary (Header Version)
 
-NOORCHAIN 1.0 — Phase 3.03 — Ethermint Architecture
+NOORCHAIN 1.0 — Phase 3.03 — Evmos (EVM) Architecture
 
 This document defines:
 

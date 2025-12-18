@@ -59,7 +59,7 @@ staking
 
 gov
 
-3.2 Ethermint Modules
+3.2 Evmos (EVM) Modules
 
 evm
 
@@ -76,7 +76,7 @@ lifecycle defined here for future integration
 🔄 4. Execution Order Requirements
 
 Execution order is critical for chain stability.
-The following order has been validated in Phase 3 and in Ethermint reference chains.
+The following order has been validated in Phase 3 and in Evmos (EVM) reference chains.
 
 4.1 BeginBlock Order
 
@@ -162,7 +162,7 @@ auth	none	base layer
 bank	auth	balances depend on accounts
 staking	bank	delegation depends on balances
 gov	staking	voting depends on validator power
-evm	auth, bank, staking	Ethermint core
+evm	auth, bank, staking	Evmos (EVM) core
 feemarket	evm	EIP-1559 model
 noorsignal	staking, bank	PoSS rewards depend on validator set
 🧩 9. ModuleManager Construction Blueprint
@@ -175,7 +175,7 @@ Register module basics: auth, bank, staking, gov
 
 Step 2
 
-Register Ethermint modules: evm, feemarket
+Register Evmos (EVM) modules: evm, feemarket
 
 Step 3
 

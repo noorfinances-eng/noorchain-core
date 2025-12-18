@@ -9,7 +9,7 @@
 Documenter l’état **réel** du noyau technique NOORCHAIN après l’intégration :
 
 - du Cosmos SDK (auth / bank / staking / gov / params),
-- d’Ethermint (EVM + FeeMarket v0.22.0),
+- d’Evmos (EVM) (EVM + FeeMarket v0.22.0),
 - des stores et keepers,
 - sans encore implémenter l’ante handler EVM complet ni PoSS.
 
@@ -22,9 +22,9 @@ Ce document décrit **ce qui existe déjà dans le code** et ce qui viendra plus
 - **Langage** : Go 1.22
 - **Cosmos SDK** : `v0.46.11`
 - **Tendermint** : remplacé par **CometBFT** via `replace`  
-  - `github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.34.27`
+  - `github.com/tendermint/tendermint => github.com/cometbft/cometbft v0.38.x`
 - **Base de données** : `github.com/tendermint/tm-db v0.6.7`
-- **Ethermint** : `v0.22.0`
+- **Evmos (EVM)** : `v0.22.0`
   - Module EVM : `github.com/evmos/ethermint/x/evm`
   - Module FeeMarket (EIP-1559) : `github.com/evmos/ethermint/x/feemarket`
 
@@ -56,7 +56,7 @@ type NoorchainApp struct {
     StakingKeeper stakingkeeper.Keeper
     // GovKeeper viendra plus complet plus tard
 
-    // Ethermint
+    // Evmos (EVM)
     FeeMarketKeeper feemarketkeeper.Keeper
     EvmKeeper       *evmkeeper.Keeper // ajouté dans les blocs EVM
 
@@ -183,7 +183,7 @@ Gère les validateurs, délégations, etc.
 À terme, il sera alimenté dans le genesis (Phase Testnet).
 
 6. FeeMarketKeeper (EIP-1559)
-On instancie un FeeMarketKeeper compatbile avec Ethermint 0.22 :
+On instancie un FeeMarketKeeper compatbile avec Evmos (EVM) 0.22 :
 
 Store :
 
@@ -216,7 +216,7 @@ les params comme MinGasPrice, MinGasMultiplier,
 la base fee EIP-1559 utilisée par l’EVM.
 
 7. EvmKeeper (squelette intégré)
-Nous avons intégré le Keeper EVM d’Ethermint (x/evm/keeper) avec :
+Nous avons intégré le Keeper EVM d’Evmos (EVM) (x/evm/keeper) avec :
 
 storeKey pour l’état EVM,
 

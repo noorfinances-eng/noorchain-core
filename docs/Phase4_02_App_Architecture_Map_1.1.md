@@ -4,7 +4,7 @@
 > Branch: `main-3` — Date: 2025-12-18
 
 # NOORCHAIN — Phase 4A  
-## App Architecture Map (Cosmos SDK + Ethermint + PoSS)  
+## App Architecture Map (Cosmos SDK + Evmos (EVM) + PoSS)  
 ### Version 1.1 — Final Structural Overview  
 ### Last Updated: 2025-12-03  
 
@@ -13,8 +13,8 @@ NOORCHAIN Core Application as implemented at the end of **Phase 4**.
 
 It is fully aligned with:
 
-- Cosmos SDK v0.46.11  
-- Ethermint v0.22.0  
+- Cosmos SDK v0.50.x  
+- Evmos (EVM) v0.22.0  
 - CometBFT/Tendermint v0.34.27 (with replace directive)  
 - NOORCHAIN custom module `x/noorsignal` (PoSS)  
 - The final Keeper structure validated in Phase 4  
@@ -68,7 +68,7 @@ This layer provides the essential blockchain primitives.
 
 ---
 
-## 2.2 Ethermint Layer (EVM Layer)
+## 2.2 Evmos (EVM) Layer (EVM Layer)
 
 Provides full Ethereum EVM compatibility on top of Cosmos.
 

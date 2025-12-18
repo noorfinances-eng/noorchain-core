@@ -4,7 +4,7 @@
 > Branch: `main-3` — Date: 2025-12-18
 
 # NOORCHAIN — Phase 4A  
-## Keepers System Design (Cosmos SDK + Ethermint + PoSS)  
+## Keepers System Design (Cosmos SDK + Evmos (EVM) + PoSS)  
 ### Version 1.1 — Architecture Only (No Code)  
 ### Last Updated: 2025-12-03  
 
@@ -76,7 +76,7 @@ NOORCHAIN uses three keeper categories:
 
 ---
 
-## 3.2 Ethermint Keepers (EVM Layer)
+## 3.2 Evmos (EVM) Keepers (EVM Layer)
 
 ### **EVMKeeper**
 - EVM execution  
@@ -124,7 +124,7 @@ Copier le code
 
 ---
 
-## 4.2 Ethermint Keepers
+## 4.2 Evmos (EVM) Keepers
 
 ### **EVMKeeper**
 Depends on:

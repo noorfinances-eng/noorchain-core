@@ -4,7 +4,7 @@
 > Branch: `main-3` — Date: 2025-12-18
 
 # NOORCHAIN — Phase 4A  
-## Final Requirements Checklist (Cosmos + Ethermint + PoSS-Ready)  
+## Final Requirements Checklist (Cosmos + Evmos (EVM) + PoSS-Ready)  
 ### Version 1.1 — Non-code Specification  
 ### Last Updated: 2025-12-03  
 
@@ -29,7 +29,7 @@ NOORCHAIN uses **fixed and validated versions**:
 | Component      | Required Version | Status |
 |----------------|------------------|--------|
 | Cosmos SDK     | **0.46.11**      | ✔️ |
-| Ethermint       | **0.22.0**       | ✔️ |
+| Evmos (EVM)       | **0.22.0**       | ✔️ |
 | CometBFT/TM     | **0.34.27** (via replace) | ✔️ |
 | IAVL            | **0.19–0.21** compatible | ✔️ |
 | Go              | **1.22+**       | ✔️ |
@@ -47,7 +47,7 @@ All versions remain **locked** unless Phase 3 documentation is amended.
 ### ✔️ Application Layers (All Present)
 
 - Cosmos base modules  
-- Ethermint EVM layer  
+- Evmos (EVM) EVM layer  
 - NOORCHAIN custom PoSS module  
 - Strict separation of responsibilities  
 
@@ -74,7 +74,7 @@ All versions remain **locked** unless Phase 3 documentation is amended.
 
 All registered, stores mounted, and storages defined.
 
-## 4.2 Ethermint Modules
+## 4.2 Evmos (EVM) Modules
 
 ✔️ `evm`  
 ✔️ `feemarket`  
@@ -128,7 +128,7 @@ No circular dependencies.
 ### ✔️ Wiring Rules
 
 - `staking.SetHooks(...)`  
-- `evm.SetStakingKeeper(...)` or Ethermint equivalent  
+- `evm.SetStakingKeeper(...)` or Evmos (EVM) equivalent  
 - `poss.SetBankKeeper(...)`  
 - `poss.SetStakingKeeper(...)`  
 - PoSS receives its own params subspace  
@@ -205,7 +205,7 @@ All steps validated in the App Initialization Blueprint.
 - ethermint evm / feemarket  
 - noorsignal (Phase 4B+)  
 
-### ✔️ JSON-RPC routes (Ethermint)
+### ✔️ JSON-RPC routes (Evmos (EVM))
 
 - `eth_*`  
 - `web3_*`  
