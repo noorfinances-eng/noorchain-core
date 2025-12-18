@@ -1,3 +1,8 @@
+> ⚠️ **PoSS SPEC ONLY (NOORCHAIN 2.0)**  
+> This document is a **specification** aligned with `NOORCHAIN_Tech_Baseline_2.0_1.1.md`.  
+> PoSS is not assumed to be active by default (e.g., `PoSSEnabled=false`) until explicitly implemented and enabled in the roadmap.  
+> No wording in this document should be interpreted as a guaranteed yield, profit, or financial promise.
+
 > ⚠️ **Status: TECH MIGRATION**  
 > This document is being realigned to the **NOORCHAIN 2.0 Technical Baseline**.  
 > Reference: `NOORCHAIN_Tech_Baseline_2.0_1.1.md`  
@@ -16,7 +21,7 @@ Status: 100% complete
 
 Technical decisions
 
-Core: Cosmos SDK + Ethermint (EVM) + CometBFT
+Core: Cosmos SDK + Evmos (EVM) (EVM) + CometBFT
 
 Native token: NUR
 
@@ -100,9 +105,9 @@ Status: ~95% complete
 
 4.1 Core App / Cosmos / EVM
 
-Fully wired Cosmos SDK 0.46.11
+Fully wired Cosmos SDK v0.50.x
 
-Ethermint 0.22.0 EVM integrated
+Evmos (EVM) 0.22.0 EVM integrated
 
 FeeMarket fully operational
 

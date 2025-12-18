@@ -1,3 +1,8 @@
+> ⚠️ **PoSS SPEC ONLY (NOORCHAIN 2.0)**  
+> This document is a **specification** aligned with `NOORCHAIN_Tech_Baseline_2.0_1.1.md`.  
+> PoSS is not assumed to be active by default (e.g., `PoSSEnabled=false`) until explicitly implemented and enabled in the roadmap.  
+> No wording in this document should be interpreted as a guaranteed yield, profit, or financial promise.
+
 > ⚠️ **Status: TECH MIGRATION**  
 > This document is being realigned to the **NOORCHAIN 2.0 Technical Baseline**.  
 > Reference: `NOORCHAIN_Tech_Baseline_2.0_1.1.md`  
@@ -7,7 +12,7 @@ NOORCHAIN 1.0 — Phase 3
 PoSS Module Specifications (x/noorsignal) — Version 1.1
 0. Scope of this document
 
-This document describes the current specifications of the PoSS module (x/noorsignal) as implemented in the Noorchain Core (Cosmos SDK v0.46.11 + Ethermint v0.22.0).
+This document describes the current specifications of the PoSS module (x/noorsignal) as implemented in the Noorchain Core (Cosmos SDK v0.50.x + Evmos (EVM) v0.22.0).
 
 It focuses on:
 
