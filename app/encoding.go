@@ -4,11 +4,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/crypto/codec as cryptocodec"
 	"github.com/cosmos/cosmos-sdk/std"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 )
 
-// Cosmos SDK v0.50 encoding config (minimal Phase 2)
+// EncodingConfig keeps the codec and tx config used by the app/CLI.
 type EncodingConfig struct {
 	InterfaceRegistry codectypes.InterfaceRegistry
 	Marshaler         codec.Codec
@@ -16,14 +17,19 @@ type EncodingConfig struct {
 	Amino             *codec.LegacyAmino
 }
 
+// MakeEncodingConfig builds a minimal, standard Cosmos SDK v0.53 encoding config.
 func MakeEncodingConfig() EncodingConfig {
 	interfaceRegistry := codectypes.NewInterfaceRegistry()
+
+	// Standard SDK interfaces (includes most core types)
 	std.RegisterInterfaces(interfaceRegistry)
+
+	// Crypto interfaces (pubkeys, etc.) - critical for genutil/gentx flows
+	cryptocodec.RegisterInterfaces(interfaceRegistry)
 
 	marshaler := codec.NewProtoCodec(interfaceRegistry)
 	txCfg := tx.NewTxConfig(marshaler, tx.DefaultSignModes)
 
-	// Keep legacy amino non-nil (some client paths expect it)
 	amino := codec.NewLegacyAmino()
 
 	return EncodingConfig{
