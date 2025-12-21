@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	sdklog "cosmossdk.io/log"
 
@@ -15,7 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	addresscodec "github.com/cosmos/cosmos-sdk/codec/address"
 	"github.com/cosmos/cosmos-sdk/server"
-	svrcmd "github.com/cosmos/cosmos-sdk/server/cmd"
+	servercmd "github.com/cosmos/cosmos-sdk/server/cmd"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -30,7 +31,8 @@ import (
 
 func Execute() error {
 	rootCmd := NewRootCmd()
-	return svrcmd.Execute(rootCmd, app.AppName, app.DefaultNodeHome)
+	// Cosmos SDK v0.53 standard executor (adds log flags + server/client contexts)
+	return servercmd.Execute(rootCmd, strings.ToUpper(app.AppName), app.DefaultNodeHome)
 }
 
 func NewRootCmd() *cobra.Command {
@@ -41,10 +43,8 @@ func NewRootCmd() *cobra.Command {
 	cfg.SetBech32PrefixForConsensusNode("noorvalcons", "noorvalconspub")
 	cfg.Seal()
 
-	// NOTE: app.MakeEncodingConfig returns ONE value (no error) on this branch.
 	enc := app.MakeEncodingConfig()
 
-	// Address codecs required by v0.50 genutil commands
 	accAddrCodec := addresscodec.NewBech32Codec("noor")
 	valAddrCodec := addresscodec.NewBech32Codec("noorvaloper")
 
@@ -59,7 +59,7 @@ func NewRootCmd() *cobra.Command {
 
 	rootCmd := &cobra.Command{
 		Use:   app.AppName,
-		Short: "NOORCHAIN daemon (Phase 2 skeleton)",
+		Short: app.AppName,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			var err error
 
@@ -133,7 +133,7 @@ func newApp(
 	traceStore io.Writer,
 	appOpts servertypes.AppOptions,
 ) servertypes.Application {
-	_ = appOpts // Phase 2: app.NewNoorchainApp does NOT consume AppOptions on this branch.
+	_ = appOpts
 	return app.NewNoorchainApp(logger, db, traceStore)
 }
 
@@ -156,6 +156,5 @@ func appExport(
 	_ = appOpts
 	_ = modulesToExport
 
-	// Phase 2: no exporter yet
 	return servertypes.ExportedApp{}, io.EOF
 }
