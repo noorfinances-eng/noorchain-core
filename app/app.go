@@ -42,21 +42,32 @@ func NewNoorchainApp(
 		enc.TxConfig.TxDecoder(),
 	)
 
+	// Important v0.53 : BaseApp doit connaître l’InterfaceRegistry utilisée
+	// pour les Any, les signatures, et la conversion d’adresses.
+	bApp.SetInterfaceRegistry(enc.InterfaceRegistry)
+
 	bApp.SetCommitMultiStoreTracer(traceStore)
 
 	return &NoorchainApp{
 		BaseApp:   bApp,
-		appCodec: enc.Marshaler,
-		txConfig: enc.TxConfig,
+		appCodec:  enc.Marshaler,
+		txConfig:  enc.TxConfig,
 	}
 }
 
 // servertypes.Application required methods (Phase 2 = no-op)
-func (app *NoorchainApp) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.APIConfig) {}
+func (app *NoorchainApp) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.APIConfig) {
+}
+
 func (app *NoorchainApp) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
 }
-func (app *NoorchainApp) RegisterTxService(clientCtx client.Context)         {}
-func (app *NoorchainApp) RegisterTendermintService(clientCtx client.Context) {}
+
+func (app *NoorchainApp) RegisterTxService(clientCtx client.Context) {
+}
+
+func (app *NoorchainApp) RegisterTendermintService(clientCtx client.Context) {
+}
+
 func (app *NoorchainApp) RegisterNodeService(clientCtx client.Context, cfg config.Config) {
 }
 

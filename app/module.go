@@ -6,11 +6,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
+	"github.com/cosmos/cosmos-sdk/x/staking"
 )
 
-// Minimal set for Phase 2: provides `init` scaffolding.
+// Minimal set for Phase 2: provides `init` + `gentx` scaffolding.
 var ModuleBasics = module.NewBasicManager(
 	auth.AppModuleBasic{},
 	bank.AppModuleBasic{},
+	staking.AppModuleBasic{},
 	genutil.AppModuleBasic{},
 )

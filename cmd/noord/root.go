@@ -14,7 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
-	addresscodec "github.com/cosmos/cosmos-sdk/codec/address"
+	"github.com/cosmos/cosmos-sdk/codec/address"
 	"github.com/cosmos/cosmos-sdk/server"
 	servercmd "github.com/cosmos/cosmos-sdk/server/cmd"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
@@ -31,23 +31,26 @@ import (
 
 func Execute() error {
 	rootCmd := NewRootCmd()
-	// Cosmos SDK v0.53 standard executor (adds log flags + server/client contexts)
+	// Cosmos SDK v0.53 standard executor (ajoute les flags log + contextes client/server)
 	return servercmd.Execute(rootCmd, strings.ToUpper(app.AppName), app.DefaultNodeHome)
 }
 
 func NewRootCmd() *cobra.Command {
-	// --- Bech32 prefixes (global config) ---
+	// --- Prefixes Bech32 (legacy global config) ---
 	cfg := sdk.GetConfig()
 	cfg.SetBech32PrefixForAccount("noor", "noorpub")
 	cfg.SetBech32PrefixForValidator("noorvaloper", "noorvaloperpub")
 	cfg.SetBech32PrefixForConsensusNode("noorvalcons", "noorvalconspub")
 	cfg.Seal()
 
+	// Encodage (Proto + Amino) de l'app
 	enc := app.MakeEncodingConfig()
 
-	accAddrCodec := addresscodec.NewBech32Codec("noor")
-	valAddrCodec := addresscodec.NewBech32Codec("noorvaloper")
+	// Address codecs (v0.53) pour les commandes genutil
+	accAddrCodec := address.NewBech32Codec("noor")
+	valAddrCodec := address.NewBech32Codec("noorvaloper")
 
+	// Contexte client de base
 	initClientCtx := client.Context{}.
 		WithCodec(enc.Marshaler).
 		WithInterfaceRegistry(enc.InterfaceRegistry).
@@ -64,12 +67,12 @@ func NewRootCmd() *cobra.Command {
 			var err error
 
 			// --- Client context ---
-			initClientCtx = initClientCtx.WithCmdContext(cmd.Context())
-			initClientCtx, err = client.ReadPersistentCommandFlags(initClientCtx, cmd.Flags())
+			clientCtx := initClientCtx.WithCmdContext(cmd.Context())
+			clientCtx, err = client.ReadPersistentCommandFlags(clientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
-			if err := client.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
+			if err := client.SetCmdClientContextHandler(clientCtx, cmd); err != nil {
 				return err
 			}
 
@@ -84,7 +87,7 @@ func NewRootCmd() *cobra.Command {
 			// Sync RootDir with --home
 			serverCtx.Config.SetRoot(homeDir)
 
-			// Ensure config/ exists before genutil tries to write node_key.json
+			// Ensure config/ exists avant que genutil essaie d'écrire node_key.json
 			if err := os.MkdirAll(filepath.Join(homeDir, "config"), 0o711); err != nil {
 				return err
 			}
@@ -93,23 +96,23 @@ func NewRootCmd() *cobra.Command {
 			chainID, _ := cmd.Flags().GetString(flags.FlagChainID)
 			if chainID != "" {
 				serverCtx.Viper.Set(flags.FlagChainID, chainID) // "chain-id"
-				serverCtx.Viper.Set("chain-id", chainID)        // defensive alias
+				serverCtx.Viper.Set("chain-id", chainID)        // alias défensif
 			}
 
 			return server.SetCmdServerContext(cmd, serverCtx)
 		},
 	}
 
-	// Global flags
+	// Flag global
 	rootCmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 
-	// Standard server commands (start, etc.)
+	// Commandes serveur standard (start, etc.)
 	server.AddCommands(rootCmd, app.DefaultNodeHome, newApp, appExport, addModuleInitFlags)
 
-	// Keys
+	// Commandes keys
 	rootCmd.AddCommand(keys.Commands())
 
-	// --- GENUTIL commands (explicit codecs + balances iterator) ---
+	// --- GENUTIL commands (init, add-genesis-account, gentx, collect, validate) ---
 	var mbm module.BasicManager = app.ModuleBasics
 	var genBalIterator genutiltypes.GenesisBalancesIterator = banktypes.GenesisBalancesIterator{}
 	msgValidator := genutiltypes.DefaultMessageValidator
@@ -127,6 +130,7 @@ func NewRootCmd() *cobra.Command {
 
 func addModuleInitFlags(startCmd *cobra.Command) {}
 
+// newApp construit NoorchainApp avec le socle minimal pour Phase 2
 func newApp(
 	logger sdklog.Logger,
 	db dbm.DB,
@@ -137,6 +141,7 @@ func newApp(
 	return app.NewNoorchainApp(logger, db, traceStore)
 }
 
+// appExport est un stub minimal pour satisfaire l'interface Application
 func appExport(
 	logger sdklog.Logger,
 	db dbm.DB,

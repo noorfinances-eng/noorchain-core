@@ -1,15 +1,18 @@
 package app
 
 import (
+	sigopts "cosmossdk.io/x/tx/signing"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/crypto/codec as cryptocodec"
+	addresscodec "github.com/cosmos/cosmos-sdk/codec/address"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/std"
-	"github.com/cosmos/cosmos-sdk/x/auth/tx"
+	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 )
 
-// EncodingConfig keeps the codec and tx config used by the app/CLI.
+// EncodingConfig garde le codec et la config Tx utilisés par l'app/CLI.
 type EncodingConfig struct {
 	InterfaceRegistry codectypes.InterfaceRegistry
 	Marshaler         codec.Codec
@@ -17,20 +20,53 @@ type EncodingConfig struct {
 	Amino             *codec.LegacyAmino
 }
 
-// MakeEncodingConfig builds a minimal, standard Cosmos SDK v0.53 encoding config.
+// MakeEncodingConfig construit une config standard Cosmos SDK v0.53
+// avec :
+// - SigningOptions (AddressCodec/ValidatorAddressCodec) adaptés à NOOR,
+// - Types des modules de l'app (ModuleBasics) enregistrés,
+// - TxConfig classique (auth/tx).
 func MakeEncodingConfig() EncodingConfig {
-	interfaceRegistry := codectypes.NewInterfaceRegistry()
+	// Bech32 codecs pour NOORCHAIN
+	accAddrCodec := addresscodec.NewBech32Codec("noor")
+	valAddrCodec := addresscodec.NewBech32Codec("noorvaloper")
 
-	// Standard SDK interfaces (includes most core types)
+	// Options de signature : indispensables pour éviter
+	// "InterfaceRegistry requires a proper address codec implementation..."
+	signingOptions := sigopts.Options{
+		AddressCodec:          accAddrCodec,
+		ValidatorAddressCodec: valAddrCodec,
+		// ConsensusAddressCodec peut rester nil à ce stade M2.
+	}
+
+	// InterfaceRegistry avec SigningOptions
+	interfaceRegistry, err := codectypes.NewInterfaceRegistryWithOptions(
+		codectypes.InterfaceRegistryOptions{
+			SigningOptions: signingOptions,
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	// 1) Types SDK de base
 	std.RegisterInterfaces(interfaceRegistry)
 
-	// Crypto interfaces (pubkeys, etc.) - critical for genutil/gentx flows
+	// 2) Types crypto (PubKey, etc.)
 	cryptocodec.RegisterInterfaces(interfaceRegistry)
 
-	marshaler := codec.NewProtoCodec(interfaceRegistry)
-	txCfg := tx.NewTxConfig(marshaler, tx.DefaultSignModes)
+	// 3) Types des modules de l'app (auth, bank, genutil)
+	ModuleBasics.RegisterInterfaces(interfaceRegistry)
 
+	// Codec Proto
+	marshaler := codec.NewProtoCodec(interfaceRegistry)
+
+	// TxConfig standard (auth/tx)
+	txCfg := authtx.NewTxConfig(marshaler, authtx.DefaultSignModes)
+
+	// Legacy Amino + modules (utile pour certains outils CLI)
 	amino := codec.NewLegacyAmino()
+	std.RegisterLegacyAminoCodec(amino)
+	ModuleBasics.RegisterLegacyAminoCodec(amino)
 
 	return EncodingConfig{
 		InterfaceRegistry: interfaceRegistry,
