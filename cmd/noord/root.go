@@ -3,20 +3,22 @@ package main
 import (
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
 	sdklog "cosmossdk.io/log"
 
+	cometcfg "github.com/cometbft/cometbft/config"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
+	clientcfg "github.com/cosmos/cosmos-sdk/client/config"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
-	"github.com/cosmos/cosmos-sdk/codec/address"
+	addresscodec "github.com/cosmos/cosmos-sdk/codec/address"
 	"github.com/cosmos/cosmos-sdk/server"
 	servercmd "github.com/cosmos/cosmos-sdk/server/cmd"
+	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -29,28 +31,28 @@ import (
 	"github.com/noorfinances-eng/noorchain-core/app"
 )
 
+// Execute is the main entry point called by main.go.
 func Execute() error {
 	rootCmd := NewRootCmd()
-	// Cosmos SDK v0.53 standard executor (ajoute les flags log + contextes client/server)
 	return servercmd.Execute(rootCmd, strings.ToUpper(app.AppName), app.DefaultNodeHome)
 }
 
+// NewRootCmd builds the root "noorchain" command.
 func NewRootCmd() *cobra.Command {
-	// --- Prefixes Bech32 (legacy global config) ---
+	// Bech32 prefixes
 	cfg := sdk.GetConfig()
 	cfg.SetBech32PrefixForAccount("noor", "noorpub")
 	cfg.SetBech32PrefixForValidator("noorvaloper", "noorvaloperpub")
 	cfg.SetBech32PrefixForConsensusNode("noorvalcons", "noorvalconspub")
 	cfg.Seal()
 
-	// Encodage (Proto + Amino) de l'app
+	// Encoding config
 	enc := app.MakeEncodingConfig()
 
-	// Address codecs (v0.53) pour les commandes genutil
-	accAddrCodec := address.NewBech32Codec("noor")
-	valAddrCodec := address.NewBech32Codec("noorvaloper")
+	accAddrCodec := addresscodec.NewBech32Codec("noor")
+	valAddrCodec := addresscodec.NewBech32Codec("noorvaloper")
 
-	// Contexte client de base
+	// Base client context
 	initClientCtx := client.Context{}.
 		WithCodec(enc.Marshaler).
 		WithInterfaceRegistry(enc.InterfaceRegistry).
@@ -61,14 +63,15 @@ func NewRootCmd() *cobra.Command {
 		WithHomeDir(app.DefaultNodeHome)
 
 	rootCmd := &cobra.Command{
-		Use:   app.AppName,
-		Short: app.AppName,
+		Use:   "noorchain",
+		Short: "Noorchain core-local node",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			var err error
-
-			// --- Client context ---
-			clientCtx := initClientCtx.WithCmdContext(cmd.Context())
-			clientCtx, err = client.ReadPersistentCommandFlags(clientCtx, cmd.Flags())
+			// 1) Client context avec flags + client.toml
+			clientCtx, err := client.ReadPersistentCommandFlags(initClientCtx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+			clientCtx, err = clientcfg.ReadFromClientConfig(clientCtx)
 			if err != nil {
 				return err
 			}
@@ -76,43 +79,25 @@ func NewRootCmd() *cobra.Command {
 				return err
 			}
 
-			// --- Server context ---
-			serverCtx := server.GetServerContextFromCmd(cmd)
+			// 2) Interception standard des configs (config.toml, app.toml, flags)
+			appTemplate := serverconfig.DefaultConfigTemplate
+			appCfg := serverconfig.DefaultConfig()
+			tmCfg := cometcfg.DefaultConfig()
 
-			homeDir, _ := cmd.Flags().GetString(flags.FlagHome)
-			if homeDir == "" {
-				homeDir = app.DefaultNodeHome
-			}
-
-			// Sync RootDir with --home
-			serverCtx.Config.SetRoot(homeDir)
-
-			// Ensure config/ exists avant que genutil essaie d'écrire node_key.json
-			if err := os.MkdirAll(filepath.Join(homeDir, "config"), 0o711); err != nil {
-				return err
-			}
-
-			// Propagate --chain-id into server Viper (appOpts)
-			chainID, _ := cmd.Flags().GetString(flags.FlagChainID)
-			if chainID != "" {
-				serverCtx.Viper.Set(flags.FlagChainID, chainID) // "chain-id"
-				serverCtx.Viper.Set("chain-id", chainID)        // alias défensif
-			}
-
-			return server.SetCmdServerContext(cmd, serverCtx)
+			return server.InterceptConfigsPreRunHandler(cmd, appTemplate, appCfg, tmCfg)
 		},
 	}
 
-	// Flag global
+	// Flag global chain-id (optionnel)
 	rootCmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
 
-	// Commandes serveur standard (start, etc.)
+	// Ajout des commandes serveur (start, unsafe-reset-all, etc.)
 	server.AddCommands(rootCmd, app.DefaultNodeHome, newApp, appExport, addModuleInitFlags)
 
 	// Commandes keys
 	rootCmd.AddCommand(keys.Commands())
 
-	// --- GENUTIL commands (init, add-genesis-account, gentx, collect, validate) ---
+	// genutil / genesis
 	var mbm module.BasicManager = app.ModuleBasics
 	var genBalIterator genutiltypes.GenesisBalancesIterator = banktypes.GenesisBalancesIterator{}
 	msgValidator := genutiltypes.DefaultMessageValidator
@@ -128,20 +113,20 @@ func NewRootCmd() *cobra.Command {
 	return rootCmd
 }
 
-func addModuleInitFlags(startCmd *cobra.Command) {}
+// addModuleInitFlags is required by server.AddCommands; no custom start flags for core-local.
+func addModuleInitFlags(_ *cobra.Command) {}
 
-// newApp construit NoorchainApp avec le socle minimal pour Phase 2
+// newApp is the AppCreator used by the "start" command.
 func newApp(
 	logger sdklog.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
 	appOpts servertypes.AppOptions,
 ) servertypes.Application {
-	_ = appOpts
-	return app.NewNoorchainApp(logger, db, traceStore)
+	return app.NewNoorchainApp(logger, db, traceStore, appOpts)
 }
 
-// appExport est un stub minimal pour satisfaire l'interface Application
+// appExport is the AppExporter used by "export" (non implémenté pour core-local).
 func appExport(
 	logger sdklog.Logger,
 	db dbm.DB,
@@ -161,5 +146,6 @@ func appExport(
 	_ = appOpts
 	_ = modulesToExport
 
+	// Export non supporté pour le profil core-local minimal
 	return servertypes.ExportedApp{}, io.EOF
 }
