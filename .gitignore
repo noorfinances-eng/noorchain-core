@@ -7,9 +7,37 @@
 
 # Build artifacts
 *.out
+dist/
+build/
+target/
 
 # Testnet local directory (généré automatiquement)
 data-testnet/
 
 # Logs
 *.log
+
+# Dépendances (récupérables)
+node_modules/
+vendor/
+
+# Environnements virtuels
+.venv/
+venv/
+
+# Caches/tests
+.cache/
+.pytest_cache/
+coverage/
+coverage.xml
+
+# IDE / système
+.vscode/
+.idea/
+.DS_Store
+
+# Config locale / secrets
+/workspaces/noorchain-core/.noor-core-local
+.env
+/.noor-core-local
+/workspaces/noorchain-core/.noor-core-local

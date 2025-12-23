@@ -21,7 +21,7 @@ type EncodingConfig struct {
 	Amino             *codec.LegacyAmino
 }
 
-// MakeEncodingConfig builds an EncodingConfig for Noorchain (M2 minimal)
+// MakeEncodingConfig builds an EncodingConfig for Noorchain (M2/M3 minimal)
 // with Cosmos SDK v0.53.5 and base modules declared in ModuleBasics
 // (auth, bank, staking, genutil).
 func MakeEncodingConfig() EncodingConfig {

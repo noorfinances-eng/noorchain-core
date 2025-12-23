@@ -2,17 +2,16 @@ package app
 
 import (
 	"github.com/cosmos/cosmos-sdk/types/module"
-
-	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/cosmos/cosmos-sdk/x/genutil"
-	"github.com/cosmos/cosmos-sdk/x/staking"
+	authmodule "github.com/cosmos/cosmos-sdk/x/auth"
+	bankmodule "github.com/cosmos/cosmos-sdk/x/bank"
+	genutilmodule "github.com/cosmos/cosmos-sdk/x/genutil"
+	stakingmodule "github.com/cosmos/cosmos-sdk/x/staking"
 )
 
-// Minimal set for Phase 2: provides `init` + `gentx` scaffolding.
+// ModuleBasics fournit les AppModuleBasic pour l’enregistrement (gRPC Gateway, codec, etc.)
 var ModuleBasics = module.NewBasicManager(
-	auth.AppModuleBasic{},
-	bank.AppModuleBasic{},
-	staking.AppModuleBasic{},
-	genutil.AppModuleBasic{},
+	authmodule.AppModuleBasic{},
+	bankmodule.AppModuleBasic{},
+	stakingmodule.AppModuleBasic{},
+	genutilmodule.AppModuleBasic{},
 )

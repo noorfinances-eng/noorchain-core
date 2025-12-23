@@ -10,6 +10,7 @@ import (
 	cometcfg "github.com/cometbft/cometbft/config"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	clientcfg "github.com/cosmos/cosmos-sdk/client/config"
@@ -52,25 +53,29 @@ func NewRootCmd() *cobra.Command {
 	accAddrCodec := addresscodec.NewBech32Codec("noor")
 	valAddrCodec := addresscodec.NewBech32Codec("noorvaloper")
 
-	// Base client context
-	initClientCtx := client.Context{}.
-		WithCodec(enc.Marshaler).
-		WithInterfaceRegistry(enc.InterfaceRegistry).
-		WithTxConfig(enc.TxConfig).
-		WithLegacyAmino(enc.Amino).
-		WithInput(os.Stdin).
-		WithAccountRetriever(authtypes.AccountRetriever{}).
-		WithHomeDir(app.DefaultNodeHome)
+	// Base client context (Viper non-nil)
+	initClientCtx := client.Context{
+		Viper:             viper.New(),
+		Codec:             enc.Marshaler,
+		InterfaceRegistry: enc.InterfaceRegistry,
+		TxConfig:          enc.TxConfig,
+		LegacyAmino:       enc.Amino,
+		Input:             os.Stdin,
+		AccountRetriever:  authtypes.AccountRetriever{},
+		HomeDir:           app.DefaultNodeHome,
+	}
 
 	rootCmd := &cobra.Command{
 		Use:   "noorchain",
 		Short: "Noorchain core-local node",
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
-			// 1) Client context avec flags + client.toml
+			// 1) Client context avec flags
 			clientCtx, err := client.ReadPersistentCommandFlags(initClientCtx, cmd.Flags())
 			if err != nil {
 				return err
 			}
+
+			// 2) Client config (client.toml)
 			clientCtx, err = clientcfg.ReadFromClientConfig(clientCtx)
 			if err != nil {
 				return err
@@ -79,7 +84,7 @@ func NewRootCmd() *cobra.Command {
 				return err
 			}
 
-			// 2) Interception standard des configs (config.toml, app.toml, flags)
+			// 3) Interception standard des configs (config.toml, app.toml, flags)
 			appTemplate := serverconfig.DefaultConfigTemplate
 			appCfg := serverconfig.DefaultConfig()
 			tmCfg := cometcfg.DefaultConfig()

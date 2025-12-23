@@ -1,4 +1,4 @@
 package app
 
-// Phase 2: keep it dead-simple and stable.
-const DefaultNodeHome = ".noorchain"
+// Profil core-local
+const DefaultNodeHome = ".noor-core-local"
