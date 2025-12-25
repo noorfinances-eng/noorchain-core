@@ -21,7 +21,7 @@ func New(cfg config.Config) *Node {
 	return &Node{
 		cfg:     cfg,
 		logger:  newLogger(),
-		network: network.New("127.0.0.1:30303"),
+		network: network.New(cfg.P2PAddr),
 	}
 }
 

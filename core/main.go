@@ -17,6 +17,7 @@ func main() {
 
 	chainID := flag.String("chain-id", "", "chain identifier")
 	dataDir := flag.String("data-dir", "", "data directory")
+	p2pAddr := flag.String("p2p-addr", "", "p2p listen address")
 	flag.Parse()
 
 	cfg := config.Default()
@@ -25,6 +26,9 @@ func main() {
 	}
 	if *dataDir != "" {
 		cfg.DataDir = *dataDir
+	}
+	if *p2pAddr != "" {
+		cfg.P2PAddr = *p2pAddr
 	}
 
 	n := node.New(cfg)
