@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -14,7 +15,18 @@ import (
 func main() {
 	fmt.Println("NOORCHAIN 2.1 — EVM L1 booting")
 
+	chainID := flag.String("chain-id", "", "chain identifier")
+	dataDir := flag.String("data-dir", "", "data directory")
+	flag.Parse()
+
 	cfg := config.Default()
+	if *chainID != "" {
+		cfg.ChainID = *chainID
+	}
+	if *dataDir != "" {
+		cfg.DataDir = *dataDir
+	}
+
 	n := node.New(cfg)
 	n.Start()
 
