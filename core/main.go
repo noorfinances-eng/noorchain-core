@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,7 +13,8 @@ import (
 )
 
 func main() {
-	fmt.Println("NOORCHAIN 2.1 — EVM L1 booting")
+	mainlog := log.New(os.Stdout, "[main] ", log.LstdFlags)
+	mainlog.Println("NOORCHAIN 2.1 — EVM L1 booting")
 
 	chainID := flag.String("chain-id", "", "chain identifier")
 	dataDir := flag.String("data-dir", "", "data directory")
@@ -32,13 +33,18 @@ func main() {
 	}
 
 	n := node.New(cfg)
-	n.Start()
+	if err := n.Start(); err != nil {
+		mainlog.Println("fatal: node start failed:", err)
+		os.Exit(1)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	<-ctx.Done()
 
-	n.Stop()
-	fmt.Println("NOORCHAIN 2.1 — shutdown clean")
+	if err := n.Stop(); err != nil {
+		mainlog.Println("warn: node stop error:", err)
+	}
+	mainlog.Println("NOORCHAIN 2.1 — shutdown clean")
 }

@@ -2,10 +2,13 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"noorchain-evm-l1/core/config"
+	"noorchain-evm-l1/core/health"
 	"noorchain-evm-l1/core/network"
 )
 
@@ -25,10 +28,14 @@ type Node struct {
 	cfg     config.Config
 	logger  Logger
 	network *network.Network
-	ctx     context.Context
-	cancel  context.CancelFunc
-	state   State
-	height  uint64
+	health  *health.Server
+
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	mu     sync.Mutex
+	state  State
+	height uint64
 }
 
 func New(cfg config.Config) *Node {
@@ -37,6 +44,7 @@ func New(cfg config.Config) *Node {
 		cfg:     cfg,
 		logger:  newLogger(),
 		network: network.New(cfg.P2PAddr),
+		health:  health.New("127.0.0.1:8080"),
 		ctx:     ctx,
 		cancel:  cancel,
 		state:   StateInit,
@@ -44,19 +52,29 @@ func New(cfg config.Config) *Node {
 	}
 }
 
-func (n *Node) Start() {
+func (n *Node) Start() error {
 	if err := os.MkdirAll(n.cfg.DataDir, 0o755); err != nil {
-		panic(err)
+		return fmt.Errorf("mkdir data-dir %s: %w", n.cfg.DataDir, err)
 	}
 
+	n.mu.Lock()
 	n.state = StateRunning
+	n.mu.Unlock()
+
 	n.logger.Println("node started")
-	n.logger.Println("state:", n.state)
+	n.logger.Println("state:", StateRunning)
 	n.logger.Println("chain-id:", n.cfg.ChainID)
 	n.logger.Println("data-dir:", n.cfg.DataDir)
 
-	n.network.Start()
+	if err := n.network.Start(); err != nil {
+		return err
+	}
+	if err := n.health.Start(); err != nil {
+		return err
+	}
+
 	go n.loop()
+	return nil
 }
 
 func (n *Node) loop() {
@@ -69,17 +87,42 @@ func (n *Node) loop() {
 			n.logger.Println("node loop stopped")
 			return
 		case <-ticker.C:
+			n.mu.Lock()
 			n.height++
-			n.logger.Println("tick | height:", n.height, "| state:", n.state)
+			state := n.state
+			height := n.height
+			n.mu.Unlock()
+
+			n.logger.Println("tick | height:", height, "| state:", state)
 		}
 	}
 }
 
-func (n *Node) Stop() {
+func (n *Node) Stop() error {
+	n.mu.Lock()
+	if n.state == StateStopping {
+		n.mu.Unlock()
+		return nil
+	}
 	n.state = StateStopping
-	n.logger.Println("state:", n.state)
+	n.mu.Unlock()
+
+	n.logger.Println("state:", StateStopping)
 
 	n.cancel()
-	n.network.Stop()
+
+	// stop health first (fast)
+	{
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_ = n.health.Stop(ctx)
+}
+
+	// stop network
+	if err := n.network.Stop(); err != nil {
+		n.logger.Println("network stop error:", err)
+	}
+
 	n.logger.Println("node stopped")
+	return nil
 }

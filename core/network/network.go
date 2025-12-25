@@ -2,7 +2,9 @@ package network
 
 import (
 	"fmt"
+	"log"
 	"net"
+	"os"
 )
 
 type Network struct {
@@ -14,18 +16,25 @@ func New(addr string) *Network {
 	return &Network{addr: addr}
 }
 
-func (n *Network) Start() {
+func (n *Network) Start() error {
 	ln, err := net.Listen("tcp", n.addr)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("network listen %s: %w", n.addr, err)
 	}
 	n.ln = ln
-	fmt.Println("network listening on", n.addr)
+
+	log.New(os.Stdout, "[network] ", log.LstdFlags).Println("listening on", n.addr)
+	return nil
 }
 
-func (n *Network) Stop() {
+func (n *Network) Stop() error {
 	if n.ln != nil {
-		_ = n.ln.Close()
+		if err := n.ln.Close(); err != nil {
+			// keep stopping even if close fails
+			log.New(os.Stdout, "[network] ", log.LstdFlags).Println("close error:", err)
+			return err
+		}
 	}
-	fmt.Println("network stopped")
+	log.New(os.Stdout, "[network] ", log.LstdFlags).Println("stopped")
+	return nil
 }
