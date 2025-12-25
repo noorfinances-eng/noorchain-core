@@ -33,6 +33,7 @@ import (
 	genutilmodule "github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
+	paramsmodule "github.com/cosmos/cosmos-sdk/x/params"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
@@ -80,12 +81,14 @@ type NoopConsensusParamStore struct {
 func (ps *NoopConsensusParamStore) Has(ctx context.Context) (bool, error) {
 	return ps.cp != nil, nil
 }
+
 func (ps *NoopConsensusParamStore) Get(ctx context.Context) (tmproto.ConsensusParams, error) {
 	if ps.cp == nil {
 		return tmproto.ConsensusParams{}, nil
 	}
 	return *ps.cp, nil
 }
+
 func (ps *NoopConsensusParamStore) Set(ctx context.Context, cp tmproto.ConsensusParams) error {
 	ps.cp = &cp
 	return nil
@@ -129,6 +132,7 @@ func NewNoorchainApp(
 		bappOpts = append(bappOpts, baseapp.SetInterBlockCache(store.NewCommitKVStoreCacheManager()))
 	}
 
+	// Pruning (flags/app.toml)
 	if pruningStr := cast.ToString(appOpts.Get("pruning")); pruningStr != "" {
 		pruningOpts := pruningtypes.NewPruningOptionsFromString(pruningStr)
 		bappOpts = append(bappOpts, baseapp.SetPruning(pruningOpts))
@@ -193,9 +197,9 @@ func NewNoorchainApp(
 		sdkruntime.NewKVStoreService(app.keys[authtypes.StoreKey]),
 		authtypes.ProtoBaseAccount,
 		maccPerms,
-		addresscodec.NewBech32Codec("noor"), // accounts bech32
+		addresscodec.NewBech32Codec("noor"),
 		AppName,
-		authtypes.NewModuleAddress("gov").String(), // authority
+		authtypes.NewModuleAddress("gov").String(),
 	)
 
 	app.BankKeeper = bankkeeper.NewBaseKeeper(
@@ -224,6 +228,7 @@ func NewNoorchainApp(
 
 	// 4) Module manager
 	app.mm = module.NewManager(
+		paramsmodule.NewAppModule(app.ParamsKeeper),
 		authmodule.NewAppModule(enc.Marshaler, app.AccountKeeper, nil, nil),
 		bankmodule.NewAppModule(enc.Marshaler, app.BankKeeper, app.AccountKeeper, nil),
 		stakingmodule.NewAppModule(enc.Marshaler, app.StakingKeeper, app.AccountKeeper, app.BankKeeper, nil),
@@ -237,6 +242,7 @@ func NewNoorchainApp(
 	app.mm.SetOrderBeginBlockers(stakingtypes.ModuleName)
 	app.mm.SetOrderEndBlockers(stakingtypes.ModuleName)
 	app.mm.SetOrderInitGenesis(
+		paramstypes.ModuleName,
 		authtypes.ModuleName,
 		banktypes.ModuleName,
 		stakingtypes.ModuleName,
