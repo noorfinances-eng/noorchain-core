@@ -28,6 +28,7 @@ type Node struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
 	state   State
+	height  uint64
 }
 
 func New(cfg config.Config) *Node {
@@ -39,6 +40,7 @@ func New(cfg config.Config) *Node {
 		ctx:     ctx,
 		cancel:  cancel,
 		state:   StateInit,
+		height:  0,
 	}
 }
 
@@ -67,7 +69,8 @@ func (n *Node) loop() {
 			n.logger.Println("node loop stopped")
 			return
 		case <-ticker.C:
-			n.logger.Println("tick | state:", n.state)
+			n.height++
+			n.logger.Println("tick | height:", n.height, "| state:", n.state)
 		}
 	}
 }
