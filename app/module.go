@@ -5,6 +5,7 @@ import (
 	authmodule "github.com/cosmos/cosmos-sdk/x/auth"
 	bankmodule "github.com/cosmos/cosmos-sdk/x/bank"
 	genutilmodule "github.com/cosmos/cosmos-sdk/x/genutil"
+	paramsmodule "github.com/cosmos/cosmos-sdk/x/params"
 	stakingmodule "github.com/cosmos/cosmos-sdk/x/staking"
 )
 
@@ -14,4 +15,5 @@ var ModuleBasics = module.NewBasicManager(
 	bankmodule.AppModuleBasic{},
 	stakingmodule.AppModuleBasic{},
 	genutilmodule.AppModuleBasic{},
+	paramsmodule.AppModuleBasic{}, // ajout du module params
 )
