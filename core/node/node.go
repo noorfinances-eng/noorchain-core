@@ -1,15 +1,23 @@
 package node
 
-import "fmt"
+import (
+	"fmt"
 
-type Node struct{}
+	"noorchain-evm-l1/core/config"
+)
 
-func New() *Node {
-	return &Node{}
+type Node struct {
+	cfg config.Config
+}
+
+func New(cfg config.Config) *Node {
+	return &Node{cfg: cfg}
 }
 
 func (n *Node) Start() {
 	fmt.Println("node started")
+	fmt.Println("chain-id:", n.cfg.ChainID)
+	fmt.Println("data-dir:", n.cfg.DataDir)
 }
 
 func (n *Node) Stop() {
