@@ -8,9 +8,11 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"noorchain-evm-l1/core/config"
 	"noorchain-evm-l1/core/network"
+	"noorchain-evm-l1/core/rpc"
 )
 
 func main() {
@@ -21,6 +23,7 @@ func main() {
 	dataDir := flag.String("data-dir", "", "data directory")
 	p2pAddr := flag.String("p2p-addr", "", "p2p listen address")
 	bootPeers := flag.String("boot-peers", "", "comma-separated list of boot peers (host:port)")
+	rpcAddr := flag.String("rpc-addr", "", "json-rpc listen address (e.g. 127.0.0.1:8545)")
 	flag.Parse()
 
 	cfg := config.Default()
@@ -34,14 +37,17 @@ func main() {
 		cfg.P2PAddr = *p2pAddr
 	}
 
-	// Initialisation réseau DIRECTE (pas de Node abstrait)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	// Start P2P network
 	netw := network.New(cfg.P2PAddr)
 	if err := netw.Start(); err != nil {
 		mainlog.Println("fatal: network start failed:", err)
 		os.Exit(1)
 	}
 
-	// Bootstrap P2P best-effort
+	// Bootstrap peers (best effort)
 	if peers := strings.TrimSpace(*bootPeers); peers != "" {
 		for _, raw := range strings.Split(peers, ",") {
 			addr := strings.TrimSpace(raw)
@@ -52,11 +58,25 @@ func main() {
 		}
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	// Start minimal JSON-RPC server if enabled
+	var rpcSrv *rpc.Server
+	if strings.TrimSpace(*rpcAddr) != "" {
+		rpcSrv = rpc.New(*rpcAddr, cfg.ChainID, log.New(os.Stdout, "[rpc] ", log.LstdFlags))
+		if err := rpcSrv.Start(ctx); err != nil {
+			mainlog.Println("fatal: rpc start failed:", err)
+			_ = netw.Stop()
+			os.Exit(1)
+		}
+	}
 
 	<-ctx.Done()
 
+	// Graceful shutdown
+	if rpcSrv != nil {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		_ = rpcSrv.Stop(shutdownCtx)
+		cancel()
+	}
 	if err := netw.Stop(); err != nil {
 		mainlog.Println("warn: network stop error:", err)
 	}
