@@ -1,0 +1,6 @@
+
+# Go build artifacts
+noorcore
+
+# Node dependencies
+node_modules/
