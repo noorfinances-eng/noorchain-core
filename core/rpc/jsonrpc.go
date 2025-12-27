@@ -15,29 +15,29 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
-
-	"github.com/syndtr/goleveldb/leveldb"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-)
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/syndtr/goleveldb/leveldb"
 
+	"noorchain-evm-l1/core/node"
+	"noorchain-evm-l1/core/txpool"
+)
 
 type Server struct {
 	addr    string
 	log     *log.Logger
 	chainID string
-
-	block atomic.Uint64
-	evm   *EvmMock
+	n       *node.Node
+	evm     *EvmMock
 
 	httpSrv *http.Server
 	ln      net.Listener
 }
 
-func New(addr, chainID string, db *leveldb.DB, l *log.Logger) *Server {
+func New(addr, chainID string, n *node.Node, db *leveldb.DB, l *log.Logger) *Server {
 	if l == nil {
 		l = log.New(ioDiscard{}, "[rpc] ", log.LstdFlags)
 	}
@@ -45,9 +45,9 @@ func New(addr, chainID string, db *leveldb.DB, l *log.Logger) *Server {
 		addr:    addr,
 		log:     l,
 		chainID: chainID,
+		n:       n,
 		evm:     NewEvmMock(db),
 	}
-	s.block.Store(0)
 	return s
 }
 
@@ -69,20 +69,6 @@ func (s *Server) Start(ctx context.Context) error {
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
-
-	// Temporary dev block ticker.
-	go func() {
-		t := time.NewTicker(2 * time.Second)
-		defer t.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-t.C:
-				s.block.Add(1)
-			}
-		}
-	}()
 
 	go func() {
 		s.log.Println("listening on", s.addr)
@@ -189,7 +175,11 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		resp.Result = chainIDToNetVersion(s.chainID)
 		return resp
 	case "eth_blockNumber":
-		resp.Result = toHexUint(s.block.Load())
+		if s.n != nil {
+			resp.Result = toHexUint(s.n.Height())
+			return resp
+		}
+		resp.Result = toHexUint(0)
 		return resp
 
 	// ---- minimal EVM tooling surface (dev-only mock) ----
@@ -255,19 +245,33 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		// unknown call => empty result
 		resp.Result = "0x"
 		return resp
-
 	case "eth_sendRawTransaction":
+		// M8.A: accept signed raw tx, hash it, and enqueue into node txpool (no EVM execution yet).
 		var params []string
 		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
 			return resp
 		}
-		raw := params[0]
-		h, err := s.evm.SendRawTransaction(raw, chainIDToBigInt(s.chainID), s.block.Load())
-		if err != nil {
-			resp.Error = &rpcError{Code: -32000, Message: err.Error()}
+		if s.n == nil {
+			resp.Error = &rpcError{Code: -32000, Message: "node not attached"}
 			return resp
 		}
+		rawHex := strings.TrimPrefix(strings.TrimSpace(params[0]), "0x")
+		rawBytes, err := hex.DecodeString(rawHex)
+		if err != nil {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid hex"}
+			return resp
+		}
+
+		// Validate basic tx encoding (RLP) using geth decoder.
+		var tx types.Transaction
+		if err := tx.UnmarshalBinary(rawBytes); err != nil {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid raw tx"}
+			return resp
+		}
+
+		h := crypto.Keccak256Hash(rawBytes)
+		s.n.TxPool().AddPending(txpool.Tx{Hash: h.Hex(), Raw: rawBytes})
 		resp.Result = h.Hex()
 		return resp
 
@@ -289,7 +293,6 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		}
 		resp.Result = rcpt
 		return resp
-
 	case "eth_getTransactionByHash":
 		// Needed by ethers.js polling (waitForTransaction)
 		var params []string
@@ -302,9 +305,42 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			resp.Result = nil
 			return resp
 		}
+
+		// M8.A: check node txpool first (pending / minimal mined)
+		if s.n != nil {
+			if ptx, ok := s.n.TxPool().Get(hashStr); ok {
+				var blockNumber any = nil
+				var txIndex any = nil
+				if bn, ok := s.n.TxIndex().Get(hashStr); ok {
+					blockNumber = toHexUint(bn)
+					txIndex = "0x0"
+				}
+				resp.Result = map[string]any{
+					"hash":             ptx.Hash,
+					"blockHash":        nil,
+					"blockNumber":      blockNumber,
+					"transactionIndex": txIndex,
+					"from":             "0x" + strings.Repeat("0", 40),
+					"to":               nil,
+					"nonce":            "0x0",
+					"value":            "0x0",
+					"gas":              "0x0",
+					"gasPrice":         "0x0",
+					"input":            "0x",
+					"type":             "0x0",
+					"chainId":          chainIDToHex(s.chainID),
+				}
+				return resp
+			}
+		}
+
+		// Fallback: legacy dev mock store (pre-M8.A)
+		if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
+			resp.Result = nil
+			return resp
+		}
 		h := common.HexToHash(hashStr)
 
-		// Lookup tx in dev mock store
 		s.evm.mu.Lock()
 		tx := s.evm.txs[h]
 		rcpt := s.evm.receipts[h]
@@ -319,32 +355,27 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		signer := types.LatestSignerForChainID(chainBig)
 		from, _ := types.Sender(signer, tx)
 
-		// Signature values (r,s,v)
 		v, rSig, sSig := tx.RawSignatureValues()
 
-		// Optional mined fields if we have a receipt
 		var blockHash any = nil
 		var blockNumber any = nil
-		var txIndex any = nil
+		var idx any = nil
 		if rcpt != nil {
 			blockHash = rcpt.BlockHash.Hex()
 			blockNumber = rcpt.BlockNumber
-			txIndex = "0x0"
+			idx = "0x0"
 		}
 
-		// Legacy gasPrice or EIP-1559 fields
 		gasPrice := "0x0"
 		maxFee := "0x0"
 		maxPrio := "0x0"
 		if tx.Type() == 2 {
-			// dynamic fee
 			if tx.GasFeeCap() != nil {
 				maxFee = "0x" + tx.GasFeeCap().Text(16)
 			}
 			if tx.GasTipCap() != nil {
 				maxPrio = "0x" + tx.GasTipCap().Text(16)
 			}
-			// provide something for gasPrice too
 			gasPrice = maxFee
 		} else {
 			if tx.GasPrice() != nil {
@@ -352,52 +383,30 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			}
 		}
 
-		// Build ethers-compatible tx object
-		type txResp struct {
-			Hash                 string `json:"hash"`
-			Nonce                string `json:"nonce"`
-			BlockHash            any    `json:"blockHash"`
-			BlockNumber          any    `json:"blockNumber"`
-			TransactionIndex     any    `json:"transactionIndex"`
-			From                 string `json:"from"`
-			To                   any    `json:"to"`
-			Value                string `json:"value"`
-			Gas                  string `json:"gas"`
-			GasPrice             string `json:"gasPrice"`
-			MaxFeePerGas         string `json:"maxFeePerGas"`
-			MaxPriorityFeePerGas string `json:"maxPriorityFeePerGas"`
-			Input                string `json:"input"`
-			Type                 string `json:"type"`
-			ChainId              string `json:"chainId"`
-			V                    string `json:"v"`
-			R                    string `json:"r"`
-			S                    string `json:"s"`
-		}
-
 		var to any = nil
 		if tx.To() != nil {
 			to = tx.To().Hex()
 		}
 
-		resp.Result = txResp{
-			Hash:                 tx.Hash().Hex(),
-			Nonce:                toHexUint(tx.Nonce()),
-			BlockHash:            blockHash,
-			BlockNumber:          blockNumber,
-			TransactionIndex:     txIndex,
-			From:                 from.Hex(),
-			To:                   to,
-			Value:                "0x" + tx.Value().Text(16),
-			Gas:                  toHexUint(tx.Gas()),
-			GasPrice:             gasPrice,
-			MaxFeePerGas:         maxFee,
-			MaxPriorityFeePerGas: maxPrio,
-			Input:                "0x" + common.Bytes2Hex(tx.Data()),
-			Type:                 toHexUint(uint64(tx.Type())),
-			ChainId:              "0x" + chainBig.Text(16),
-			V:                    "0x" + v.Text(16),
-			R:                    "0x" + rSig.Text(16),
-			S:                    "0x" + sSig.Text(16),
+		resp.Result = map[string]any{
+			"hash":                 tx.Hash().Hex(),
+			"nonce":                toHexUint(tx.Nonce()),
+			"blockHash":            blockHash,
+			"blockNumber":          blockNumber,
+			"transactionIndex":     idx,
+			"from":                 from.Hex(),
+			"to":                   to,
+			"value":                "0x" + tx.Value().Text(16),
+			"gas":                  toHexUint(tx.Gas()),
+			"gasPrice":             gasPrice,
+			"maxFeePerGas":         maxFee,
+			"maxPriorityFeePerGas": maxPrio,
+			"input":                "0x" + common.Bytes2Hex(tx.Data()),
+			"type":                 toHexUint(uint64(tx.Type())),
+			"chainId":              "0x" + chainBig.Text(16),
+			"v":                    "0x" + v.Text(16),
+			"r":                    "0x" + rSig.Text(16),
+			"s":                    "0x" + sSig.Text(16),
 		}
 		return resp
 
@@ -426,8 +435,10 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			Transactions     []any  `json:"transactions"`
 			Uncles           []any  `json:"uncles"`
 		}
-
-		n := s.block.Load()
+		n := uint64(0)
+		if s.n != nil {
+			n = s.n.Height()
+		}
 		resp.Result = blockResp{
 			Number:           toHexUint(n),
 			Hash:             pseudoBlockHash(n).Hex(),
