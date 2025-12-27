@@ -4,3 +4,8 @@ noorcore
 
 # Node dependencies
 node_modules/
+
+# --- dev generated ---
+artifacts/
+cache/
+data/
