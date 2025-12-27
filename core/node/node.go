@@ -1,6 +1,9 @@
 package node
 
 import (
+        "strconv"
+        "net/http"
+        "io"
 	"context"
 	"fmt"
 	"os"
@@ -134,6 +137,11 @@ func (n *Node) Start() error {
 	if err := n.network.Start(); err != nil {
 		return err
 	}
+
+        // M10: dial boot peers (best-effort)
+        for _, peer := range n.cfg.BootPeers {
+                _ = n.network.Connect(peer)
+        }
 	if err := n.health.Start(); err != nil {
 		return err
 	}
@@ -143,6 +151,61 @@ func (n *Node) Start() error {
 }
 
 func (n *Node) loop() {
+        // M10: follower mode (mainnet-like pack): follow leader height via RPC, do not mine locally
+        if strings.EqualFold(strings.TrimSpace(n.cfg.Role), "follower") && strings.TrimSpace(n.cfg.FollowRPC) != "" {
+                ticker := time.NewTicker(1 * time.Second)
+                defer ticker.Stop()
+
+                type rpcResp struct {
+                        Result string `json:"result"`
+                }
+
+                for {
+                        select {
+                        case <-n.ctx.Done():
+                                n.logger.Println("node loop stopped")
+                                return
+                        case <-ticker.C:
+                                reqBody := `{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}`
+                                resp, err := http.Post(strings.TrimRight(n.cfg.FollowRPC, "/"), "application/json", strings.NewReader(reqBody))
+                                if err != nil {
+                                        n.logger.Println("follower: follow-rpc post error:", err)
+                                        continue
+                                }
+                                b, _ := io.ReadAll(resp.Body)
+                                _ = resp.Body.Close()
+
+                                var rr rpcResp
+                                if err := json.Unmarshal(b, &rr); err != nil {
+                                        n.logger.Println("follower: decode error:", err)
+                                        continue
+                                }
+                                // parse hex quantity
+                                h := strings.TrimSpace(rr.Result)
+                                h = strings.TrimPrefix(h, "0x")
+                                if h == "" {
+                                        continue
+                                }
+                                hv, err := strconv.ParseUint(h, 16, 64)
+                                if err != nil {
+                                        n.logger.Println("follower: parse height error:", err)
+                                        continue
+                                }
+
+                                n.mu.Lock()
+                                if hv > n.height {
+                                        n.height = hv
+                                }
+                                height := n.height
+                                state := n.state
+                                n.mu.Unlock()
+
+                                n.logger.Println("tick | height:", height, "| state:", state, "| follower:", true)
+                        }
+                }
+        }
+
+
 	// M9: execution hook (minimal, step 1)
 	// For now: decode raw tx bytes and log decoded shape.
 	// Next steps will route contract calls + build receipts + persist.
@@ -250,6 +313,8 @@ func (n *Node) loop() {
 }
 
 func (n *Node) DB() *leveldb.DB { return n.db }
+
+func (n *Node) Config() config.Config { return n.cfg }
 
 func (n *Node) Height() uint64 {
 	n.mu.Lock()

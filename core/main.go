@@ -23,12 +23,25 @@ func main() {
 	dataDir := flag.String("data-dir", "", "data directory")
 	p2pAddr := flag.String("p2p-addr", "", "p2p listen address")
 	rpcAddr := flag.String("rpc-addr", "", "json-rpc listen address (e.g. 127.0.0.1:8545)")
+	bootPeers := flag.String("boot-peers", "", "comma-separated list of p2p peers to dial on startup")
+	role := flag.String("role", "", "node role: leader or follower")
+	followRPC := flag.String("follow-rpc", "", "leader RPC endpoint for follower mode (e.g. http://127.0.0.1:8545)")
 	flag.Parse()
 
 	cfg := config.Default()
 	if *chainID != "" {
 		cfg.ChainID = *chainID
 	}
+
+        if strings.TrimSpace(*bootPeers) != "" {
+                cfg.BootPeers = strings.Split(*bootPeers, ",")
+        }
+        if strings.TrimSpace(*role) != "" {
+                cfg.Role = strings.TrimSpace(*role)
+        }
+        if strings.TrimSpace(*followRPC) != "" {
+                cfg.FollowRPC = strings.TrimSpace(*followRPC)
+        }
 	if *dataDir != "" {
 		cfg.DataDir = *dataDir
 	}

@@ -99,7 +99,7 @@ type rpcReq struct {
 type rpcResp struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      json.RawMessage `json:"id"`
-	Result  any             `json:"result,omitempty"`
+	Result  any             `json:"result"`
 	Error   *rpcError       `json:"error,omitempty"`
 }
 
@@ -300,6 +300,29 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		}
 
 		// Fallback: in-memory receipt store
+
+                // M10: follower mode proxy — if receipt not found locally, ask leader RPC
+                if s.n != nil {
+                        cfg := s.n.Config()
+                        if strings.EqualFold(strings.TrimSpace(cfg.Role), "follower") && strings.TrimSpace(cfg.FollowRPC) != "" {
+                                // best-effort proxy to leader
+                                body := []byte(fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionReceipt","params":["%s"]}`, hashStr))
+                                resp2, err := http.Post(strings.TrimRight(cfg.FollowRPC, "/"), "application/json", bytes.NewReader(body))
+                                if err == nil && resp2 != nil {
+                                        b2, _ := ioReadAllLimit(resp2.Body, 2<<20)
+                                        _ = resp2.Body.Close()
+                                        // Parse minimal: expect {result: ...} or {error: ...}
+                                        var pr struct { Result any `json:"result"`; Error *rpcError `json:"error"` }
+                                        if err := json.Unmarshal(b2, &pr); err == nil {
+                                                if pr.Error == nil {
+                                                        // could be null or object
+                                                        resp.Result = pr.Result
+                                                        return resp
+                                                }
+                                        }
+                                }
+                        }
+                }
 		rcpt := s.evm.GetTransactionReceipt(common.HexToHash(hashStr))
 		if rcpt == nil {
 			resp.Result = nil
