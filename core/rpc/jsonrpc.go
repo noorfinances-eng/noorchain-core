@@ -1,10 +1,10 @@
 package rpc
 
 import (
-	"encoding/hex"
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,9 +18,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/syndtr/goleveldb/leveldb"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
+
 
 type Server struct {
 	addr    string
@@ -34,7 +37,7 @@ type Server struct {
 	ln      net.Listener
 }
 
-func New(addr, chainID string, l *log.Logger) *Server {
+func New(addr, chainID string, db *leveldb.DB, l *log.Logger) *Server {
 	if l == nil {
 		l = log.New(ioDiscard{}, "[rpc] ", log.LstdFlags)
 	}
@@ -42,7 +45,7 @@ func New(addr, chainID string, l *log.Logger) *Server {
 		addr:    addr,
 		log:     l,
 		chainID: chainID,
-		evm:     NewEvmMock(),
+		evm:     NewEvmMock(db),
 	}
 	s.block.Store(0)
 	return s

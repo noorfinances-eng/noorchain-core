@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"github.com/syndtr/goleveldb/leveldb"
+	"path/filepath"
 	"time"
 
 	"noorchain-evm-l1/core/config"
@@ -57,11 +59,21 @@ func main() {
 			_ = netw.Connect(addr)
 		}
 	}
+	// Open LevelDB for persistent state (mainnet-like)
+	dbPath := filepath.Join(cfg.DataDir, "db", "leveldb")
+	db, err := leveldb.OpenFile(dbPath, nil)
+	if err != nil {
+		mainlog.Println("fatal: leveldb open failed:", err)
+		_ = netw.Stop()
+		os.Exit(1)
+	}
+	defer func() { _ = db.Close() }()
+
 
 	// Start minimal JSON-RPC server if enabled
 	var rpcSrv *rpc.Server
 	if strings.TrimSpace(*rpcAddr) != "" {
-		rpcSrv = rpc.New(*rpcAddr, cfg.ChainID, log.New(os.Stdout, "[rpc] ", log.LstdFlags))
+		rpcSrv = rpc.New(*rpcAddr, cfg.ChainID, db, log.New(os.Stdout, "[rpc] ", log.LstdFlags))
 		if err := rpcSrv.Start(ctx); err != nil {
 			mainlog.Println("fatal: rpc start failed:", err)
 			_ = netw.Stop()

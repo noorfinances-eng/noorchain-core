@@ -7,7 +7,7 @@ const RPC_URL = "http://127.0.0.1:8545";
 const DEV_PRIVKEY = "0x59c6995e998f97a5a0044966f094538f2f0f9b8677183762b2f279b9da3c8e8b";
 
 // IMPORTANT: update this if you redeployed
-const REGISTRY = "0x4716234A82C888198a6BD0059a437A423bDE5eD1";
+const REGISTRY = "0xC9F398646E19778F2C3D9fF32bb75E5a99FD4E56";
 
 function loadABI(relPath) {
   const raw = readFileSync(relPath, "utf8");

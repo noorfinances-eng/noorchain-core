@@ -2,7 +2,10 @@ module noorchain-evm-l1
 
 go 1.25.5
 
-require github.com/ethereum/go-ethereum v1.14.11
+require (
+	github.com/ethereum/go-ethereum v1.14.11
+	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+)
 
 require (
 	github.com/bits-and-blooms/bitset v1.13.0 // indirect
@@ -14,6 +17,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
 	github.com/ethereum/c-kzg-4844 v1.0.0 // indirect
 	github.com/ethereum/go-verkle v0.1.1-0.20240829091221-dffa7562dbe9 // indirect
+	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/holiman/uint256 v1.3.1 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/supranational/blst v0.3.13 // indirect

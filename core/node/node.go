@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/syndtr/goleveldb/leveldb"
+
 	"noorchain-evm-l1/core/config"
 	"noorchain-evm-l1/core/health"
 	"noorchain-evm-l1/core/network"
@@ -29,6 +31,9 @@ type Node struct {
 	logger  Logger
 	network *network.Network
 	health  *health.Server
+
+
+	db *leveldb.DB
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -56,6 +61,13 @@ func (n *Node) Start() error {
 	if err := os.MkdirAll(n.cfg.DataDir, 0o755); err != nil {
 		return fmt.Errorf("mkdir data-dir %s: %w", n.cfg.DataDir, err)
 	}
+
+
+	db, err := openLevelDB(n.cfg.DataDir)
+	if err != nil {
+		return err
+	}
+	n.db = db
 
 	n.mu.Lock()
 	n.state = StateRunning
@@ -98,6 +110,8 @@ func (n *Node) loop() {
 	}
 }
 
+func (n *Node) DB() *leveldb.DB { return n.db }
+
 func (n *Node) Stop() error {
 	n.mu.Lock()
 	if n.state == StateStopping {
@@ -121,6 +135,12 @@ func (n *Node) Stop() error {
 	// stop network
 	if err := n.network.Stop(); err != nil {
 		n.logger.Println("network stop error:", err)
+	}
+
+
+	if n.db != nil {
+		_ = n.db.Close()
+		n.db = nil
 	}
 
 	n.logger.Println("node stopped")

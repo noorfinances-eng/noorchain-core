@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -11,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/syndtr/goleveldb/leveldb"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -18,14 +21,53 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-// EvmMock is a dev-only in-memory tx/receipt store to unblock tooling (Hardhat/Ethers).
-// It does NOT execute EVM. It only accepts signed txs, derives tx hash/sender, returns receipts,
+// EvmMock is a dev-only tx/receipt store to unblock tooling (Hardhat/Ethers).
+// It does NOT execute EVM. It accepts signed txs, derives tx hash/sender, returns receipts,
 // and provides a minimal "state shim" for PoSS read methods via eth_call.
 //
-// This is strictly for M6 PoSS V0 bring-up.
+// PoSS shim state is persisted in LevelDB so it survives restarts.
+//
+// ---- KV layout ----
+// poss/v1/<registryAddrLowerHex>/count              -> uint64 (big-endian)
+// poss/v1/<registryAddrLowerHex>/latest             -> uint64 (big-endian)
+// poss/v1/<registryAddrLowerHex>/snap/<id_u64_be>   -> rlp(possMetaABI)
+
+const possKVPrefix = "poss/v1/"
+
+func possAddrPrefix(addr common.Address) []byte {
+	return []byte(possKVPrefix + strings.ToLower(addr.Hex()) + "/")
+}
+
+func possKeyCount(addr common.Address) []byte {
+	return append(possAddrPrefix(addr), []byte("count")...)
+}
+func possKeyLatest(addr common.Address) []byte {
+	return append(possAddrPrefix(addr), []byte("latest")...)
+}
+
+func possKeySnap(addr common.Address, id uint64) []byte {
+	p := possAddrPrefix(addr)
+	p = append(p, []byte("snap/")...)
+	var be [8]byte
+	binary.BigEndian.PutUint64(be[:], id)
+	p = append(p, be[:]...)
+	return p
+}
+
+func u64ToBE(v uint64) []byte {
+	var be [8]byte
+	binary.BigEndian.PutUint64(be[:], v)
+	return be[:]
+}
+
+func beToU64(b []byte) (uint64, bool) {
+	if len(b) != 8 {
+		return 0, false
+	}
+	return binary.BigEndian.Uint64(b), true
+}
 
 func computeCreateAddress(from common.Address, nonce uint64) common.Address {
-	// Ethereum CREATE address: keccak256(rlp([from, nonce])) last 20 bytes
 	enc, _ := rlp.EncodeToBytes([]any{from, nonce})
 	h := crypto.Keccak256(enc)
 	return common.BytesToAddress(h[12:])
@@ -65,7 +107,7 @@ type possSigABI struct {
 }
 
 type possState struct {
-	Snapshots []possMetaABI // 1-indexed for IDs conceptually; stored 0-indexed
+	Snapshots []possMetaABI
 }
 
 var possABI abi.ABI
@@ -75,7 +117,6 @@ var possSelLatestSnapshotId [4]byte
 var possSelGetSnapshot [4]byte
 
 func init() {
-	// Minimal ABI: submitSnapshot(meta,sigs) + view methods used by the client
 	const abiJSON = `[
 		{"type":"function","name":"submitSnapshot","stateMutability":"nonpayable",
 		 "inputs":[
@@ -127,23 +168,20 @@ func init() {
 }
 
 type EvmMock struct {
+	db *leveldb.DB
 	mu sync.Mutex
 
-	// nonce per sender
-	nonce map[common.Address]uint64
-
-	// tx hash -> receipt
+	nonce    map[common.Address]uint64
 	receipts map[common.Hash]*receiptJSON
+	txs      map[common.Hash]*types.Transaction
 
-	// tx hash -> tx
-	txs map[common.Hash]*types.Transaction
-
-	// PoSS shim state per contract address (registry)
+	// optional cache; DB is source of truth for reads
 	poss map[common.Address]*possState
 }
 
-func NewEvmMock() *EvmMock {
+func NewEvmMock(db *leveldb.DB) *EvmMock {
 	return &EvmMock{
+		db:       db,
 		nonce:    make(map[common.Address]uint64),
 		receipts: make(map[common.Hash]*receiptJSON),
 		txs:      make(map[common.Hash]*types.Transaction),
@@ -151,10 +189,7 @@ func NewEvmMock() *EvmMock {
 	}
 }
 
-func (m *EvmMock) Accounts() []string {
-	// node is non-custodial: no unlocked accounts exposed
-	return []string{}
-}
+func (m *EvmMock) Accounts() []string { return []string{} }
 
 func (m *EvmMock) GetTransactionCount(addr common.Address) uint64 {
 	m.mu.Lock()
@@ -171,9 +206,74 @@ func (m *EvmMock) BumpNonce(addr common.Address, nonce uint64) {
 	}
 }
 
-// SendRawTransaction stores tx + receipt, bumps nonce.
-// Additionally, if tx is a call to PoSSRegistry.submitSnapshot(meta,sigs),
-// it updates a minimal in-memory PoSS state keyed by recipient contract address.
+// ---- PoSS persistence helpers ----
+
+func (m *EvmMock) possPersistSnapshot(to common.Address, meta possMetaABI) {
+	if m.db == nil {
+		return
+	}
+
+	var curCount uint64
+	if b, err := m.db.Get(possKeyCount(to), nil); err == nil {
+		if v, ok := beToU64(b); ok {
+			curCount = v
+		}
+	}
+	newID := curCount + 1
+
+	enc, err := rlp.EncodeToBytes(meta)
+	if err == nil {
+		_ = m.db.Put(possKeySnap(to, newID), enc, nil)
+	}
+	_ = m.db.Put(possKeyCount(to), u64ToBE(newID), nil)
+	_ = m.db.Put(possKeyLatest(to), u64ToBE(newID), nil)
+}
+
+func (m *EvmMock) possReadCount(to common.Address) uint64 {
+	if m.db == nil {
+		return 0
+	}
+	b, err := m.db.Get(possKeyCount(to), nil)
+	if err != nil {
+		return 0
+	}
+	v, ok := beToU64(b)
+	if !ok {
+		return 0
+	}
+	return v
+}
+
+func (m *EvmMock) possReadLatest(to common.Address) uint64 {
+	if m.db == nil {
+		return 0
+	}
+	b, err := m.db.Get(possKeyLatest(to), nil)
+	if err != nil {
+		return 0
+	}
+	v, ok := beToU64(b)
+	if !ok {
+		return 0
+	}
+	return v
+}
+
+func (m *EvmMock) possReadSnapshot(to common.Address, id uint64) (possMetaABI, bool) {
+	if m.db == nil || id == 0 {
+		return possMetaABI{}, false
+	}
+	b, err := m.db.Get(possKeySnap(to, id), nil)
+	if err != nil || len(b) == 0 {
+		return possMetaABI{}, false
+	}
+	var meta possMetaABI
+	if err := rlp.DecodeBytes(b, &meta); err != nil {
+		return possMetaABI{}, false
+	}
+	return meta, true
+}
+
 func (m *EvmMock) SendRawTransaction(rawHex string, chainID *big.Int, blockNumber uint64) (common.Hash, error) {
 	rawHex = strings.TrimSpace(rawHex)
 	rawHex = strings.TrimPrefix(rawHex, "0x")
@@ -195,23 +295,19 @@ func (m *EvmMock) SendRawTransaction(rawHex string, chainID *big.Int, blockNumbe
 
 	h := tx.Hash()
 
-	// contract address if creation
 	var contractAddr *common.Address
 	if tx.To() == nil {
 		addr := computeCreateAddress(from, tx.Nonce())
 		contractAddr = &addr
 	}
 
-	// If this is a PoSS submitSnapshot call, update shim state
 	if tx.To() != nil {
 		to := *tx.To()
 		data := tx.Data()
-		if len(data) >= 4 && bytes.Equal(data[:4], possSelSubmit[:]) {
+		if len(data) >= 4 {
 			args := data[4:]
 			decoded, derr := possABI.Methods["submitSnapshot"].Inputs.Unpack(args)
 			if derr == nil && len(decoded) == 2 {
-				// decoded[0] is meta (tuple), decoded[1] is sigs (tuple[])
-				// Decode meta tuple explicitly (avoid abi.ConvertType pitfalls)
 				metaAny := decoded[0]
 
 				var (
@@ -224,9 +320,8 @@ func (m *EvmMock) SendRawTransaction(rawHex string, chainID *big.Int, blockNumbe
 
 				switch v := metaAny.(type) {
 				case map[string]any:
-					// Most stable path
-					if b, ok := v["snapshotHash"].([32]byte); ok {
-						snapshotHash = b
+					if bb, ok := v["snapshotHash"].([32]byte); ok {
+						snapshotHash = bb
 					} else if bb, ok := v["snapshotHash"].([]byte); ok && len(bb) == 32 {
 						copy(snapshotHash[:], bb)
 					}
@@ -249,10 +344,9 @@ func (m *EvmMock) SendRawTransaction(rawHex string, chainID *big.Int, blockNumbe
 					}
 
 				case []any:
-					// Positional tuple: [hash, uri, start, end, version]
 					if len(v) >= 5 {
-						if b, ok := v[0].([32]byte); ok {
-							snapshotHash = b
+						if bb, ok := v[0].([32]byte); ok {
+							snapshotHash = bb
 						} else if bb, ok := v[0].([]byte); ok && len(bb) == 32 {
 							copy(snapshotHash[:], bb)
 						}
@@ -276,34 +370,29 @@ func (m *EvmMock) SendRawTransaction(rawHex string, chainID *big.Int, blockNumbe
 					}
 				}
 
-				// Fallback: go-ethereum may decode tuples as anonymous structs; extract via reflection
 				if version == 0 {
 					rv := reflect.ValueOf(metaAny)
 					if rv.Kind() == reflect.Struct {
-						// SnapshotHash
 						fh := rv.FieldByName("SnapshotHash")
 						if fh.IsValid() && fh.Kind() == reflect.Array && fh.Len() == 32 {
 							for i := 0; i < 32; i++ {
 								snapshotHash[i] = byte(fh.Index(i).Uint())
 							}
 						}
-						// Uri
 						fu := rv.FieldByName("Uri")
 						if fu.IsValid() && fu.Kind() == reflect.String {
 							uri = fu.String()
 						}
-						// PeriodStart / PeriodEnd
 						fps := rv.FieldByName("PeriodStart")
-						if fps.IsValid() && (fps.Kind() == reflect.Uint64 || fps.Kind() == reflect.Uint32 || fps.Kind() == reflect.Uint) {
+						if fps.IsValid() {
 							periodStart = uint64(fps.Uint())
 						}
 						fpe := rv.FieldByName("PeriodEnd")
-						if fpe.IsValid() && (fpe.Kind() == reflect.Uint64 || fpe.Kind() == reflect.Uint32 || fpe.Kind() == reflect.Uint) {
+						if fpe.IsValid() {
 							periodEnd = uint64(fpe.Uint())
 						}
-						// Version
 						fv := rv.FieldByName("Version")
-						if fv.IsValid() && (fv.Kind() == reflect.Uint32 || fv.Kind() == reflect.Uint64 || fv.Kind() == reflect.Uint) {
+						if fv.IsValid() {
 							version = uint32(fv.Uint())
 						}
 					}
@@ -319,8 +408,6 @@ func (m *EvmMock) SendRawTransaction(rawHex string, chainID *big.Int, blockNumbe
 					Publisher:    from,
 				}
 
-				// sigs are ignored in shim (signature validated by Solidity in real EVM)
-
 				m.mu.Lock()
 				st := m.poss[to]
 				if st == nil {
@@ -329,11 +416,12 @@ func (m *EvmMock) SendRawTransaction(rawHex string, chainID *big.Int, blockNumbe
 				}
 				st.Snapshots = append(st.Snapshots, meta)
 				m.mu.Unlock()
+
+				m.possPersistSnapshot(to, meta)
 			}
 		}
 	}
 
-	// minimal receipt
 	rcpt := &receiptJSON{
 		TransactionHash:   h,
 		TransactionIndex:  "0x0",
@@ -355,8 +443,6 @@ func (m *EvmMock) SendRawTransaction(rawHex string, chainID *big.Int, blockNumbe
 	m.mu.Unlock()
 
 	m.BumpNonce(from, tx.Nonce())
-
-	// simulate mining delay for polling tools
 	time.Sleep(50 * time.Millisecond)
 
 	return h, nil
@@ -368,18 +454,49 @@ func (m *EvmMock) GetTransactionReceipt(hash common.Hash) *receiptJSON {
 	return m.receipts[hash]
 }
 
-// Call implements minimal eth_call for PoSS view functions on the PoSSRegistry contract address.
 func (m *EvmMock) Call(to common.Address, data []byte) ([]byte, bool) {
 	if len(data) < 4 {
 		return nil, false
 	}
 	sel := data[:4]
 
+	if m.db != nil {
+		switch {
+		case bytes.Equal(sel, possSelSnapshotCount[:]):
+			c := m.possReadCount(to)
+			out, _ := possABI.Methods["snapshotCount"].Outputs.Pack(new(big.Int).SetUint64(c))
+			return out, true
+
+		case bytes.Equal(sel, possSelLatestSnapshotId[:]):
+			latest := m.possReadLatest(to)
+			out, _ := possABI.Methods["latestSnapshotId"].Outputs.Pack(new(big.Int).SetUint64(latest))
+			return out, true
+
+		case bytes.Equal(sel, possSelGetSnapshot[:]):
+			args := data[4:]
+			decoded, err := possABI.Methods["getSnapshot"].Inputs.Unpack(args)
+			if err != nil || len(decoded) != 1 {
+				return nil, false
+			}
+			idBig, ok := decoded[0].(*big.Int)
+			if !ok {
+				return nil, false
+			}
+			id := idBig.Uint64()
+
+			meta, ok := m.possReadSnapshot(to, id)
+			if !ok {
+				meta = possMetaABI{}
+			}
+			out, _ := possABI.Methods["getSnapshot"].Outputs.Pack(meta)
+			return out, true
+		}
+	}
+
 	m.mu.Lock()
 	st := m.poss[to]
 	m.mu.Unlock()
 	if st == nil {
-		// unknown contract => return empty result (client may treat as 0)
 		st = &possState{Snapshots: []possMetaABI{}}
 	}
 
@@ -409,18 +526,17 @@ func (m *EvmMock) Call(to common.Address, data []byte) ([]byte, bool) {
 		if id >= 1 && id <= uint64(len(st.Snapshots)) {
 			meta = st.Snapshots[id-1]
 		} else {
-			meta = possMetaABI{} // zero
+			meta = possMetaABI{}
 		}
-
 		out, _ := possABI.Methods["getSnapshot"].Outputs.Pack(meta)
 		return out, true
+
 	default:
 		return nil, false
 	}
 }
 
 func pseudoBlockHash(n uint64) common.Hash {
-	// deterministic pseudo hash for dev
 	b := make([]byte, 32)
 	for i := 0; i < 8; i++ {
 		b[31-i] = byte(n >> (8 * i))
@@ -432,7 +548,6 @@ func toHexBig(v uint64) string {
 	return "0x" + new(big.Int).SetUint64(v).Text(16)
 }
 
-// JSON helpers
 func mustJSON(v any) json.RawMessage {
 	b, _ := json.Marshal(v)
 	return b
