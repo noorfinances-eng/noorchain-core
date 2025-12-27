@@ -9,11 +9,18 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 
+	"encoding/json"
 	"noorchain-evm-l1/core/config"
+	"noorchain-evm-l1/core/exec"
 	"noorchain-evm-l1/core/health"
 	"noorchain-evm-l1/core/network"
 	"noorchain-evm-l1/core/txindex"
 	"noorchain-evm-l1/core/txpool"
+	"strings"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 type Logger interface {
@@ -27,6 +34,47 @@ const (
 	StateRunning  State = "RUNNING"
 	StateStopping State = "STOPPING"
 )
+
+// ---- M9 receipts persistence (minimal) ----
+
+const rcptKVPrefix = "rcpt/v1/"
+
+func rcptKey(txHash string) []byte {
+	h := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(txHash), "0x"))
+	return []byte(rcptKVPrefix + h)
+}
+
+type receiptJSON struct {
+	TransactionHash   common.Hash     `json:"transactionHash"`
+	TransactionIndex  string          `json:"transactionIndex"`
+	BlockHash         common.Hash     `json:"blockHash"`
+	BlockNumber       string          `json:"blockNumber"`
+	From              common.Address  `json:"from"`
+	To                *common.Address `json:"to"`
+	CumulativeGasUsed string          `json:"cumulativeGasUsed"`
+	GasUsed           string          `json:"gasUsed"`
+	ContractAddress   *common.Address `json:"contractAddress"`
+	Logs              []any           `json:"logs"`
+	Status            string          `json:"status"`
+	Type              string          `json:"type"`
+}
+
+func pseudoBlockHash(n uint64) common.Hash {
+	b := make([]byte, 32)
+	for i := 0; i < 8; i++ {
+		b[31-i] = byte(n >> (8 * i))
+	}
+	return common.BytesToHash(crypto.Keccak256(b))
+}
+
+func toHexBig(v uint64) string {
+	// v is uint64 (gas), represent as hex quantity
+	return "0x" + fmt.Sprintf("%x", v)
+}
+
+func toHexUint(v uint64) string {
+	return "0x" + fmt.Sprintf("%x", v)
+}
 
 type Node struct {
 	cfg     config.Config
@@ -95,6 +143,76 @@ func (n *Node) Start() error {
 }
 
 func (n *Node) loop() {
+	// M9: execution hook (minimal, step 1)
+	// For now: decode raw tx bytes and log decoded shape.
+	// Next steps will route contract calls + build receipts + persist.
+	applyTx := func(t txpool.Tx, height uint64) {
+		if len(t.Raw) == 0 {
+			n.logger.Println("applyTx: empty raw tx | hash:", t.Hash, "| height:", height)
+			return
+		}
+
+		var tx types.Transaction
+		if err := tx.UnmarshalBinary(t.Raw); err != nil {
+			n.logger.Println("applyTx: decode failed | hash:", t.Hash, "| height:", height, "| err:", err)
+			return
+		}
+
+		// Best-effort "to" for logging (contract creation => nil)
+		toStr := "<create>"
+		if tx.To() != nil {
+			toStr = tx.To().Hex()
+		}
+
+		// Sanity: ensure pool hash matches raw bytes hash
+		rawHash := crypto.Keccak256Hash(t.Raw)
+		match := strings.EqualFold(rawHash.Hex(), t.Hash)
+
+		// M9: persist minimal receipt (best-effort)
+		if n.db != nil {
+			toPtr := tx.To()
+			rcpt := receiptJSON{
+				TransactionHash:   rawHash,
+				TransactionIndex:  "0x0",
+				BlockHash:         pseudoBlockHash(height),
+				BlockNumber:       toHexUint(height),
+				From:              common.Address{},
+				To:                toPtr,
+				CumulativeGasUsed: toHexBig(tx.Gas()),
+				GasUsed:           toHexBig(tx.Gas()),
+				ContractAddress:   nil,
+				Logs:              []any{},
+				Status:            "0x1",
+				Type:              toHexUint(uint64(tx.Type())),
+			}
+			if b, err := json.Marshal(rcpt); err == nil {
+				_ = n.db.Put(rcptKey(t.Hash), b, nil)
+			}
+		}
+
+		// M9: minimal contracts execution (PoSS submitSnapshot)
+		possOK := false
+		if n.db != nil {
+			if ok, err := exec.ApplyPoSSSubmitSnapshot(&tx, n.cfg.ChainID, n.db, uint64(time.Now().Unix())); err != nil {
+				n.logger.Println("applyTx: poss exec error:", err)
+			} else {
+				possOK = ok
+			}
+		}
+
+		n.logger.Println(
+			"applyTx: DECODE_OK",
+			"| height:", height,
+			"| poolHash:", t.Hash,
+			"| rawHash:", rawHash.Hex(),
+			"| match:", match,
+			"| type:", tx.Type(),
+			"| nonce:", tx.Nonce(),
+			"| to:", toStr,
+			"| dataLen:", len(tx.Data()),
+			"| possOK:", possOK,
+		)
+	}
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
@@ -116,6 +234,8 @@ func (n *Node) loop() {
 				txs := n.txpool.PopPending(64)
 				for i := range txs {
 					n.txindex.Put(txs[i].Hash, height)
+					// M9: hook point (execution will be extended in next steps)
+					applyTx(txs[i], height)
 					mined++
 				}
 			}

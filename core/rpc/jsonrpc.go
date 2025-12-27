@@ -286,6 +286,20 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			resp.Result = nil
 			return resp
 		}
+
+		// M9: prefer persisted receipts from LevelDB (rcpt/v1/<hash>) if available.
+		if s.evm != nil && s.evm.db != nil {
+			key := []byte("rcpt/v1/" + strings.ToLower(strings.TrimPrefix(hashStr, "0x")))
+			if b, err := s.evm.db.Get(key, nil); err == nil && len(b) > 0 {
+				var anyRcpt any
+				if err := json.Unmarshal(b, &anyRcpt); err == nil {
+					resp.Result = anyRcpt
+					return resp
+				}
+			}
+		}
+
+		// Fallback: in-memory receipt store
 		rcpt := s.evm.GetTransactionReceipt(common.HexToHash(hashStr))
 		if rcpt == nil {
 			resp.Result = nil
