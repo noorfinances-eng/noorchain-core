@@ -291,7 +291,6 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 
         case "eth_feeHistory":
                 // Minimal EIP-1559 feeHistory for wallet compatibility (dev-only)
-                // params: [blockCount, newestBlock, rewardPercentiles]
                 resp.Result = map[string]any{
                         "oldestBlock": toHexUint(0),
                         "baseFeePerGas": []string{"0x1", "0x1"},
@@ -300,9 +299,34 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
                 }
                 return resp
 
+        case "eth_getLogs":
+                resp.Result = []any{}
+                return resp
+
+        case "eth_newFilter":
+                resp.Result = "0x1"
+                return resp
+
+        case "eth_newBlockFilter":
+                resp.Result = "0x1"
+                return resp
+
+        case "eth_uninstallFilter":
+                resp.Result = true
+                return resp
+
+        case "eth_getFilterChanges":
+                resp.Result = []any{}
+                return resp
+
+        case "eth_getFilterLogs":
+                resp.Result = []any{}
+                return resp
+
         case "eth_estimateGas":
                 resp.Result = "0x2dc6c0" // 3,000,000
                 return resp
+
 
 
 
