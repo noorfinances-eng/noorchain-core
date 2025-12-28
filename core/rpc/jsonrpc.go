@@ -377,42 +377,6 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
                 resp.Error = &rpcError{Code: -32601, Message: "not supported"}
                 return resp
 
-		var params []any
-		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
-			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
-			return resp
-
-
-		}
-		callObj, ok := params[0].(map[string]any)
-		if !ok {
-			resp.Error = &rpcError{Code: -32602, Message: "invalid call object"}
-			return resp
-
-
-		}
-		toStr, _ := callObj["to"].(string)
-		dataStr, _ := callObj["data"].(string)
-		to := common.HexToAddress(toStr)
-		dataStr = strings.TrimPrefix(strings.TrimSpace(dataStr), "0x")
-		data, err := hex.DecodeString(dataStr)
-		if err != nil {
-			resp.Error = &rpcError{Code: -32602, Message: "invalid data hex"}
-			return resp
-
-
-		}
-
-		if out, ok := s.evm.Call(to, data); ok {
-			resp.Result = "0x" + hex.EncodeToString(out)
-			return resp
-
-
-		}
-
-		// unknown call => empty result
-		resp.Result = "0x"
-		return resp
 
 
 	case "eth_sendRawTransaction":
