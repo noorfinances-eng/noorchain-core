@@ -104,7 +104,7 @@ func New(cfg config.Config) *Node {
 		cfg:     cfg,
 		logger:  newLogger(),
 		network: network.New(cfg.P2PAddr),
-		health:  health.New("127.0.0.1:8080"),
+		health:  health.New(cfg.HealthAddr),
 		txpool:  txpool.New(),
 		txindex: txindex.New(),
 		ctx:     ctx,

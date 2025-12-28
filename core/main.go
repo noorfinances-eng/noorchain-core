@@ -24,6 +24,7 @@ func main() {
 	p2pAddr := flag.String("p2p-addr", "", "p2p listen address")
 	rpcAddr := flag.String("rpc-addr", "", "json-rpc listen address (e.g. 127.0.0.1:8545)")
 	bootPeers := flag.String("boot-peers", "", "comma-separated list of p2p peers to dial on startup")
+        healthAddr := flag.String("health-addr", "", "health listen address (e.g. 127.0.0.1:8080)")
 	role := flag.String("role", "", "node role: leader or follower")
 	followRPC := flag.String("follow-rpc", "", "leader RPC endpoint for follower mode (e.g. http://127.0.0.1:8545)")
 	flag.Parse()
@@ -46,8 +47,11 @@ func main() {
 		cfg.DataDir = *dataDir
 	}
 	if *p2pAddr != "" {
-		cfg.P2PAddr = *p2pAddr
-	}
+                cfg.P2PAddr = *p2pAddr
+        }
+        if strings.TrimSpace(*healthAddr) != "" {
+                cfg.HealthAddr = strings.TrimSpace(*healthAddr)
+        }
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
