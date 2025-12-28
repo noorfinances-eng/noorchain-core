@@ -237,6 +237,31 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		return resp
 
 
+        case "eth_protocolVersion":
+                resp.Result = "0x0"
+                return resp
+
+        case "net_peerCount":
+                resp.Result = "0x0"
+                return resp
+
+        case "web3_sha3":
+                var params []string
+                if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
+                        resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+                        return resp
+                }
+                inHex := strings.TrimPrefix(strings.TrimSpace(params[0]), "0x")
+                in, err := hex.DecodeString(inHex)
+                if err != nil {
+                        resp.Error = &rpcError{Code: -32602, Message: "invalid hex"}
+                        return resp
+                }
+                h := crypto.Keccak256Hash(in)
+                resp.Result = h.Hex()
+                return resp
+
+
         case "eth_blockNumber":
                 if s.n != nil {
                         resp.Result = toHexUint(s.n.Height())
@@ -315,34 +340,43 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
                 resp.Result = true
                 return resp
 
-        case "eth_getFilterChanges":
-                resp.Result = []any{}
+        case "eth_call":
+                // Minimal eth_call support for PoSS view methods (dev-only).
+                // params: [ {to: "0x..", data: "0x.."}, "latest" ]
+                var params []any
+                if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
+                        resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+                        return resp
+                }
+                callObj, ok := params[0].(map[string]any)
+                if !ok {
+                        resp.Error = &rpcError{Code: -32602, Message: "invalid call object"}
+                        return resp
+                }
+                toStr, _ := callObj["to"].(string)
+                dataStr, _ := callObj["data"].(string)
+                to := common.HexToAddress(toStr)
+                dataStr = strings.TrimPrefix(strings.TrimSpace(dataStr), "0x")
+                data, err := hex.DecodeString(dataStr)
+                if err != nil {
+                        resp.Error = &rpcError{Code: -32602, Message: "invalid data hex"}
+                        return resp
+                }
+                if out, ok := s.evm.Call(to, data); ok {
+                        resp.Result = "0x" + hex.EncodeToString(out)
+                        return resp
+                }
+                resp.Result = "0x"
                 return resp
 
-        case "eth_getFilterLogs":
-                resp.Result = []any{}
+        case "debug_traceTransaction":
+                resp.Error = &rpcError{Code: -32601, Message: "not supported"}
                 return resp
 
-        case "eth_estimateGas":
-                resp.Result = "0x2dc6c0" // 3,000,000
+        case "debug_traceCall":
+                resp.Error = &rpcError{Code: -32601, Message: "not supported"}
                 return resp
 
-
-
-
-
-
-
-
-	case "eth_getBalance":
-		resp.Result = "0x0"
-		return resp
-
-
-
-	case "eth_call":
-		// Minimal eth_call support for PoSS view methods (dev-only).
-		// params: [ {to: "0x..", data: "0x.."}, "latest" ]
 		var params []any
 		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
