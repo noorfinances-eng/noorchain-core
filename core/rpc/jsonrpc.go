@@ -582,6 +582,39 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 
 
 
+        case "eth_getBlockByHash":
+                // Minimal: ignore hash input, return latest block (dev-compatible)
+                resp.Result = nil
+                if s.n != nil {
+                        n := s.n.Height()
+                        // reuse the same shape as eth_getBlockByNumber
+                        resp.Result = map[string]any{
+                                "number":     toHexUint(n),
+                                "hash":       pseudoBlockHash(n).Hex(),
+                                "parentHash": pseudoBlockHash(n - 1).Hex(),
+                                "nonce":      "0x0000000000000000",
+                                "sha3Uncles":  "0x" + strings.Repeat("0", 64),
+                                "logsBloom":   "0x" + strings.Repeat("0", 512),
+                                "transactionsRoot": "0x" + strings.Repeat("0", 64),
+                                "stateRoot":        "0x" + strings.Repeat("0", 64),
+                                "receiptsRoot":     "0x" + strings.Repeat("0", 64),
+                                "miner":            "0x" + strings.Repeat("0", 40),
+                                "difficulty":       "0x0",
+                                "totalDifficulty":  "0x0",
+                                "extraData":        "0x",
+                                "size":             "0x0",
+                                "gasLimit":         "0x1c9c380",
+                                "gasUsed":          "0x0",
+                                "timestamp":        toHexUint(uint64(time.Now().Unix())),
+                                "mixHash":          "0x" + strings.Repeat("0", 64),
+                                "baseFeePerGas":    "0x1",
+                                "transactions":     []any{},
+                                "uncles":           []any{},
+                        }
+                }
+                return resp
+
+
 	case "eth_getBlockByNumber":
 		// Ethers.js expects many fields to be present. Provide a dev-compatible block shape.
 		type blockResp struct {
