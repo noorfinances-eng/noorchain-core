@@ -237,15 +237,25 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		return resp
 
 
-	case "eth_blockNumber":
-		if s.n != nil {
-			resp.Result = toHexUint(s.n.Height())
-			return resp
+        case "eth_blockNumber":
+                if s.n != nil {
+                        resp.Result = toHexUint(s.n.Height())
+                        return resp
+                }
+                resp.Result = toHexUint(0)
+                return resp
 
+        case "eth_syncing":
+                resp.Result = false
+                return resp
 
-		}
-		resp.Result = toHexUint(0)
-		return resp
+        case "eth_mining":
+                resp.Result = true
+                return resp
+
+        case "net_listening":
+                resp.Result = true
+                return resp
 
 
 
