@@ -53,7 +53,7 @@ func New(addr, chainID string, n *node.Node, db *leveldb.DB, l *log.Logger) *Ser
 
 func (s *Server) Start(ctx context.Context) error {
 
-        assertRoutingTableStatic()
+	assertRoutingTableStatic()
 
 	if strings.TrimSpace(s.addr) == "" {
 		return errors.New("rpc: empty addr")
@@ -161,135 +161,153 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 //
 // routeClass defines dispatcher routing behavior.
 //
-//   routeLeaderOnly      : write / leader-only (proxy if follower)
-//   routeLocalThenProxy  : read local, fallback proxy leader
-//   routeLocal           : local or safe stub
-//
+//	routeLeaderOnly      : write / leader-only (proxy if follower)
+//	routeLocalThenProxy  : read local, fallback proxy leader
+//	routeLocal           : local or safe stub
 type routeClass uint8
 
 const (
-        routeLocal routeClass = iota
-        routeLocalThenProxy
-        routeLeaderOnly
+	routeLocal routeClass = iota
+	routeLocalThenProxy
+	routeLeaderOnly
 )
 
 // Canonical routing table (eth_*) — declarative, not yet enforced
 var ethRouting = map[string]routeClass{
-        "eth_sendRawTransaction":     routeLeaderOnly,
-        "eth_getTransactionReceipt":  routeLocalThenProxy,
-        "eth_getTransactionByHash":   routeLocalThenProxy,
-        "eth_chainId":                routeLocal,
-        "eth_blockNumber":            routeLocal,
-        "eth_accounts":               routeLocal,
-        "eth_getTransactionCount":    routeLocal,
-        "eth_gasPrice":               routeLocal,
-        "eth_estimateGas":            routeLocal,
-        "eth_getBalance":             routeLocal,
-        "eth_call":                   routeLocal,
-        "eth_getBlockByNumber":       routeLocal,
+	"eth_sendRawTransaction":    routeLeaderOnly,
+	"eth_getTransactionReceipt": routeLocalThenProxy,
+	"eth_getTransactionByHash":  routeLocalThenProxy,
+	"eth_chainId":               routeLocal,
+	"eth_blockNumber":           routeLocal,
+	"eth_accounts":              routeLocal,
+	"eth_getTransactionCount":   routeLocal,
+	"eth_gasPrice":              routeLocal,
+	"eth_estimateGas":           routeLocal,
+	"eth_getBalance":            routeLocal,
+	"eth_call":                  routeLocal,
+	"eth_getBlockByNumber":      routeLocal,
 }
 
 func (s *Server) dispatch(req *rpcReq) rpcResp {
-        resp := rpcResp{JSONRPC: "2.0", ID: req.ID}
+	resp := rpcResp{JSONRPC: "2.0", ID: req.ID}
 
-        if req.JSONRPC != "2.0" {
-                resp.Error = &rpcError{Code: -32600, Message: "invalid jsonrpc version"}
-                return resp
-        }
+	if req.JSONRPC != "2.0" {
+		resp.Error = &rpcError{Code: -32600, Message: "invalid jsonrpc version"}
+		return resp
+	}
 
+	// Dispatcher routing (M10.6)
+	// M10.6 safety: assert routing table coverage (log-only)
+	if strings.HasPrefix(req.Method, "eth_") {
+		if _, ok := ethRouting[req.Method]; !ok {
+			s.log.Println("rpc warning: eth method not in routing table:", req.Method)
+		}
+	}
 
-        // Dispatcher routing (M10.6)
-        // M10.6 safety: assert routing table coverage (log-only)
-        if strings.HasPrefix(req.Method, "eth_") {
-                if _, ok := ethRouting[req.Method]; !ok {
-                        s.log.Println("rpc warning: eth method not in routing table:", req.Method)
-                }
-        }
+	// M10.6 effective routing (leader/follower)
+	if cls, ok := ethRouting[req.Method]; ok {
+		if cls == routeLeaderOnly && s.n != nil {
+			cfg := s.n.Config()
+			if strings.EqualFold(strings.TrimSpace(cfg.Role), "follower") &&
+				strings.TrimSpace(cfg.FollowRPC) != "" {
+				return s.proxyToLeader(req)
+			}
+		}
+	}
 
-
-        // M10.6 effective routing (leader/follower)
-        if cls, ok := ethRouting[req.Method]; ok {
-                if cls == routeLeaderOnly && s.n != nil {
-                        cfg := s.n.Config()
-                        if strings.EqualFold(strings.TrimSpace(cfg.Role), "follower") &&
-                           strings.TrimSpace(cfg.FollowRPC) != "" {
-                                return s.proxyToLeader(req)
-                        }
-                }
-        }
-
-        switch req.Method {
-
+	switch req.Method {
 
 	// ---- base ----
 	case "web3_clientVersion":
 		resp.Result = "noorcore/2.1 (minimal-jsonrpc)"
 		return resp
 
-
 	case "eth_chainId":
-		resp.Result = chainIDToHex(s.chainID)
+		resp.Result = toHexUint(evmChainID)
 		return resp
-
 
 	case "net_version":
-		resp.Result = chainIDToNetVersion(s.chainID)
+		resp.Result = strconv.FormatUint(evmChainID, 10)
 		return resp
 
+	case "eth_protocolVersion":
+		resp.Result = "0x0"
+		return resp
 
-        case "eth_protocolVersion":
-                resp.Result = "0x0"
-                return resp
+	case "net_peerCount":
+		resp.Result = "0x0"
+		return resp
 
-        case "net_peerCount":
-                resp.Result = "0x0"
-                return resp
+	case "web3_sha3":
+		var params []string
+		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+			return resp
+		}
+		inHex := strings.TrimPrefix(strings.TrimSpace(params[0]), "0x")
+		in, err := hex.DecodeString(inHex)
+		if err != nil {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid hex"}
+			return resp
+		}
+		h := crypto.Keccak256Hash(in)
+		resp.Result = h.Hex()
+		return resp
 
-        case "web3_sha3":
-                var params []string
-                if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
-                        resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
-                        return resp
-                }
-                inHex := strings.TrimPrefix(strings.TrimSpace(params[0]), "0x")
-                in, err := hex.DecodeString(inHex)
-                if err != nil {
-                        resp.Error = &rpcError{Code: -32602, Message: "invalid hex"}
-                        return resp
-                }
-                h := crypto.Keccak256Hash(in)
-                resp.Result = h.Hex()
-                return resp
+	case "eth_blockNumber":
+		if s.n != nil {
+			resp.Result = toHexUint(s.n.Height())
+			return resp
+		}
+		resp.Result = toHexUint(0)
+		return resp
 
+	case "eth_syncing":
+		resp.Result = false
+		return resp
 
-        case "eth_blockNumber":
-                if s.n != nil {
-                        resp.Result = toHexUint(s.n.Height())
-                        return resp
-                }
-                resp.Result = toHexUint(0)
-                return resp
+	case "eth_mining":
+		resp.Result = true
+		return resp
 
-        case "eth_syncing":
-                resp.Result = false
-                return resp
-
-        case "eth_mining":
-                resp.Result = true
-                return resp
-
-        case "net_listening":
-                resp.Result = true
-                return resp
-
-
+	case "net_listening":
+		resp.Result = true
+		return resp
 
 	// ---- minimal EVM tooling surface (dev-only mock) ----
 	case "eth_accounts":
 		resp.Result = s.evm.Accounts()
 		return resp
 
+	case "eth_estimateGas":
+		// Minimal estimate for tooling compatibility (Hardhat/Viem/ethers).
+		// Deterministic heuristic (not a real EVM simulation).
+		var params []any
+		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+			return resp
+		}
 
+		// params[0] is a tx object: {from,to,data,value,...}
+		txo, _ := params[0].(map[string]any)
+		toStr, _ := txo["to"].(string)
+		dataStr, _ := txo["data"].(string)
+		dataStr = strings.TrimSpace(dataStr)
+
+		// Contract creation (no "to") => allocate higher gas.
+		if strings.TrimSpace(toStr) == "" {
+			resp.Result = toHexUint(5_000_000)
+			return resp
+		}
+
+		// If calldata present => moderate estimate, else plain transfer.
+		if dataStr != "" && dataStr != "0x" {
+			resp.Result = toHexUint(300_000)
+			return resp
+		}
+
+		resp.Result = toHexUint(21_000)
+		return resp
 
 	case "eth_getTransactionCount":
 		var params []any
@@ -297,87 +315,100 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
 			return resp
 
-
 		}
 		addrStr, _ := params[0].(string)
 		if !common.IsHexAddress(addrStr) {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid address"}
 			return resp
 
-
 		}
 		addr := common.HexToAddress(addrStr)
 		resp.Result = toHexUint(s.evm.GetTransactionCount(addr))
 		return resp
 
-        case "eth_gasPrice":
-                resp.Result = "0x1"
-                return resp
-
-        case "eth_feeHistory":
-                // Minimal EIP-1559 feeHistory for wallet compatibility (dev-only)
-                resp.Result = map[string]any{
-                        "oldestBlock": toHexUint(0),
-                        "baseFeePerGas": []string{"0x1", "0x1"},
-                        "gasUsedRatio": []float64{0},
-                        "reward": [][]string{},
-                }
-                return resp
-
-        case "eth_getLogs":
-                resp.Result = []any{}
-                return resp
-
-        case "eth_newFilter":
-                resp.Result = "0x1"
-                return resp
-
-        case "eth_newBlockFilter":
-                resp.Result = "0x1"
-                return resp
-
-        case "eth_uninstallFilter":
-                resp.Result = true
-                return resp
-
-        case "eth_call":
-                // Minimal eth_call support for PoSS view methods (dev-only).
-                // params: [ {to: "0x..", data: "0x.."}, "latest" ]
+        case "eth_getBalance":
+                // Minimal wallet/tooling compatibility (dev-only).
+                // params: [ "0x..address..", "latest"|"pending"|... ]
                 var params []any
                 if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
                         resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
                         return resp
                 }
-                callObj, ok := params[0].(map[string]any)
-                if !ok {
-                        resp.Error = &rpcError{Code: -32602, Message: "invalid call object"}
+                addrStr, _ := params[0].(string)
+                if !common.IsHexAddress(addrStr) {
+                        resp.Error = &rpcError{Code: -32602, Message: "invalid address"}
                         return resp
                 }
-                toStr, _ := callObj["to"].(string)
-                dataStr, _ := callObj["data"].(string)
-                to := common.HexToAddress(toStr)
-                dataStr = strings.TrimPrefix(strings.TrimSpace(dataStr), "0x")
-                data, err := hex.DecodeString(dataStr)
-                if err != nil {
-                        resp.Error = &rpcError{Code: -32602, Message: "invalid data hex"}
-                        return resp
-                }
-                if out, ok := s.evm.Call(to, data); ok {
-                        resp.Result = "0x" + hex.EncodeToString(out)
-                        return resp
-                }
-                resp.Result = "0x"
+                // No real account-state yet in the dev RPC shim; return 0.
+                resp.Result = "0x0"
                 return resp
 
-        case "debug_traceTransaction":
-                resp.Error = &rpcError{Code: -32601, Message: "not supported"}
-                return resp
+	case "eth_gasPrice":
+		resp.Result = "0x1"
+		return resp
 
-        case "debug_traceCall":
-                resp.Error = &rpcError{Code: -32601, Message: "not supported"}
-                return resp
+	case "eth_feeHistory":
+		// Minimal EIP-1559 feeHistory for wallet compatibility (dev-only)
+		resp.Result = map[string]any{
+			"oldestBlock":   toHexUint(0),
+			"baseFeePerGas": []string{"0x1", "0x1"},
+			"gasUsedRatio":  []float64{0},
+			"reward":        [][]string{},
+		}
+		return resp
 
+	case "eth_getLogs":
+		resp.Result = []any{}
+		return resp
 
+	case "eth_newFilter":
+		resp.Result = "0x1"
+		return resp
+
+	case "eth_newBlockFilter":
+		resp.Result = "0x1"
+		return resp
+
+	case "eth_uninstallFilter":
+		resp.Result = true
+		return resp
+
+	case "eth_call":
+		// Minimal eth_call support for PoSS view methods (dev-only).
+		// params: [ {to: "0x..", data: "0x.."}, "latest" ]
+		var params []any
+		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+			return resp
+		}
+		callObj, ok := params[0].(map[string]any)
+		if !ok {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid call object"}
+			return resp
+		}
+		toStr, _ := callObj["to"].(string)
+		dataStr, _ := callObj["data"].(string)
+		to := common.HexToAddress(toStr)
+		dataStr = strings.TrimPrefix(strings.TrimSpace(dataStr), "0x")
+		data, err := hex.DecodeString(dataStr)
+		if err != nil {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid data hex"}
+			return resp
+		}
+		if out, ok := s.evm.Call(to, data); ok {
+			resp.Result = "0x" + hex.EncodeToString(out)
+			return resp
+		}
+		resp.Result = "0x"
+		return resp
+
+	case "debug_traceTransaction":
+		resp.Error = &rpcError{Code: -32601, Message: "not supported"}
+		return resp
+
+	case "debug_traceCall":
+		resp.Error = &rpcError{Code: -32601, Message: "not supported"}
+		return resp
 
 	case "eth_sendRawTransaction":
 		// M8.A: accept signed raw tx, hash it, and enqueue into node txpool (no EVM execution yet).
@@ -386,12 +417,10 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
 			return resp
 
-
 		}
 		if s.n == nil {
 			resp.Error = &rpcError{Code: -32000, Message: "node not attached"}
 			return resp
-
 
 		}
 		rawHex := strings.TrimPrefix(strings.TrimSpace(params[0]), "0x")
@@ -399,7 +428,6 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		if err != nil {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid hex"}
 			return resp
-
 
 		}
 
@@ -409,15 +437,21 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid raw tx"}
 			return resp
 
-
 		}
 
 		h := crypto.Keccak256Hash(rawBytes)
+
+                if s.evm != nil {
+                        chainBig := new(big.Int).SetUint64(evmChainID)
+                        signer := types.LatestSignerForChainID(chainBig)
+                        if from, err := types.Sender(signer, &tx); err == nil {
+                                s.evm.BumpNonce(from, tx.Nonce())
+                        }
+                }
+
 		s.n.TxPool().AddPending(txpool.Tx{Hash: h.Hex(), Raw: rawBytes})
 		resp.Result = h.Hex()
 		return resp
-
-
 
 	case "eth_getTransactionReceipt":
 		var params []string
@@ -425,13 +459,11 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
 			return resp
 
-
 		}
 		hashStr := params[0]
 		if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
 			resp.Result = nil
 			return resp
-
 
 		}
 
@@ -444,47 +476,46 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 					resp.Result = anyRcpt
 					return resp
 
-
 				}
 			}
 		}
 
 		// Fallback: in-memory receipt store
 
-                // M10: follower mode proxy — if receipt not found locally, ask leader RPC
-                if s.n != nil {
-                        cfg := s.n.Config()
-                        if strings.EqualFold(strings.TrimSpace(cfg.Role), "follower") && strings.TrimSpace(cfg.FollowRPC) != "" {
-                                // best-effort proxy to leader
-                                body := []byte(fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionReceipt","params":["%s"]}`, hashStr))
-                                resp2, err := http.Post(strings.TrimRight(cfg.FollowRPC, "/"), "application/json", bytes.NewReader(body))
-                                if err == nil && resp2 != nil {
-                                        b2, _ := ioReadAllLimit(resp2.Body, 2<<20)
-                                        _ = resp2.Body.Close()
-                                        // Parse minimal: expect {result: ...} or {error: ...}
-                                        var pr struct { Result any `json:"result"`; Error *rpcError `json:"error"` }
-                                        if err := json.Unmarshal(b2, &pr); err == nil {
-                                                if pr.Error == nil {
-                                                        // could be null or object
-                                                        resp.Result = pr.Result
-                                                        return resp
+		// M10: follower mode proxy — if receipt not found locally, ask leader RPC
+		if s.n != nil {
+			cfg := s.n.Config()
+			if strings.EqualFold(strings.TrimSpace(cfg.Role), "follower") && strings.TrimSpace(cfg.FollowRPC) != "" {
+				// best-effort proxy to leader
+				body := []byte(fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionReceipt","params":["%s"]}`, hashStr))
+				resp2, err := http.Post(strings.TrimRight(cfg.FollowRPC, "/"), "application/json", bytes.NewReader(body))
+				if err == nil && resp2 != nil {
+					b2, _ := ioReadAllLimit(resp2.Body, 2<<20)
+					_ = resp2.Body.Close()
+					// Parse minimal: expect {result: ...} or {error: ...}
+					var pr struct {
+						Result any       `json:"result"`
+						Error  *rpcError `json:"error"`
+					}
+					if err := json.Unmarshal(b2, &pr); err == nil {
+						if pr.Error == nil {
+							// could be null or object
+							resp.Result = pr.Result
+							return resp
 
-
-                                                }
-                                        }
-                                }
-                        }
-                }
+						}
+					}
+				}
+			}
+		}
 		rcpt := s.evm.GetTransactionReceipt(common.HexToHash(hashStr))
 		if rcpt == nil {
 			resp.Result = nil
 			return resp
 
-
 		}
 		resp.Result = rcpt
 		return resp
-
 
 	case "eth_getTransactionByHash":
 		// Needed by ethers.js polling (waitForTransaction)
@@ -493,13 +524,11 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
 			return resp
 
-
 		}
 		hashStr := params[0]
 		if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
 			resp.Result = nil
 			return resp
-
 
 		}
 
@@ -525,10 +554,9 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 					"gasPrice":         "0x0",
 					"input":            "0x",
 					"type":             "0x0",
-					"chainId":          chainIDToHex(s.chainID),
+					"chainId":          toHexUint(evmChainID),
 				}
 				return resp
-
 
 			}
 		}
@@ -537,7 +565,6 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
 			resp.Result = nil
 			return resp
-
 
 		}
 		h := common.HexToHash(hashStr)
@@ -551,10 +578,9 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			resp.Result = nil
 			return resp
 
-
 		}
 
-		chainBig := chainIDToBigInt(s.chainID)
+		chainBig := new(big.Int).SetUint64(evmChainID)
 		signer := types.LatestSignerForChainID(chainBig)
 		from, _ := types.Sender(signer, tx)
 
@@ -613,40 +639,37 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		}
 		return resp
 
-
-
-        case "eth_getBlockByHash":
-                // Minimal: ignore hash input, return latest block (dev-compatible)
-                resp.Result = nil
-                if s.n != nil {
-                        n := s.n.Height()
-                        // reuse the same shape as eth_getBlockByNumber
-                        resp.Result = map[string]any{
-                                "number":     toHexUint(n),
-                                "hash":       pseudoBlockHash(n).Hex(),
-                                "parentHash": pseudoBlockHash(n - 1).Hex(),
-                                "nonce":      "0x0000000000000000",
-                                "sha3Uncles":  "0x" + strings.Repeat("0", 64),
-                                "logsBloom":   "0x" + strings.Repeat("0", 512),
-                                "transactionsRoot": "0x" + strings.Repeat("0", 64),
-                                "stateRoot":        "0x" + strings.Repeat("0", 64),
-                                "receiptsRoot":     "0x" + strings.Repeat("0", 64),
-                                "miner":            "0x" + strings.Repeat("0", 40),
-                                "difficulty":       "0x0",
-                                "totalDifficulty":  "0x0",
-                                "extraData":        "0x",
-                                "size":             "0x0",
-                                "gasLimit":         "0x1c9c380",
-                                "gasUsed":          "0x0",
-                                "timestamp":        toHexUint(uint64(time.Now().Unix())),
-                                "mixHash":          "0x" + strings.Repeat("0", 64),
-                                "baseFeePerGas":    "0x1",
-                                "transactions":     []any{},
-                                "uncles":           []any{},
-                        }
-                }
-                return resp
-
+	case "eth_getBlockByHash":
+		// Minimal: ignore hash input, return latest block (dev-compatible)
+		resp.Result = nil
+		if s.n != nil {
+			n := s.n.Height()
+			// reuse the same shape as eth_getBlockByNumber
+			resp.Result = map[string]any{
+				"number":           toHexUint(n),
+				"hash":             pseudoBlockHash(n).Hex(),
+				"parentHash":       pseudoBlockHash(n - 1).Hex(),
+				"nonce":            "0x0000000000000000",
+				"sha3Uncles":       "0x" + strings.Repeat("0", 64),
+				"logsBloom":        "0x" + strings.Repeat("0", 512),
+				"transactionsRoot": "0x" + strings.Repeat("0", 64),
+				"stateRoot":        "0x" + strings.Repeat("0", 64),
+				"receiptsRoot":     "0x" + strings.Repeat("0", 64),
+				"miner":            "0x" + strings.Repeat("0", 40),
+				"difficulty":       "0x0",
+				"totalDifficulty":  "0x0",
+				"extraData":        "0x",
+				"size":             "0x0",
+				"gasLimit":         "0x1c9c380",
+				"gasUsed":          "0x0",
+				"timestamp":        toHexUint(uint64(time.Now().Unix())),
+				"mixHash":          "0x" + strings.Repeat("0", 64),
+				"baseFeePerGas":    "0x1",
+				"transactions":     []any{},
+				"uncles":           []any{},
+			}
+		}
+		return resp
 
 	case "eth_getBlockByNumber":
 		// Ethers.js expects many fields to be present. Provide a dev-compatible block shape.
@@ -702,45 +725,46 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		}
 		return resp
 
-
-
 	default:
 		resp.Error = &rpcError{Code: -32601, Message: "method not found"}
 		return resp
-
 
 	}
 }
 
 func (s *Server) writeErrorRaw(w http.ResponseWriter, id json.RawMessage, code int, msg string) {
-        w.Header().Set("Content-Type", "application/json")
-        resp := rpcResp{JSONRPC: "2.0", ID: id, Error: &rpcError{Code: code, Message: msg}}
-        _ = json.NewEncoder(w).Encode(resp)
+	w.Header().Set("Content-Type", "application/json")
+	resp := rpcResp{JSONRPC: "2.0", ID: id, Error: &rpcError{Code: code, Message: msg}}
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // M10.6 leader proxy (minimal)
 func (s *Server) proxyToLeader(req *rpcReq) rpcResp {
-        cfg := s.n.Config()
-        body, _ := json.Marshal(req)
-        respHTTP, err := http.Post(strings.TrimRight(cfg.FollowRPC, "/"), "application/json", bytes.NewReader(body))
-        if err != nil || respHTTP == nil {
-                return rpcResp{JSONRPC: "2.0", ID: req.ID, Error: &rpcError{Code: -32000, Message: "leader unreachable"}}
-        }
-        defer respHTTP.Body.Close()
-        b, _ := ioReadAllLimit(respHTTP.Body, 2<<20)
-        var out rpcResp
-        if err := json.Unmarshal(b, &out); err != nil {
-                return rpcResp{JSONRPC: "2.0", ID: req.ID, Error: &rpcError{Code: -32603, Message: "invalid leader response"}}
-        }
-        return out
+	cfg := s.n.Config()
+	body, _ := json.Marshal(req)
+	respHTTP, err := http.Post(strings.TrimRight(cfg.FollowRPC, "/"), "application/json", bytes.NewReader(body))
+	if err != nil || respHTTP == nil {
+		return rpcResp{JSONRPC: "2.0", ID: req.ID, Error: &rpcError{Code: -32000, Message: "leader unreachable"}}
+	}
+	defer respHTTP.Body.Close()
+	b, _ := ioReadAllLimit(respHTTP.Body, 2<<20)
+	var out rpcResp
+	if err := json.Unmarshal(b, &out); err != nil {
+		return rpcResp{JSONRPC: "2.0", ID: req.ID, Error: &rpcError{Code: -32603, Message: "invalid leader response"}}
+	}
+	return out
 }
 
 // ---- helpers ----
 
-
 func toHexUint(v uint64) string {
 	return "0x" + strconv.FormatUint(v, 16)
 }
+
+// EVM Chain ID (EIP-155) must be tooling/wallet compatible.
+// NOTE: JavaScript tooling (Hardhat/Viem/ethers/MetaMask) requires chainId <= Number.MAX_SAFE_INTEGER.
+// For NOORCHAIN 2.1 local dev, we pin this to 2121.
+const evmChainID uint64 = 2121
 
 func chainIDToHex(chainID string) string {
 	if n, err := strconv.ParseUint(chainID, 10, 64); err == nil {
@@ -781,42 +805,38 @@ func chainIDToBigInt(chainID string) *big.Int {
 }
 
 func ioReadAllLimit(rc io.ReadCloser, limit int64) ([]byte, error) {
-        defer rc.Close()
-        var b bytes.Buffer
-        if _, err := b.ReadFrom(io.LimitReader(rc, limit)); err != nil {
-                return nil, err
-        }
-        return b.Bytes(), nil
+	defer rc.Close()
+	var b bytes.Buffer
+	if _, err := b.ReadFrom(io.LimitReader(rc, limit)); err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
 }
-
 
 // M10.6 static safety: ensure routing table entries exist in dispatcher
 func assertRoutingTableStatic() {
-        // list of methods handled by switch (manually maintained)
-        handled := map[string]struct{}{
-                "eth_chainId": {},
-                "eth_blockNumber": {},
-                "eth_accounts": {},
-                "eth_getTransactionCount": {},
-                "eth_gasPrice": {},
-                "eth_estimateGas": {},
-                "eth_getBalance": {},
-                "eth_call": {},
-                "eth_sendRawTransaction": {},
-                "eth_getTransactionReceipt": {},
-                "eth_getTransactionByHash": {},
-                "eth_getBlockByNumber": {},
-        }
+	// list of methods handled by switch (manually maintained)
+	handled := map[string]struct{}{
+		"eth_chainId":               {},
+		"eth_blockNumber":           {},
+		"eth_accounts":              {},
+		"eth_getTransactionCount":   {},
+		"eth_gasPrice":              {},
+		"eth_estimateGas":           {},
+		"eth_getBalance":            {},
+		"eth_call":                  {},
+		"eth_sendRawTransaction":    {},
+		"eth_getTransactionReceipt": {},
+		"eth_getTransactionByHash":  {},
+		"eth_getBlockByNumber":      {},
+	}
 
-        for m := range ethRouting {
-                if _, ok := handled[m]; !ok {
-                        panic("rpc: routing table references unhandled method: " + m)
-                }
-        }
+	for m := range ethRouting {
+		if _, ok := handled[m]; !ok {
+			panic("rpc: routing table references unhandled method: " + m)
+		}
+	}
 }
-
-
-
 
 type ioDiscard struct{}
 

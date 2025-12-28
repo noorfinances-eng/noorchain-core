@@ -1,12 +1,13 @@
 package node
 
 import (
-        "strconv"
-        "net/http"
-        "io"
 	"context"
 	"fmt"
+	"io"
+	"math/big"
+	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -41,6 +42,10 @@ const (
 // ---- M9 receipts persistence (minimal) ----
 
 const rcptKVPrefix = "rcpt/v1/"
+
+// EVM Chain ID (EIP-155) must be tooling/wallet compatible.
+// For NOORCHAIN 2.1 local dev, we pin this to 2121.
+const evmChainID uint64 = 2121
 
 func rcptKey(txHash string) []byte {
 	h := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(txHash), "0x"))
@@ -98,6 +103,8 @@ type Node struct {
 	height uint64
 }
 
+func (n *Node) DB() *leveldb.DB { return n.db }
+
 func New(cfg config.Config) *Node {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Node{
@@ -138,10 +145,10 @@ func (n *Node) Start() error {
 		return err
 	}
 
-        // M10: dial boot peers (best-effort)
-        for _, peer := range n.cfg.BootPeers {
-                _ = n.network.Connect(peer)
-        }
+	// M10: dial boot peers (best-effort)
+	for _, peer := range n.cfg.BootPeers {
+		_ = n.network.Connect(peer)
+	}
 	if err := n.health.Start(); err != nil {
 		return err
 	}
@@ -151,60 +158,59 @@ func (n *Node) Start() error {
 }
 
 func (n *Node) loop() {
-        // M10: follower mode (mainnet-like pack): follow leader height via RPC, do not mine locally
-        if strings.EqualFold(strings.TrimSpace(n.cfg.Role), "follower") && strings.TrimSpace(n.cfg.FollowRPC) != "" {
-                ticker := time.NewTicker(1 * time.Second)
-                defer ticker.Stop()
+	// M10: follower mode (mainnet-like pack): follow leader height via RPC, do not mine locally
+	if strings.EqualFold(strings.TrimSpace(n.cfg.Role), "follower") && strings.TrimSpace(n.cfg.FollowRPC) != "" {
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
 
-                type rpcResp struct {
-                        Result string `json:"result"`
-                }
+		type rpcResp struct {
+			Result string `json:"result"`
+		}
 
-                for {
-                        select {
-                        case <-n.ctx.Done():
-                                n.logger.Println("node loop stopped")
-                                return
-                        case <-ticker.C:
-                                reqBody := `{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}`
-                                resp, err := http.Post(strings.TrimRight(n.cfg.FollowRPC, "/"), "application/json", strings.NewReader(reqBody))
-                                if err != nil {
-                                        n.logger.Println("follower: follow-rpc post error:", err)
-                                        continue
-                                }
-                                b, _ := io.ReadAll(resp.Body)
-                                _ = resp.Body.Close()
+		for {
+			select {
+			case <-n.ctx.Done():
+				n.logger.Println("node loop stopped")
+				return
+			case <-ticker.C:
+				reqBody := `{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}`
+				resp, err := http.Post(strings.TrimRight(n.cfg.FollowRPC, "/"), "application/json", strings.NewReader(reqBody))
+				if err != nil {
+					n.logger.Println("follower: follow-rpc post error:", err)
+					continue
+				}
+				b, _ := io.ReadAll(resp.Body)
+				_ = resp.Body.Close()
 
-                                var rr rpcResp
-                                if err := json.Unmarshal(b, &rr); err != nil {
-                                        n.logger.Println("follower: decode error:", err)
-                                        continue
-                                }
-                                // parse hex quantity
-                                h := strings.TrimSpace(rr.Result)
-                                h = strings.TrimPrefix(h, "0x")
-                                if h == "" {
-                                        continue
-                                }
-                                hv, err := strconv.ParseUint(h, 16, 64)
-                                if err != nil {
-                                        n.logger.Println("follower: parse height error:", err)
-                                        continue
-                                }
+				var rr rpcResp
+				if err := json.Unmarshal(b, &rr); err != nil {
+					n.logger.Println("follower: decode error:", err)
+					continue
+				}
+				// parse hex quantity
+				h := strings.TrimSpace(rr.Result)
+				h = strings.TrimPrefix(h, "0x")
+				if h == "" {
+					continue
+				}
+				hv, err := strconv.ParseUint(h, 16, 64)
+				if err != nil {
+					n.logger.Println("follower: parse height error:", err)
+					continue
+				}
 
-                                n.mu.Lock()
-                                if hv > n.height {
-                                        n.height = hv
-                                }
-                                height := n.height
-                                state := n.state
-                                n.mu.Unlock()
+				n.mu.Lock()
+				if hv > n.height {
+					n.height = hv
+				}
+				height := n.height
+				state := n.state
+				n.mu.Unlock()
 
-                                n.logger.Println("tick | height:", height, "| state:", state, "| follower:", true)
-                        }
-                }
-        }
-
+				n.logger.Println("tick | height:", height, "| state:", state, "| follower:", true)
+			}
+		}
+	}
 
 	// M9: execution hook (minimal, step 1)
 	// For now: decode raw tx bytes and log decoded shape.
@@ -231,6 +237,22 @@ func (n *Node) loop() {
 		rawHash := crypto.Keccak256Hash(t.Raw)
 		match := strings.EqualFold(rawHash.Hex(), t.Hash)
 
+		// Sender is required for receipt.from and contractAddress derivation (CREATE).
+		from := common.Address{}
+		signer := types.LatestSignerForChainID(new(big.Int).SetUint64(evmChainID))
+		if f, err := types.Sender(signer, &tx); err == nil {
+			from = f
+		} else {
+			n.logger.Println("applyTx: sender decode failed | hash:", t.Hash, "| err:", err)
+		}
+
+		// Contract creation => contractAddress = CreateAddress(from, nonce)
+		var contractAddrPtr *common.Address
+		if tx.To() == nil && from != (common.Address{}) {
+			ca := crypto.CreateAddress(from, tx.Nonce())
+			contractAddrPtr = &ca
+		}
+
 		// M9: persist minimal receipt (best-effort)
 		if n.db != nil {
 			toPtr := tx.To()
@@ -239,17 +261,17 @@ func (n *Node) loop() {
 				TransactionIndex:  "0x0",
 				BlockHash:         pseudoBlockHash(height),
 				BlockNumber:       toHexUint(height),
-				From:              common.Address{},
+				From:              from,
 				To:                toPtr,
 				CumulativeGasUsed: toHexBig(tx.Gas()),
 				GasUsed:           toHexBig(tx.Gas()),
-				ContractAddress:   nil,
+				ContractAddress:   contractAddrPtr,
 				Logs:              []any{},
 				Status:            "0x1",
 				Type:              toHexUint(uint64(tx.Type())),
 			}
 			if b, err := json.Marshal(rcpt); err == nil {
-				_ = n.db.Put(rcptKey(t.Hash), b, nil)
+				_ = n.db.Put(rcptKey(rawHash.Hex()), b, nil)
 			}
 		}
 
@@ -312,7 +334,6 @@ func (n *Node) loop() {
 	}
 }
 
-func (n *Node) DB() *leveldb.DB { return n.db }
 
 func (n *Node) Config() config.Config { return n.cfg }
 
