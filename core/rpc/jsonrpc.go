@@ -52,6 +52,9 @@ func New(addr, chainID string, n *node.Node, db *leveldb.DB, l *log.Logger) *Ser
 }
 
 func (s *Server) Start(ctx context.Context) error {
+
+        assertRoutingTableStatic()
+
 	if strings.TrimSpace(s.addr) == "" {
 		return errors.New("rpc: empty addr")
 	}
@@ -154,65 +157,143 @@ func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
+// Routing classes (M10.6)
+//
+// routeClass defines dispatcher routing behavior.
+//
+//   routeLeaderOnly      : write / leader-only (proxy if follower)
+//   routeLocalThenProxy  : read local, fallback proxy leader
+//   routeLocal           : local or safe stub
+//
+type routeClass uint8
+
+const (
+        routeLocal routeClass = iota
+        routeLocalThenProxy
+        routeLeaderOnly
+)
+
+// Canonical routing table (eth_*) — declarative, not yet enforced
+var ethRouting = map[string]routeClass{
+        "eth_sendRawTransaction":     routeLeaderOnly,
+        "eth_getTransactionReceipt":  routeLocalThenProxy,
+        "eth_getTransactionByHash":   routeLocalThenProxy,
+        "eth_chainId":                routeLocal,
+        "eth_blockNumber":            routeLocal,
+        "eth_accounts":               routeLocal,
+        "eth_getTransactionCount":    routeLocal,
+        "eth_gasPrice":               routeLocal,
+        "eth_estimateGas":            routeLocal,
+        "eth_getBalance":             routeLocal,
+        "eth_call":                   routeLocal,
+        "eth_getBlockByNumber":       routeLocal,
+}
+
 func (s *Server) dispatch(req *rpcReq) rpcResp {
-	resp := rpcResp{JSONRPC: "2.0", ID: req.ID}
+        resp := rpcResp{JSONRPC: "2.0", ID: req.ID}
 
-	if req.JSONRPC != "2.0" {
-		resp.Error = &rpcError{Code: -32600, Message: "invalid jsonrpc version"}
-		return resp
-	}
+        if req.JSONRPC != "2.0" {
+                resp.Error = &rpcError{Code: -32600, Message: "invalid jsonrpc version"}
+                return resp
+        }
 
-	switch req.Method {
+
+        // Dispatcher routing (M10.6)
+        // M10.6 safety: assert routing table coverage (log-only)
+        if strings.HasPrefix(req.Method, "eth_") {
+                if _, ok := ethRouting[req.Method]; !ok {
+                        s.log.Println("rpc warning: eth method not in routing table:", req.Method)
+                }
+        }
+
+
+        // M10.6 effective routing (leader/follower)
+        if cls, ok := ethRouting[req.Method]; ok {
+                if cls == routeLeaderOnly && s.n != nil {
+                        cfg := s.n.Config()
+                        if strings.EqualFold(strings.TrimSpace(cfg.Role), "follower") &&
+                           strings.TrimSpace(cfg.FollowRPC) != "" {
+                                return s.proxyToLeader(req)
+                        }
+                }
+        }
+
+        switch req.Method {
+
 
 	// ---- base ----
 	case "web3_clientVersion":
 		resp.Result = "noorcore/2.1 (minimal-jsonrpc)"
 		return resp
+
+
 	case "eth_chainId":
 		resp.Result = chainIDToHex(s.chainID)
 		return resp
+
+
 	case "net_version":
 		resp.Result = chainIDToNetVersion(s.chainID)
 		return resp
+
+
 	case "eth_blockNumber":
 		if s.n != nil {
 			resp.Result = toHexUint(s.n.Height())
 			return resp
+
+
 		}
 		resp.Result = toHexUint(0)
 		return resp
+
+
 
 	// ---- minimal EVM tooling surface (dev-only mock) ----
 	case "eth_accounts":
 		resp.Result = s.evm.Accounts()
 		return resp
 
+
+
 	case "eth_getTransactionCount":
 		var params []any
 		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
 			return resp
+
+
 		}
 		addrStr, _ := params[0].(string)
 		if !common.IsHexAddress(addrStr) {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid address"}
 			return resp
+
+
 		}
 		addr := common.HexToAddress(addrStr)
 		resp.Result = toHexUint(s.evm.GetTransactionCount(addr))
 		return resp
 
+
+
 	case "eth_gasPrice":
 		resp.Result = "0x1"
 		return resp
+
+
 
 	case "eth_estimateGas":
 		resp.Result = "0x2dc6c0" // 3,000,000
 		return resp
 
+
+
 	case "eth_getBalance":
 		resp.Result = "0x0"
 		return resp
+
+
 
 	case "eth_call":
 		// Minimal eth_call support for PoSS view methods (dev-only).
@@ -221,11 +302,15 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
 			return resp
+
+
 		}
 		callObj, ok := params[0].(map[string]any)
 		if !ok {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid call object"}
 			return resp
+
+
 		}
 		toStr, _ := callObj["to"].(string)
 		dataStr, _ := callObj["data"].(string)
@@ -235,32 +320,44 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		if err != nil {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid data hex"}
 			return resp
+
+
 		}
 
 		if out, ok := s.evm.Call(to, data); ok {
 			resp.Result = "0x" + hex.EncodeToString(out)
 			return resp
+
+
 		}
 
 		// unknown call => empty result
 		resp.Result = "0x"
 		return resp
+
+
 	case "eth_sendRawTransaction":
 		// M8.A: accept signed raw tx, hash it, and enqueue into node txpool (no EVM execution yet).
 		var params []string
 		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
 			return resp
+
+
 		}
 		if s.n == nil {
 			resp.Error = &rpcError{Code: -32000, Message: "node not attached"}
 			return resp
+
+
 		}
 		rawHex := strings.TrimPrefix(strings.TrimSpace(params[0]), "0x")
 		rawBytes, err := hex.DecodeString(rawHex)
 		if err != nil {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid hex"}
 			return resp
+
+
 		}
 
 		// Validate basic tx encoding (RLP) using geth decoder.
@@ -268,6 +365,8 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		if err := tx.UnmarshalBinary(rawBytes); err != nil {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid raw tx"}
 			return resp
+
+
 		}
 
 		h := crypto.Keccak256Hash(rawBytes)
@@ -275,16 +374,22 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		resp.Result = h.Hex()
 		return resp
 
+
+
 	case "eth_getTransactionReceipt":
 		var params []string
 		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
 			return resp
+
+
 		}
 		hashStr := params[0]
 		if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
 			resp.Result = nil
 			return resp
+
+
 		}
 
 		// M9: prefer persisted receipts from LevelDB (rcpt/v1/<hash>) if available.
@@ -295,6 +400,8 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 				if err := json.Unmarshal(b, &anyRcpt); err == nil {
 					resp.Result = anyRcpt
 					return resp
+
+
 				}
 			}
 		}
@@ -318,6 +425,8 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
                                                         // could be null or object
                                                         resp.Result = pr.Result
                                                         return resp
+
+
                                                 }
                                         }
                                 }
@@ -327,20 +436,28 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		if rcpt == nil {
 			resp.Result = nil
 			return resp
+
+
 		}
 		resp.Result = rcpt
 		return resp
+
+
 	case "eth_getTransactionByHash":
 		// Needed by ethers.js polling (waitForTransaction)
 		var params []string
 		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
 			return resp
+
+
 		}
 		hashStr := params[0]
 		if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
 			resp.Result = nil
 			return resp
+
+
 		}
 
 		// M8.A: check node txpool first (pending / minimal mined)
@@ -368,6 +485,8 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 					"chainId":          chainIDToHex(s.chainID),
 				}
 				return resp
+
+
 			}
 		}
 
@@ -375,6 +494,8 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
 			resp.Result = nil
 			return resp
+
+
 		}
 		h := common.HexToHash(hashStr)
 
@@ -386,6 +507,8 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		if tx == nil {
 			resp.Result = nil
 			return resp
+
+
 		}
 
 		chainBig := chainIDToBigInt(s.chainID)
@@ -447,6 +570,8 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		}
 		return resp
 
+
+
 	case "eth_getBlockByNumber":
 		// Ethers.js expects many fields to be present. Provide a dev-compatible block shape.
 		type blockResp struct {
@@ -501,19 +626,41 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		}
 		return resp
 
+
+
 	default:
 		resp.Error = &rpcError{Code: -32601, Message: "method not found"}
 		return resp
+
+
 	}
 }
 
 func (s *Server) writeErrorRaw(w http.ResponseWriter, id json.RawMessage, code int, msg string) {
-	w.Header().Set("Content-Type", "application/json")
-	resp := rpcResp{JSONRPC: "2.0", ID: id, Error: &rpcError{Code: code, Message: msg}}
-	_ = json.NewEncoder(w).Encode(resp)
+        w.Header().Set("Content-Type", "application/json")
+        resp := rpcResp{JSONRPC: "2.0", ID: id, Error: &rpcError{Code: code, Message: msg}}
+        _ = json.NewEncoder(w).Encode(resp)
+}
+
+// M10.6 leader proxy (minimal)
+func (s *Server) proxyToLeader(req *rpcReq) rpcResp {
+        cfg := s.n.Config()
+        body, _ := json.Marshal(req)
+        respHTTP, err := http.Post(strings.TrimRight(cfg.FollowRPC, "/"), "application/json", bytes.NewReader(body))
+        if err != nil || respHTTP == nil {
+                return rpcResp{JSONRPC: "2.0", ID: req.ID, Error: &rpcError{Code: -32000, Message: "leader unreachable"}}
+        }
+        defer respHTTP.Body.Close()
+        b, _ := ioReadAllLimit(respHTTP.Body, 2<<20)
+        var out rpcResp
+        if err := json.Unmarshal(b, &out); err != nil {
+                return rpcResp{JSONRPC: "2.0", ID: req.ID, Error: &rpcError{Code: -32603, Message: "invalid leader response"}}
+        }
+        return out
 }
 
 // ---- helpers ----
+
 
 func toHexUint(v uint64) string {
 	return "0x" + strconv.FormatUint(v, 16)
@@ -558,13 +705,42 @@ func chainIDToBigInt(chainID string) *big.Int {
 }
 
 func ioReadAllLimit(rc io.ReadCloser, limit int64) ([]byte, error) {
-	defer rc.Close()
-	var b bytes.Buffer
-	if _, err := b.ReadFrom(io.LimitReader(rc, limit)); err != nil {
-		return nil, err
-	}
-	return b.Bytes(), nil
+        defer rc.Close()
+        var b bytes.Buffer
+        if _, err := b.ReadFrom(io.LimitReader(rc, limit)); err != nil {
+                return nil, err
+        }
+        return b.Bytes(), nil
 }
+
+
+// M10.6 static safety: ensure routing table entries exist in dispatcher
+func assertRoutingTableStatic() {
+        // list of methods handled by switch (manually maintained)
+        handled := map[string]struct{}{
+                "eth_chainId": {},
+                "eth_blockNumber": {},
+                "eth_accounts": {},
+                "eth_getTransactionCount": {},
+                "eth_gasPrice": {},
+                "eth_estimateGas": {},
+                "eth_getBalance": {},
+                "eth_call": {},
+                "eth_sendRawTransaction": {},
+                "eth_getTransactionReceipt": {},
+                "eth_getTransactionByHash": {},
+                "eth_getBlockByNumber": {},
+        }
+
+        for m := range ethRouting {
+                if _, ok := handled[m]; !ok {
+                        panic("rpc: routing table references unhandled method: " + m)
+                }
+        }
+}
+
+
+
 
 type ioDiscard struct{}
 
