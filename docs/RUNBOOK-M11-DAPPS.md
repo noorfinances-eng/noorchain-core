@@ -1,51 +1,49 @@
-# NOORCHAIN 2.1 (evm-l1) — RUNBOOK M11 (dApps v0)
+# NOORCHAIN 2.1 (evm-l1) — RUNBOOK M11 dApps v0
 Date: 2025-12-30
-Scope: Multi-node mainnet-like local stack + Curators Hub v0 dapp smoke-tests.
-Terminals:
-- T1 = nodes only (no editing, no tooling)
-- T2 = tooling (curl, hardhat, node, git)
+Branch: evm-l1
 
-## 0) Constants
-ChainId (EVM): 2121 (0x849)
-Node1 (leader): P2P 127.0.0.1:30303 | RPC 127.0.0.1:8545 | Health 127.0.0.1:8081
-Node2 (follower): P2P 127.0.0.1:30304 | RPC 127.0.0.1:8546 | Health 127.0.0.1:8082
-Health endpoint: /healthz (NOT /)
+## Terminal discipline
+- T1 = nodes (node1/node2 only)
+- T2 = tooling (git, build, curl, dApps)
+- T3 = optional (tail logs, extra checks)
+Rule: one step / one command at a time.
 
-Repo root: /workspaces/noorchain-core
-Dapp root: /workspaces/noorchain-core/dapps/curators-hub-v0
+## Ports (default)
+- Node1: P2P 30303, RPC 8545, HEALTH 8081
+- Node2: P2P 30304, RPC 8546, HEALTH 8082
+Health path is **/healthz** (NOT /).
 
-NOTE: It is acceptable to `go build` while nodes run, but the running processes keep the old binary.
-To apply changes: STOP → BUILD → START.
+---
 
-## 1) STOP (T2)
-Clean stop all noorcore processes, then confirm ports are free.
+## A) STOP (clean)
+(T2)
 
 ```bash
-cd /workspaces/noorchain-core
-pkill -INT -f "(^|/)(noorcore)( |$)" || true
+pkill -INT -f '(^|/)(noorcore)( |$)' || true
 sleep 1
 pgrep -a noorcore || true
-ss -ltnp | egrep ":30303|:30304|:8545|:8546|:8081|:8082" || true
-Expected:
+ss -ltnp | egrep ':30303|:30304|:8545|:8546|:8081|:8082' || true
+Gate expected:
 
 no noorcore process
 
-no LISTEN on those ports
+no LISTEN on 30303/30304/8545/8546/8081/8082
 
-2) BUILD (T2)
+B) BUILD (clean)
+(T2)
+
 bash
 Copier le code
 cd /workspaces/noorchain-core
 go build -o noorcore ./core
-./noorcore -h >/dev/null
-Expected:
+Gate expected:
 
-build succeeds
+BUILD_OK (no errors)
 
-3) START (T1)
-Start leader first, then follower. Logs are persisted inside each data-dir (survive /tmp cleanups).
+C) START (2 nodes mainnet-like)
+(T1)
 
-3.1) Node1 (leader)
+Start node1 (leader)
 bash
 Copier le code
 cd /workspaces/noorchain-core
@@ -57,8 +55,8 @@ cd /workspaces/noorchain-core
   -health-addr 127.0.0.1:8081 \
   -boot-peers 127.0.0.1:30304 \
   > ./data/node1/noorcore.log 2>&1 &
-echo "PID=$!"
-3.2) Node2 (follower)
+echo "PID=$(pgrep -n noorcore)"
+Start node2 (follower)
 bash
 Copier le code
 cd /workspaces/noorchain-core
@@ -69,134 +67,115 @@ cd /workspaces/noorchain-core
   -rpc-addr 127.0.0.1:8546 \
   -health-addr 127.0.0.1:8082 \
   -follow-rpc http://127.0.0.1:8545 \
-  > ./data/node2/noorcore.log 2>&1 &
-echo "PID=$!"
-Hard rule:
+  > /tmp/noorcore_node2.log 2>&1 &
+echo "PID=$(pgrep -n noorcore)"
+D) VERIFY (nodes)
+(T2)
 
-never run two nodes with the same -data-dir (LevelDB LOCK).
-
-4) VERIFY stack (T2)
-4.1) Processes + ports
+Processes + ports
 bash
 Copier le code
-cd /workspaces/noorchain-core
-echo "=== PROCS ==="
 pgrep -a noorcore
+ss -ltnp | egrep ':30303|:30304|:8545|:8546|:8081|:8082'
+Health endpoints
+bash
+Copier le code
+curl -fsS http://127.0.0.1:8081/healthz; echo
+curl -fsS http://127.0.0.1:8082/healthz; echo
+RPC (node1)
+bash
+Copier le code
+curl -s http://127.0.0.1:8545 -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}'
 echo
-echo "=== PORTS ==="
-ss -ltnp | egrep ":30303|:30304|:8545|:8546|:8081|:8082"
-4.2) Health
-bash
-Copier le code
-curl -fsS http://127.0.0.1:8081/healthz && echo
-curl -fsS http://127.0.0.1:8082/healthz && echo
-Expected: ok
+curl -s http://127.0.0.1:8545 -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":2,"method":"eth_blockNumber","params":[]}'
+echo
+curl -s http://127.0.0.1:8545 -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":3,"method":"eth_getBalance","params":["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","latest"]}'
+echo
+curl -s http://127.0.0.1:8545 -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":4,"method":"eth_getTransactionCount","params":["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","latest"]}'
+echo
+Gate expected:
 
-4.3) RPC smoke (node1 leader)
-bash
-Copier le code
-RPC=http://127.0.0.1:8545
-curl -fsS -H "content-type: application/json" \
-  -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_chainId\",\"params\":[]}" $RPC; echo
-curl -fsS -H "content-type: application/json" \
-  -d "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"eth_blockNumber\",\"params\":[]}" $RPC; echo
-Expected:
+eth_chainId = 0x849 (2121)
 
-chainId = 0x849
+healthz returns "ok"
 
-blockNumber increases over time (non-zero eventually)
+RPC answers without errors
 
-5) dApp — Curators Hub v0 (T2)
-5.1) Install deps (first time only)
+E) dApp (Curators Hub v0)
+Path: /workspaces/noorchain-core/dapps/curators-hub-v0
+
+Install deps (only if needed)
+(T2)
+
 bash
 Copier le code
 cd /workspaces/noorchain-core/dapps/curators-hub-v0
 npm ci
-5.2) Deploy contracts
+1) Deploy contracts (writes deployments json)
+(T2)
+
 bash
 Copier le code
 cd /workspaces/noorchain-core/dapps/curators-hub-v0
-npx hardhat run scripts/deploy-curators-hub.mjs --network localhost
+node ./scripts/deploy-curators-hub.mjs
 Expected:
 
-Connected chainId: 2121
+prints chainId 2121
 
-CuratorSet deployed at: 0x...
+prints CuratorSet address + PoSSRegistry address
 
-PoSSRegistry deployed at: 0x... (different from CuratorSet)
+creates/updates: deployments/noorchain-2.1-local.json
 
-5.3) Submit snapshot (PoSSRegistry.submitSnapshot)
-Uses a funded dev key via env var PK.
+2) Submit PoSS snapshot (requires PK env)
+(T2)
 
 bash
 Copier le code
 cd /workspaces/noorchain-core/dapps/curators-hub-v0
 export PK=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-npx hardhat run scripts/send-op-tx.ts --network localhost
+npx hardhat run ./scripts/send-op-tx.ts --network localhost
 Expected:
 
 receipt.status: success
 
-logs print to (PoSSRegistry): <address>
-
-5.4) Verify PoSS state via eth_call (T2)
-Replace REG with the printed PoSSRegistry address.
-
-bash
-Copier le code
-RPC=http://127.0.0.1:8545
-REG=0x0000000000000000000000000000000000000000  # <-- set this
-echo "snapshotCount:"
-curl -fsS -H "content-type: application/json" -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_call\",\"params\":[{\"to\":\"$REG\",\"data\":\"0x098ab6a1\"},\"latest\"]}" $RPC; echo
-echo "latestSnapshotId:"
-curl -fsS -H "content-type: application/json" -d "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"eth_call\",\"params\":[{\"to\":\"$REG\",\"data\":\"0xe484cf32\"},\"latest\"]}" $RPC; echo
-Expected:
-
 snapshotCount increments
 
-latestSnapshotId matches
-
-5.5) Decode getSnapshot(latest) (T2)
-Replace REG and ID.
+3) Read PoSS state (snapshotCount/latest/getSnapshot)
+(T2)
 
 bash
 Copier le code
 cd /workspaces/noorchain-core/dapps/curators-hub-v0
-node --input-type=module - <<'"'"'NODE'"'"'
-import { decodeFunctionResult, encodeFunctionData } from "viem";
-const RPC = "http://127.0.0.1:8545";
-const REG = "0x0000000000000000000000000000000000000000"; // set
-const id = 1n; // set
-
-const abi = [{
-  type: "function", name: "getSnapshot", stateMutability: "view",
-  inputs: [{ name: "id", type: "uint256" }],
-  outputs: [{
-    name: "", type: "tuple", components: [
-      { name: "snapshotHash", type: "bytes32" },
-      { name: "uri", type: "string" },
-      { name: "periodStart", type: "uint64" },
-      { name: "periodEnd", type: "uint64" },
-      { name: "publishedAt", type: "uint64" },
-      { name: "version", type: "uint32" },
-      { name: "publisher", type: "address" },
-    ]
-  }]
-}];
-
-const data = encodeFunctionData({ abi, functionName: "getSnapshot", args: [id] });
-const body = { jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: REG, data }, "latest"] };
-const res = await fetch(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-const json = await res.json();
-
-console.log("calldata:", data);
-console.log("raw:", json.result);
-
-const decoded = decodeFunctionResult({ abi, functionName: "getSnapshot", data: json.result });
-console.log("decoded:", decoded);
-NODE
+node ./scripts/read-poss.mjs
 Expected:
 
-raw is not 0x
+snapshotCount >= 1
 
-decoded shows uri/publishedAt/publisher
+latestSnapshotId matches
+
+getSnapshot(latest) shows uri, timestamps, publisher
+
+F) Troubleshooting quick hits
+Health 404
+Use /healthz, not /
+
+Hardhat network errors
+Use:
+
+--network localhost
+and ensure hardhat.config.ts defines localhost with chainId 2121.
+
+Nonce / duplicate contract addresses
+Verify:
+
+bash
+Copier le code
+curl -s http://127.0.0.1:8545 -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionCount","params":["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","latest"]}'
+echo
+If something feels stale
+STOP all nodes, verify ports closed, rebuild, start again.
