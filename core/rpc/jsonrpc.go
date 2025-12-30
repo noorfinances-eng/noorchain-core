@@ -16,6 +16,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/triedb"
+	"github.com/holiman/uint256"
+
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -323,8 +328,30 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 
 		}
 		addr := common.HexToAddress(addrStr)
-		resp.Result = toHexUint(s.evm.GetTransactionCount(addr))
-		return resp
+
+nonce := uint64(0)
+
+// Prefer geth StateDB (world-state) if available
+if s.n != nil && s.n.EVMStore() != nil && s.n.EVMStore().DB() != nil {
+	root := s.n.StateRootHead()
+
+	diskdb := rawdb.NewDatabase(s.n.EVMStore().DB())
+	tdb := triedb.NewDatabase(diskdb, nil)
+	sdbCache := state.NewDatabase(tdb, nil)
+
+	if st, err := state.New(root, sdbCache); err == nil {
+		nonce = st.GetNonce(addr)
+	} else {
+		s.log.Println("rpc: state.New failed (txCount) | err:", err)
+	}
+} else if s.evm != nil {
+	// Fallback to legacy mock
+	nonce = s.evm.GetTransactionCount(addr)
+}
+
+resp.Result = toHexUint(nonce)
+return resp
+
 
 	case "eth_getBalance":
 		// Minimal wallet/tooling compatibility (dev-only).
@@ -339,9 +366,27 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			resp.Error = &rpcError{Code: -32602, Message: "invalid address"}
 			return resp
 		}
-		// No real account-state yet in the dev RPC shim; return 0.
-		resp.Result = "0x0"
-		return resp
+		addr := common.HexToAddress(addrStr)
+
+bal := uint256.NewInt(0) // default 0
+
+if s.n != nil && s.n.EVMStore() != nil && s.n.EVMStore().DB() != nil {
+	root := s.n.StateRootHead()
+
+	diskdb := rawdb.NewDatabase(s.n.EVMStore().DB())
+	tdb := triedb.NewDatabase(diskdb, nil)
+	sdbCache := state.NewDatabase(tdb, nil)
+
+	if st, err := state.New(root, sdbCache); err == nil {
+		bal = st.GetBalance(addr)
+	} else {
+		s.log.Println("rpc: state.New failed (balance) | err:", err)
+	}
+}
+
+resp.Result = "0x" + bal.ToBig().Text(16)
+return resp
+
 
 	case "eth_gasPrice":
 		resp.Result = "0x1"

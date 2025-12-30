@@ -25,9 +25,15 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/ethereum/go-ethereum/triedb"
+	"github.com/holiman/uint256"
+	"github.com/ethereum/go-ethereum/core/tracing"
+
 )
 
 type Logger interface {
@@ -49,6 +55,8 @@ const rcptKVPrefix = "rcpt/v1/"
 // EVM Chain ID (EIP-155) must be tooling/wallet compatible.
 // For NOORCHAIN 2.1 local dev, we pin this to 2121.
 const evmChainID uint64 = 2121
+
+const stateHeadKVKey = "stateroot/v1/head" // persisted in NOOR LevelDB (n.db)
 
 func rcptKey(txHash string) []byte {
 	h := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(txHash), "0x"))
@@ -219,12 +227,39 @@ func (n *Node) loop() {
 					n.height = hv
 				}
 				height := n.height
-				state := n.state
+				nodeState := n.state
 				n.mu.Unlock()
 
-				n.logger.Println("tick | height:", height, "| state:", state, "| follower:", true)
+				n.logger.Println("tick | height:", height, "| state:", nodeState, "| follower:", true)
 			}
 		}
+	}
+
+	// M12.2: init geth world-state (StateDB + triedb) using isolated geth DB.
+	headRoot := common.Hash{}
+	if n.db != nil {
+		if b, err := n.db.Get([]byte(stateHeadKVKey), nil); err == nil && len(b) == 32 {
+			headRoot = common.BytesToHash(b)
+		}
+	}
+
+	var tdb *triedb.Database
+	var sdbCache *state.CachingDB
+	var statedb *state.StateDB
+
+	if n.evmStore != nil && n.evmStore.DB() != nil {
+		diskdb := rawdb.NewDatabase(n.evmStore.DB())
+			tdb = triedb.NewDatabase(diskdb, nil)
+		sdbCache = state.NewDatabase(tdb, nil)
+		if st, err := state.New(headRoot, sdbCache); err == nil {
+			statedb = st
+		} else {
+			n.logger.Println("evmstate: state.New failed, fallback empty root | err:", err)
+			headRoot = common.Hash{}
+			statedb, _ = state.New(headRoot, sdbCache)
+		}
+	} else {
+		n.logger.Println("evmstate: missing evmStore DB; stateRoot will remain placeholder")
 	}
 
 	// M9: execution hook (minimal, step 1)
@@ -259,6 +294,14 @@ func (n *Node) loop() {
 			from = f
 		} else {
 			n.logger.Println("applyTx: sender decode failed | hash:", t.Hash, "| err:", err)
+		}
+		// M12.2: minimal world-state write (nonce) so RPC can read real values.
+		// Not full EVM execution; just proves StateDB is live and persisted.
+		if statedb != nil && from != (common.Address{}) {
+		statedb.SetNonce(from, tx.Nonce()+1)
+		
+		// M12.2: minimal balance write for proof (temporary until full value-transfer/EVM).
+		statedb.AddBalance(from, uint256.NewInt(1), tracing.BalanceChangeUnspecified)
 		}
 
 		// Contract creation => contractAddress = CreateAddress(from, nonce)
@@ -338,7 +381,7 @@ func (n *Node) loop() {
 		case <-ticker.C:
 			n.mu.Lock()
 			n.height++
-			state := n.state
+			nodeState := n.state
 			height := n.height
 			n.mu.Unlock()
 
@@ -362,8 +405,29 @@ func (n *Node) loop() {
 			if n.db != nil {
 				bloom := types.CreateBloom(receipts)
 				receiptsRoot := types.DeriveSha(receipts, trie.NewStackTrie(nil))
-				// stateRoot is wired in M12; for now, use a non-zero placeholder until StateDB is integrated
+
+				// M12.2: compute stateRoot from geth StateDB + triedb (persisted), fallback to placeholder
 				stateRoot := pseudoBlockHash(height)
+				if statedb != nil {
+					root, err := statedb.Commit(height, false)
+					if err != nil {
+						n.logger.Println("evmstate: commit failed, keep placeholder | err:", err)
+					} else {
+						stateRoot = root
+						if tdb != nil {
+							_ = tdb.Commit(root, false)
+						}
+						_ = n.db.Put([]byte(stateHeadKVKey), root.Bytes(), nil)
+						if sdbCache != nil {
+							if st2, err := state.New(root, sdbCache); err == nil {
+								statedb = st2
+							} else {
+								n.logger.Println("evmstate: reopen state failed | err:", err)
+							}
+						}
+					}
+				}
+
 				bm := blockMeta{
 					Height:       height,
 					BlockHash:    pseudoBlockHash(height),
@@ -377,9 +441,9 @@ func (n *Node) loop() {
 			}
 
 			if mined > 0 {
-				n.logger.Println("tick | height:", height, "| state:", state, "| mined:", mined)
+				n.logger.Println("tick | height:", height, "| state:", nodeState, "| mined:", mined)
 			} else {
-				n.logger.Println("tick | height:", height, "| state:", state)
+				n.logger.Println("tick | height:", height, "| state:", nodeState)
 			}
 		}
 	}
@@ -395,6 +459,20 @@ func (n *Node) Height() uint64 {
 
 func (n *Node) TxPool() *txpool.Pool    { return n.txpool }
 func (n *Node) TxIndex() *txindex.Index { return n.txindex }
+func (n *Node) EVMStore() *evmstate.Store { return n.evmStore }
+
+// StateRootHead returns the latest committed world-state root (or zero-hash if missing).
+func (n *Node) StateRootHead() common.Hash {
+	if n == nil || n.db == nil {
+		return common.Hash{}
+	}
+	b, err := n.db.Get([]byte(stateHeadKVKey), nil)
+	if err != nil || len(b) != 32 {
+		return common.Hash{}
+	}
+	return common.BytesToHash(b)
+}
+
 
 func (n *Node) Stop() error {
 	n.mu.Lock()
