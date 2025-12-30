@@ -13,6 +13,7 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 
+	"encoding/hex"
 	"encoding/json"
 	"noorchain-evm-l1/core/config"
 	"noorchain-evm-l1/core/evmstate"
@@ -26,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/trie"
 )
 
 type Logger interface {
@@ -228,16 +230,16 @@ func (n *Node) loop() {
 	// M9: execution hook (minimal, step 1)
 	// For now: decode raw tx bytes and log decoded shape.
 	// Next steps will route contract calls + build receipts + persist.
-	applyTx := func(t txpool.Tx, height uint64) {
+	applyTx := func(t txpool.Tx, height uint64) *types.Receipt {
 		if len(t.Raw) == 0 {
 			n.logger.Println("applyTx: empty raw tx | hash:", t.Hash, "| height:", height)
-			return
+			return nil
 		}
 
 		var tx types.Transaction
 		if err := tx.UnmarshalBinary(t.Raw); err != nil {
 			n.logger.Println("applyTx: decode failed | hash:", t.Hash, "| height:", height, "| err:", err)
-			return
+			return nil
 		}
 
 		// Best-effort "to" for logging (contract creation => nil)
@@ -298,6 +300,18 @@ func (n *Node) loop() {
 			}
 		}
 
+		// M12: build a minimal geth receipt for per-block receiptsRoot/logsBloom
+		rcptGeth := &types.Receipt{
+			TxHash:            rawHash,
+			BlockHash:         pseudoBlockHash(height),
+			BlockNumber:       new(big.Int).SetUint64(height),
+			TransactionIndex:  0,
+			Status:            1,
+			CumulativeGasUsed: tx.Gas(),
+			GasUsed:           tx.Gas(),
+			Logs:              []*types.Log{},
+		}
+
 		n.logger.Println(
 			"applyTx: DECODE_OK",
 			"| height:", height,
@@ -310,7 +324,9 @@ func (n *Node) loop() {
 			"| dataLen:", len(tx.Data()),
 			"| possOK:", possOK,
 		)
+		return rcptGeth
 	}
+
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
@@ -328,13 +344,35 @@ func (n *Node) loop() {
 
 			// M8.A minimal inclusion: mark some pending txs as mined at this height
 			mined := 0
+			receipts := types.Receipts{}
 			if n.txpool != nil && n.txindex != nil {
 				txs := n.txpool.PopPending(64)
 				for i := range txs {
 					n.txindex.Put(txs[i].Hash, height)
 					// M9: hook point (execution will be extended in next steps)
-					applyTx(txs[i], height)
+					r := applyTx(txs[i], height)
+					if r != nil {
+						receipts = append(receipts, r)
+					}
 					mined++
+				}
+			}
+
+			// M12: persist block metadata (roots/bloom) for RPC reads
+			if n.db != nil {
+				bloom := types.CreateBloom(receipts)
+				receiptsRoot := types.DeriveSha(receipts, trie.NewStackTrie(nil))
+				// stateRoot is wired in M12; for now, use a non-zero placeholder until StateDB is integrated
+				stateRoot := pseudoBlockHash(height)
+				bm := blockMeta{
+					Height:       height,
+					BlockHash:    pseudoBlockHash(height),
+					StateRoot:    stateRoot,
+					ReceiptsRoot: receiptsRoot,
+					LogsBloomHex: "0x" + hex.EncodeToString(bloom[:]),
+				}
+				if b, err := encodeBlockMeta(bm); err == nil {
+					_ = n.db.Put(blkMetaKey(height), b, nil)
 				}
 			}
 
