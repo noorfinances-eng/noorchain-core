@@ -185,7 +185,7 @@ var ethRouting = map[string]routeClass{
 	"eth_estimateGas":           routeLocal,
 	"eth_getBalance":            routeLocal,
 	"eth_call":                  routeLocal,
-	"eth_getBlockByNumber":      routeLocal,
+	"eth_getBlockByNumber":      routeLeaderOnly,
 }
 
 func (s *Server) dispatch(req *rpcReq) rpcResp {
@@ -696,9 +696,43 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			Transactions     []any  `json:"transactions"`
 			Uncles           []any  `json:"uncles"`
 		}
-		n := uint64(0)
+
+		// params: [ blockNumberOrTag, fullTxObjects ]
+		reqN := uint64(0)
 		if s.n != nil {
-			n = s.n.Height()
+			reqN = s.n.Height()
+		}
+		// default: latest
+		n := reqN
+		var params []any
+		if err := json.Unmarshal(req.Params, &params); err == nil && len(params) >= 1 {
+			if tag, ok := params[0].(string); ok {
+				t := strings.TrimSpace(strings.ToLower(tag))
+				switch t {
+				case "latest", "pending":
+					n = reqN
+				case "earliest":
+					n = 0
+				default:
+					if strings.HasPrefix(t, "0x") {
+						tt := strings.TrimPrefix(t, "0x")
+						if tt != "" {
+							if v, err := strconv.ParseUint(tt, 16, 64); err == nil {
+								n = v
+							}
+						}
+					} else {
+						if v, err := strconv.ParseUint(t, 10, 64); err == nil {
+							n = v
+						}
+					}
+				}
+			}
+		}
+		// If asked height is above current, return null (Ethereum-compatible)
+		if s.n != nil && n > reqN {
+			resp.Result = nil
+			return resp
 		}
 
 		// M12: if persisted block metadata exists, expose real roots/bloom
