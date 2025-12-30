@@ -15,6 +15,7 @@ import (
 
 	"encoding/json"
 	"noorchain-evm-l1/core/config"
+	"noorchain-evm-l1/core/evmstate"
 	"noorchain-evm-l1/core/exec"
 	"noorchain-evm-l1/core/health"
 	"noorchain-evm-l1/core/network"
@@ -95,6 +96,9 @@ type Node struct {
 
 	db *leveldb.DB
 
+	// M12: geth-compatible DB for Ethereum world-state (trie/code/storage), isolated under <data-dir>/db/geth
+	evmStore *evmstate.Store
+
 	ctx    context.Context
 	cancel context.CancelFunc
 
@@ -131,6 +135,15 @@ func (n *Node) Start() error {
 		return err
 	}
 	n.db = db
+
+	// M12: open isolated geth DB for EVM world-state (Option A)
+	es, err := evmstate.Open(n.cfg.DataDir, false)
+	if err != nil {
+		_ = n.db.Close()
+		n.db = nil
+		return err
+	}
+	n.evmStore = es
 
 	n.mu.Lock()
 	n.state = StateRunning
@@ -334,7 +347,6 @@ func (n *Node) loop() {
 	}
 }
 
-
 func (n *Node) Config() config.Config { return n.cfg }
 
 func (n *Node) Height() uint64 {
@@ -369,6 +381,11 @@ func (n *Node) Stop() error {
 	// stop network
 	if err := n.network.Stop(); err != nil {
 		n.logger.Println("network stop error:", err)
+	}
+
+	if n.evmStore != nil {
+		_ = n.evmStore.Close()
+		n.evmStore = nil
 	}
 
 	if n.db != nil {
