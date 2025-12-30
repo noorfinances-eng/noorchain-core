@@ -326,22 +326,22 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		resp.Result = toHexUint(s.evm.GetTransactionCount(addr))
 		return resp
 
-        case "eth_getBalance":
-                // Minimal wallet/tooling compatibility (dev-only).
-                // params: [ "0x..address..", "latest"|"pending"|... ]
-                var params []any
-                if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
-                        resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
-                        return resp
-                }
-                addrStr, _ := params[0].(string)
-                if !common.IsHexAddress(addrStr) {
-                        resp.Error = &rpcError{Code: -32602, Message: "invalid address"}
-                        return resp
-                }
-                // No real account-state yet in the dev RPC shim; return 0.
-                resp.Result = "0x0"
-                return resp
+	case "eth_getBalance":
+		// Minimal wallet/tooling compatibility (dev-only).
+		// params: [ "0x..address..", "latest"|"pending"|... ]
+		var params []any
+		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+			return resp
+		}
+		addrStr, _ := params[0].(string)
+		if !common.IsHexAddress(addrStr) {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid address"}
+			return resp
+		}
+		// No real account-state yet in the dev RPC shim; return 0.
+		resp.Result = "0x0"
+		return resp
 
 	case "eth_gasPrice":
 		resp.Result = "0x1"
@@ -441,13 +441,13 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 
 		h := crypto.Keccak256Hash(rawBytes)
 
-                if s.evm != nil {
-                        chainBig := new(big.Int).SetUint64(evmChainID)
-                        signer := types.LatestSignerForChainID(chainBig)
-                        if from, err := types.Sender(signer, &tx); err == nil {
-                                s.evm.BumpNonce(from, tx.Nonce())
-                        }
-                }
+		if s.evm != nil {
+			chainBig := new(big.Int).SetUint64(evmChainID)
+			signer := types.LatestSignerForChainID(chainBig)
+			if from, err := types.Sender(signer, &tx); err == nil {
+				s.evm.BumpNonce(from, tx.Nonce())
+			}
+		}
 
 		s.n.TxPool().AddPending(txpool.Tx{Hash: h.Hex(), Raw: rawBytes})
 		resp.Result = h.Hex()
@@ -700,16 +700,43 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		if s.n != nil {
 			n = s.n.Height()
 		}
+
+		// M12: if persisted block metadata exists, expose real roots/bloom
+		logsBloom := "0x" + strings.Repeat("0", 512)
+		stateRoot := "0x" + strings.Repeat("0", 64)
+		receiptsRoot := "0x" + strings.Repeat("0", 64)
+		if s.n != nil && s.n.DB() != nil {
+			key := []byte("blkmeta/v1/" + strings.TrimPrefix(toHexUint(n), "0x"))
+			if b, err := s.n.DB().Get(key, nil); err == nil {
+				var bm struct {
+					LogsBloomHex string `json:"logsBloom"`
+					StateRoot    string `json:"stateRoot"`
+					ReceiptsRoot string `json:"receiptsRoot"`
+				}
+				if err := json.Unmarshal(b, &bm); err == nil {
+					if strings.HasPrefix(bm.LogsBloomHex, "0x") && len(bm.LogsBloomHex) == 514 {
+						logsBloom = bm.LogsBloomHex
+					}
+					if strings.HasPrefix(bm.StateRoot, "0x") && len(bm.StateRoot) == 66 {
+						stateRoot = bm.StateRoot
+					}
+					if strings.HasPrefix(bm.ReceiptsRoot, "0x") && len(bm.ReceiptsRoot) == 66 {
+						receiptsRoot = bm.ReceiptsRoot
+					}
+				}
+			}
+		}
+
 		resp.Result = blockResp{
 			Number:           toHexUint(n),
 			Hash:             pseudoBlockHash(n).Hex(),
 			ParentHash:       pseudoBlockHash(n - 1).Hex(),
 			Nonce:            "0x0000000000000000",
 			Sha3Uncles:       "0x" + strings.Repeat("0", 64),
-			LogsBloom:        "0x" + strings.Repeat("0", 512),
+			LogsBloom:        logsBloom,
 			TransactionsRoot: "0x" + strings.Repeat("0", 64),
-			StateRoot:        "0x" + strings.Repeat("0", 64),
-			ReceiptsRoot:     "0x" + strings.Repeat("0", 64),
+			StateRoot:        stateRoot,
+			ReceiptsRoot:     receiptsRoot,
 			Miner:            "0x" + strings.Repeat("0", 40),
 			Difficulty:       "0x0",
 			TotalDifficulty:  "0x0",
