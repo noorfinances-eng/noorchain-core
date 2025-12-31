@@ -1,347 +1,39 @@
-NOORCHAIN — Public Whitepaper 1.1
-A Human-Centered Blockchain for Social Participation
+NOORCHAIN — Public Whitepaper 1.2
 
-Version 1.1 — Public Edition
-Last Updated: 08.12.2025
+A Human-Centered Blockchain for Social Participation
+Public Edition
+Last Updated: 2025
 
 Legal Disclaimer (Public Version)
-
-This document is informational and describes the design and mission of NOORCHAIN.
-It does not constitute financial advice, investment guidance, a prospectus, or a solicitation.
-NOORCHAIN is a non-financial, non-custodial blockchain protocol operating under the Swiss Legal Light CH framework.
-
+This document is provided for informational purposes only. It describes the mission, principles, and design of the NOORCHAIN protocol. It does not constitute financial advice, investment guidance, a prospectus, or a solicitation of any kind. NOORCHAIN is a non-financial, non-custodial blockchain protocol operating under Swiss Legal-Light CH principles. The NUR token is a utility instrument and is not positioned as a financial asset or investment product.
 1. Introduction
-
-NOORCHAIN is a Swiss-based, ethical blockchain designed to recognize and validate positive human actions.
-
-Traditional blockchains reward financial power or computational ability.
-NOORCHAIN introduces a new paradigm:
-
-Value is created through verified social participation, not financial resources.
-
-Key characteristics:
-
-non-financial
-
-non-custodial
-
-transparent
-
-aligned with Swiss Legal Light CH
-
-designed for institutions, NGOs, educators, and communities
-
-Its objective is simple:
-
-Provide a neutral, transparent, and long-term digital infrastructure that institutions and communities can trust.
-
+NOORCHAIN is a Swiss-based ethical blockchain designed to recognise and validate positive human actions. While most blockchain systems reward financial capital, stake, or computational power, NOORCHAIN introduces a different paradigm: value emerges from verified social participation rather than financial resources. The protocol is intentionally non-financial, non-custodial, transparent, and aligned with Swiss Legal-Light CH principles. It is designed for institutions, NGOs, educators, municipalities, and communities that require a neutral and reliable digital infrastructure. The objective of NOORCHAIN is deliberately simple: to provide a long-term, transparent participation ledger that institutions and communities can trust.
 2. Vision
-
-Most digital systems reward economic capital, attention capture, or computational resources.
-NOORCHAIN shifts this dynamic by recognizing human engagement as a measurable, verifiable, meaningful contribution.
-
-Vision Statement
-
-Build the first global infrastructure where positive social actions create value in an ethical, transparent, and verifiable way.
-
-This vision encourages:
-
-participation
-
-responsibility
-
-community involvement
-
-social contribution
-
-all without speculation or financial incentives.
-
-3. What Makes NOORCHAIN Unique
-
-NOORCHAIN introduces several foundational innovations:
-
-• Proof of Signal Social (PoSS)
-
-A protocol mechanism that validates real, positive human actions.
-
-• Fixed Supply — 299,792,458 NUR
-
-No inflation. No additional minting. Ever.
-
-• Immutable Ethical Reward Split — 70/30
-
-70% to the participant, 30% to the curator.
-Permanent, protocol-encoded, non-modifiable.
-
-• Halving Every 8 Years
-
-A slow, predictable supply emission schedule designed for sustainability.
-
-• Non-Speculative by Design
-
-No staking yield, no APR/APY, no financial promises.
-
-• Institution-Ready
-
-Built for NGOs, schools, cultural institutions, municipalities, and communities.
-Focused on transparency, reliability, and ethical interaction.
-
-NOORCHAIN is not a financial product.
-It is an institutional infrastructure designed to bring visibility and recognition to positive human participation.
-
-4. The Role of PoSS (Proof of Signal Social)
-
-PoSS transforms positive actions into verifiable on-chain signals, validated by trusted curators.
-
-A “signal” can represent:
-
-class participation
-
-volunteer work
-
-involvement in community projects
-
-engagement in cultural or social activities
-
-contributions to public or educational programs
-
-Curators (teachers, NGOs, schools, institutions) validate signals ethically and transparently.
-
-Rewards under PoSS:
-
-symbolic
-
-non-financial
-
-protocol-controlled
-
-strictly capped by the PoSS reserve
-
-not tied to staking, deposit, or yield
-
-PoSS is a social recognition system, not a financial incentive mechanism.
-
+Most digital systems today reward economic capital, attention capture, or technical dominance. NOORCHAIN shifts this dynamic by recognising human engagement as a measurable, verifiable, and meaningful contribution. The vision of the project is to build a global infrastructure where positive social actions can be acknowledged ethically and transparently, without speculation or financial incentives. NOORCHAIN encourages participation, responsibility, community involvement, and social contribution through recognition rather than monetary reward.
+3. What Makes NOORCHAIN Distinct
+NOORCHAIN introduces a set of foundational principles that clearly differentiate it from financial or speculative blockchain systems. At its core is Proof of Social Signal (PoSS), a protocol mechanism that allows real and positive human actions to be validated by trusted institutions. The protocol operates with a fixed supply of 299,792,458 NUR tokens, defined at genesis and never expandable. PoSS recognition follows an immutable 70/30 structural split between participants and curators, encoded at the protocol level and not subject to governance discretion. Emission follows a slow and predictable eight-year halving cycle designed for sustainability and intergenerational use. NOORCHAIN deliberately excludes staking yields, APR or APY mechanisms, and financial promises. It is built as an institution-ready infrastructure focused on transparency, reliability, and ethical interaction. NOORCHAIN is not a financial product; it is a public participation infrastructure.
+4. The Role of PoSS (Proof of Social Signal)
+PoSS transforms positive human actions into verifiable on-chain signals validated by trusted curators. A signal may represent class participation, volunteer work, involvement in community projects, engagement in cultural or social activities, or contributions to public and educational programs. Curators, such as schools, NGOs, educators, or institutions, validate these signals according to ethical and transparent criteria. Recognition under PoSS is symbolic and non-financial. It is protocol-controlled, strictly capped by the PoSS reserve, and never linked to staking, deposits, or yield. PoSS functions as a social recognition system, not as a financial incentive mechanism. It does not secure the blockchain and is not a consensus layer; it operates strictly at the application level.
 5. Economic Model
-
-NOORCHAIN follows a transparent and immutable economic model built for public-good infrastructure.
-
+NOORCHAIN follows a transparent and immutable economic model designed for public-good infrastructure rather than financial optimisation. The protocol is built around a fixed and predictable supply, clear allocation rules, and the absence of speculative mechanisms. Its economic architecture is intended to support long-term institutional use, not market-driven dynamics.
 5.1 Fixed Supply
-
-299,792,458 NUR, inspired by the speed of light.
-This supply is immutable and encoded at genesis.
-
-No inflation.
-No discretionary minting.
-No token creation beyond the PoSS reserve.
-
-5.2 Genesis Allocation (5 / 5 / 5 / 5 / 80)
-
-5% Foundation — governance, transparency, institutional partnerships
-
-5% Development Entity (Sàrl) — technical maintenance, R&D
-
-5% PoSS Stimulus — early support for NGOs, schools, pilots
-
-5% Pre-sale (optional, regulated) — Swiss-only, vested, if activated
-
-80% PoSS Reserve — long-term PoSS emission over several eras
-
-These values are immutable and cannot be changed by governance.
-
-5.3 No Speculation Features
-
-NOORCHAIN deliberately excludes:
-
-staking yield
-
-APR/APY
-
-liquidity pools operated by the Foundation
-
-financial returns
-
-investment mechanisms
-
-farming, locking, or deposit-based rewards
-
-This ensures strict compliance with Swiss Legal Light CH standards.
-
+The total supply of the NUR token is fixed at 299,792,458 units, a symbolic reference to the speed of light and the principles of clarity and transparency. This supply is encoded at genesis and cannot be altered. There is no inflation, no discretionary minting, and no token creation beyond the predefined PoSS reserve. This fixed-supply design provides predictability and stability for institutions and communities using the protocol.
+5.2 Genesis Allocation
+The genesis allocation follows a clear and immutable structure. Five percent of the supply is allocated to the Foundation to support governance, transparency, documentation, and institutional partnerships. Five percent is allocated to the technical development entity (Swiss Sàrl) to ensure maintenance, research, and long-term technical sustainability. Five percent is reserved for PoSS stimulus to support early institutional adoption, pilots, and ecosystem activation. Five percent may be allocated to a regulated and optional pre-sale, limited to Swiss and institutional contexts and subject to vesting, if activated. The remaining eighty percent is reserved for long-term PoSS emission across multiple eras. These allocation values are protocol-defined and cannot be modified by governance.
+5.3 Absence of Speculative Features
+NOORCHAIN deliberately excludes mechanisms commonly associated with speculative blockchain systems. There is no staking yield, no APR or APY, no protocol-operated liquidity pools, no farming or lock-up incentives, and no investment-oriented reward structures. This exclusion ensures alignment with Swiss Legal-Light CH principles and protects institutions from financial and reputational risk.
 6. Curators: Guardians of Integrity
-
-Curators are community-trusted entities:
-
-NGOs
-
-schools & educators
-
-social institutions
-
-cultural organizations
-
-associations
-
-community groups
-
-Curators do not receive financial benefits.
-Their role is ethical and mission-oriented:
-
-validate real human actions
-
-ensure fairness
-
-prevent misuse
-
-reinforce the social purpose of the protocol
-
-Curators are central to the integrity and legitimacy of PoSS.
-
+Curators are trusted entities drawn from the social and institutional ecosystem, including NGOs, schools, educators, social institutions, cultural organisations, associations, and community groups. Their role is not financial but ethical and mission-oriented. Curators validate real human actions, ensure fairness in recognition, and help prevent misuse of the protocol. They do not receive financial benefits, do not control protocol governance, and do not manage user assets. Curators are central to the integrity and legitimacy of PoSS, acting as accountable validators of social participation.
 7. Technology Overview
-
-NOORCHAIN is built on secure, well-established, and institution-friendly components:
-
-Cosmos SDK — modular, transparent, proven
-
-Ethermint (EVM) — enabling future compatibility with Ethereum tooling
-
-Custom PoSS Module — parameter-driven, auditable, predictable
-
-The architecture is intentionally simple and long-term:
-
-predictable
-
-auditable
-
-minimal risk
-
-stable for institutional adoption
-
-free of DeFi, custodial layers, or yield engineering
-
-NOORCHAIN aims to be a public-good digital ledger, not a financial system.
-
-8. Legal & Compliance Foundations
-
-NOORCHAIN is fully aligned with the Swiss Legal Light CH framework:
-
-non-custodial (no private keys, no user funds)
-
-no financial products
-
-no investment offering
-
-no speculative messaging
-
-no yield, APR, APY, or financial remuneration
-
-transparent governance
-
-symbolic, protocol-based rewards
-
-These principles ensure safety for:
-
-public institutions
-
-NGOs
-
-educators
-
-municipalities
-
-community programs
-
-The protocol is designed to operate within Switzerland’s strict non-financial classification.
-
+NOORCHAIN is implemented as a sovereign Layer 1 blockchain with native EVM compatibility. The architecture is intentionally conservative and institution-friendly. It is designed to be predictable, auditable, and stable over long periods of time. The protocol avoids complex DeFi logic, custodial layers, and yield engineering. Its technical design prioritises clarity, security, and long-term operability. NOORCHAIN is intended to function as a public digital ledger for participation, not as a financial execution environment.
+8. Legal and Compliance Foundations
+NOORCHAIN is designed to operate within the Swiss Legal-Light CH framework. It is non-custodial and does not hold private keys or user funds. It does not constitute a financial product, investment offering, or speculative instrument. The protocol includes no yield mechanisms, no financial remuneration, and no investment messaging. Governance processes, documentation, and core parameters are transparent and publicly accessible. These principles ensure that NOORCHAIN can be safely adopted by public institutions, NGOs, educators, municipalities, and community programs without regulatory exposure.
 9. Use Cases
-Education
-
-participation tracking
-
-recognition of student effort
-
-extracurricular validation
-
-transparent engagement records
-
-NGOs & Humanitarian Projects
-
-volunteer verification
-
-transparent participation logs
-
-community contribution measurement
-
-Communities & Municipalities
-
-civic engagement tracking
-
-cultural participation reporting
-
-collaborative project validation
-
-Cultural Institutions
-
-event attendance
-
-cultural engagement metrics
-
-public program participation
-
-NOORCHAIN acts as a neutral, durable, transparent participation ledger.
-
+NOORCHAIN is designed as a neutral and durable participation ledger applicable across multiple social and institutional contexts. In education, it enables participation tracking, recognition of student effort, validation of extracurricular activities, and transparent engagement records over time. For NGOs and humanitarian projects, it provides verification of volunteer participation, transparent contribution logs, and reliable measurement of community involvement. Within communities and municipalities, NOORCHAIN supports civic engagement tracking, cultural participation reporting, and validation of collaborative public projects. Cultural institutions can use the protocol to document event participation, measure cultural engagement, and provide transparent reporting for public programs. Across all use cases, NOORCHAIN functions as a non-financial infrastructure focused on recognition rather than remuneration.
 10. Governance Principles
-
-NOORCHAIN governance is designed for stability, neutrality, and long-term clarity.
-
-• Foundation (5%)
-
-Public-good mission, transparency, compliance, documentation.
-
-• Multi-sig Committee (3/5)
-
-Executes governance-approved actions.
-Cannot modify supply, PoSS rules, or economic invariants.
-
-• Curators
-
-Advisory and validation role.
-No treasury control or governance authority.
-
-• Immutable Protocol Rules
-
-fixed supply
-
-70/30 PoSS split
-
-8-year halving
-
-allocation percentages (5/5/5/5/80)
-
-Legal Light CH restrictions
-
-Governance is transparent, documented, and strictly non-financial.
-
+NOORCHAIN governance is designed to ensure stability, neutrality, and long-term clarity. A non-profit Foundation safeguards the public-good mission, ensures legal alignment, and maintains transparency and documentation. A multi-signature committee executes governance-approved actions within strict boundaries and cannot modify supply, PoSS rules, or economic invariants. Curators hold an advisory and validation role without treasury control or governance authority. Core protocol rules are immutable, including fixed supply, the 70/30 PoSS recognition structure, the eight-year halving schedule, the genesis allocation framework, and Legal-Light CH constraints. Governance processes are transparent, documented, and strictly non-financial.
 11. Long-Term Vision
-
-NOORCHAIN aims to become a global reference for:
-
-digital participation records
-
-ethical recognition systems
-
-community engagement metrics
-
-transparent validation tools
-
-non-financial public infrastructure
-
-Its architecture — multi-era PoSS distribution, fixed supply, and institutional neutrality — makes it a long-term digital platform, not a speculative asset.
-
+NOORCHAIN aims to become a global reference infrastructure for digital participation records, ethical recognition systems, community engagement metrics, and transparent validation tools. Its architecture—based on fixed supply, multi-era PoSS emission, and institutional neutrality—is designed for longevity rather than short-term adoption cycles. The protocol is intended to serve as a stable digital platform for public-interest use cases across generations.
 12. Conclusion
+NOORCHAIN introduces a distinct category of blockchain infrastructure: a human-centered, ethical, and non-financial participation protocol. By recognising positive actions through transparent and responsible mechanisms, NOORCHAIN provides a durable foundation for communities, educators, institutions, and public organisations worldwide. It is designed for public good, ethical technology, and long-term trust—rather than speculation or financial incentives.
 
-NOORCHAIN introduces a new category of blockchain:
-
-A human-centered, ethical, non-financial participation protocol.
-
-By recognizing positive actions transparently and responsibly, NOORCHAIN provides a durable foundation for communities, educators, institutions, and public organizations worldwide.
-
-It is designed for public good, ethical technology, and transparent participation — not for speculation or financial incentives.
