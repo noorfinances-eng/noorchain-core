@@ -1,4 +1,4 @@
-NOORCHAIN — Brandbook 1.1
+NOORCHAIN — Brandbook 1.2
 Visual Identity & Logo System
 Version 1.1 — 2025
 
@@ -459,5 +459,128 @@ This structure should be respected in the main web project to avoid confusion.
 •	Attribution is required for academic or media usage where the logo appears in reports or studies.
 •	Any commercial reuse (merchandise, co-branding, campaigns) requires prior written authorization from the NOORCHAIN project.
 
-End of NOORCHAIN Brandbook 1.1 — Visual Identity & Logo System
+5. MOTION & INTERACTION GUIDELINES
+5.1 Motion Philosophy
+Motion in NOORCHAIN is not decorative.
+It exists to support clarity, continuity and trust.
+The role of motion is to:
+•	guide attention,
+•	structure reading flow,
+•	suggest continuous activity,
+•	reinforce a sense of operational seriousness.
+Motion must always feel:
+•	calm,
+•	deliberate,
+•	restrained,
+•	institutional.
+NOORCHAIN motion design follows a Swiss-inspired, engineering-first philosophy.
+❌ Motion must never be:
+•	playful,
+•	flashy,
+•	spectacular,
+•	distracting,
+•	or reminiscent of speculative Web3 aesthetics.
+
+5.2 General Motion Principles
+All motion within NOORCHAIN interfaces must comply with the following principles:
+•	Purpose-driven
+Every animation must have a functional reason (orientation, feedback, hierarchy).
+•	Subtle by default
+Motion should be felt more than noticed.
+•	Consistent across platforms
+Website, applications and digital assets must follow the same motion logic.
+•	Performance-aware
+Animations must not impact readability, loading time or device performance.
+
+5.3 Section Entrance Animations (Scroll Reveal)
+Section-level entrance animations are allowed and recommended to avoid static layouts.
+Approved patterns
+•	Opacity: 0 → 1
+•	Vertical offset: +10 px to +24 px → 0
+•	Duration: 300–500 ms
+•	Easing: ease-out or soft cubic-bezier
+Usage rules
+•	Triggered on scroll (first appearance only)
+•	No repeated looping
+•	No staggered chaos; spacing must remain readable
+Forbidden
+•	Bounce or elastic effects
+•	Horizontal slide-ins
+•	Zoom-in or scale-based reveals
+•	Long delays or cinematic sequencing
+The objective is to create rhythm, not spectacle.
+
+5.4 Micro-Interactions (UI Feedback)
+Micro-interactions are essential to convey precision and responsiveness.
+Buttons and links
+Approved interactions:
+•	Subtle vertical movement (1–2 px)
+•	Light glow or contrast enhancement
+•	Smooth transition (150–250 ms)
+Hover and focus states must feel:
+•	controlled,
+•	confident,
+•	immediate.
+Forbidden
+•	Color explosions
+•	Shadows with large blur radius
+•	Sound effects
+•	Excessive easing or delays
+Micro-interactions should communicate:
+“This interface is alive, stable and intentional.”
+
+5.5 Hero & Background Motion
+Hero sections may include restrained background motion to avoid a frozen appearance.
+Allowed
+•	Slowly animated gradients
+•	Very subtle noise textures
+•	Soft glow on the N-frame or key elements
+•	Long-duration, low-amplitude motion loops
+Forbidden
+•	Autoplay video backgrounds
+•	Particle systems
+•	WebGL-heavy effects
+•	Fast or distracting movement
+Hero motion should suggest:
+continuity and depth, not excitement.
+
+5.6 Accessibility & Reduced Motion
+NOORCHAIN respects accessibility and user comfort.
+Mandatory rules:
+•	Honor prefers-reduced-motion
+•	Provide static fallbacks when motion is disabled
+•	Ensure no animation blocks content visibility
+•	Maintain WCAG contrast and readability at all times
+Motion must never be required to understand content.
+
+5.7 Performance & Technical Constraints
+•	Animations must remain lightweight
+•	Avoid layout shifts
+•	Avoid blocking JavaScript on load
+•	Prefer CSS or minimal JS-based motion
+•	Maintain smooth rendering on low-end devices
+Performance degradation is considered a brand violation.
+
+5.8 Motion Do / Don’t Summary
+✔ Do
+•	Use motion to guide reading
+•	Keep durations short and calm
+•	Maintain consistency
+•	Prioritize clarity and trust
+✘ Don’t
+•	Use motion for decoration
+•	Mimic crypto trading platforms
+•	Add unnecessary visual noise
+•	Sacrifice performance for effect
+
+5.9 Brand Integrity Statement
+Motion is part of NOORCHAIN’s visual identity.
+Poor or excessive animation weakens institutional credibility.
+When in doubt:
+Remove motion rather than exaggerate it.
+Clarity always prevails.
+
+
+
+End of NOORCHAIN Brandbook 1.2 — Visual Identity & Logo System
 
