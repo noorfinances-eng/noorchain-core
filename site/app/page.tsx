@@ -77,10 +77,25 @@ function SignalMesh() {
         <path d="M1060 90 L980 240 L900 420" fill="none" />
       </g>
 
-      <g filter="url(#softGlow)" stroke="url(#pulseStroke)" strokeWidth="2" fill="none" opacity="0.65">
-        <path className="noor-pulse-line noor-pulse-line-1" d="M80 120 L380 80 L640 160 L930 110 L1120 180" />
-        <path className="noor-pulse-line noor-pulse-line-2" d="M120 280 L360 220 L640 260 L900 240 L1140 310" />
-        <path className="noor-pulse-line noor-pulse-line-3" d="M200 420 L420 360 L690 400 L980 360 L1160 420" />
+      <g
+        filter="url(#softGlow)"
+        stroke="url(#pulseStroke)"
+        strokeWidth="2"
+        fill="none"
+        opacity="0.65"
+      >
+        <path
+          className="noor-pulse-line noor-pulse-line-1"
+          d="M80 120 L380 80 L640 160 L930 110 L1120 180"
+        />
+        <path
+          className="noor-pulse-line noor-pulse-line-2"
+          d="M120 280 L360 220 L640 260 L900 240 L1140 310"
+        />
+        <path
+          className="noor-pulse-line noor-pulse-line-3"
+          d="M200 420 L420 360 L690 400 L980 360 L1160 420"
+        />
       </g>
 
       <g filter="url(#softGlow)">
@@ -106,7 +121,12 @@ function SignalMesh() {
         ].map((n, i) => (
           <g key={i} className="noor-node">
             <circle cx={n.cx} cy={n.cy} r={n.r} fill="rgba(255,255,255,0.65)" />
-            <circle cx={n.cx} cy={n.cy} r={n.r * 3.2} fill="rgba(255,255,255,0.06)" />
+            <circle
+              cx={n.cx}
+              cy={n.cy}
+              r={n.r * 3.2}
+              fill="rgba(255,255,255,0.06)"
+            />
           </g>
         ))}
       </g>
@@ -119,7 +139,7 @@ function PoSSSignalBoard() {
     <div
       className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06]
                  shadow-[0_26px_80px_rgba(0,0,0,0.28)] backdrop-blur-md
-                 h-[360px] w-[560px]"
+                 h-[320px] w-[620px]"
       aria-hidden="true"
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(800px_circle_at_20%_18%,rgba(255,255,255,0.22),transparent_60%)]" />
@@ -144,7 +164,7 @@ function PoSSSignalBoard() {
           <div className="h-4 w-[64%] rounded bg-white/14" />
         </div>
 
-        <div className="mt-7 grid grid-cols-2 gap-3">
+        <div className="mt-6 grid grid-cols-2 gap-3">
           <div className="rounded-xl border border-white/12 bg-white/[0.06] p-4">
             <div className="h-3 w-16 rounded bg-white/18 mb-3" />
             <div className="h-7 w-24 rounded bg-white/16" />
@@ -174,14 +194,17 @@ export default function HomePage() {
   return (
     <main className="w-full">
       <section className="relative isolate w-full overflow-hidden text-white">
+        {/* Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#1A6AFF] to-[#00D1B2]" />
         <div className="absolute inset-0 bg-[radial-gradient(900px_circle_at_18%_18%,rgba(255,255,255,0.18),transparent_55%),radial-gradient(900px_circle_at_85%_25%,rgba(0,0,0,0.20),transparent_55%),radial-gradient(1100px_circle_at_50%_115%,rgba(0,0,0,0.30),transparent_62%)]" />
         <div className="absolute inset-0 opacity-[0.14] bg-[linear-gradient(to_right,rgba(255,255,255,0.35)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.35)_1px,transparent_1px)] bg-[size:52px_52px]" />
 
+        {/* Mesh */}
         <div className="absolute inset-0 opacity-[0.85]">
           <SignalMesh />
         </div>
 
+        {/* Particles */}
         <div className="pointer-events-none absolute inset-0">
           {SIGNAL_PARTICLES.map((p, i) => (
             <span
@@ -202,16 +225,14 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* board tuned */}
-        <div className="pointer-events-none absolute right-[-120px] top-[112px] hidden lg:block w-[560px]">
-          <PoSSSignalBoard />
-        </div>
-
+        {/* Scan */}
         <div className="pointer-events-none absolute inset-0 noor-scan" />
 
+        {/* Content */}
         <div className="relative">
           <div className="container py-16 sm:py-18 md:py-24">
-            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_560px] gap-10 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_620px] gap-10 items-start">
+              {/* Left */}
               <div className="max-w-3xl">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-5">
                   <div className="relative">
@@ -270,129 +291,55 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <div className="hidden lg:block" />
+              {/* Right (board) — moved right + lower top + size tuned */}
+              <div className="hidden lg:block justify-self-end translate-x-8 mt-10">
+                <PoSSSignalBoard />
+              </div>
             </div>
           </div>
         </div>
-
-        <style jsx global>{`
-          @media (prefers-reduced-motion: reduce) {
-            .noor-particle,
-            .noor-scan,
-            .noor-node,
-            .noor-pulse-line,
-            .noor-beam {
-              animation: none !important;
-              transform: none !important;
-            }
-          }
-
-          .noor-particle {
-            position: absolute;
-            border-radius: 9999px;
-            background: rgba(255, 255, 255, 0.9);
-            filter: blur(0.2px);
-            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08),
-              0 0 28px rgba(255, 255, 255, 0.14);
-            animation: noor-drift var(--dur, 18s) ease-in-out infinite;
-            animation-delay: var(--delay, 0s);
-            will-change: transform;
-          }
-          @keyframes noor-drift {
-            0% { transform: translate3d(0, 0, 0) scale(1); }
-            35% { transform: translate3d(10px, -12px, 0) scale(1.06); }
-            70% { transform: translate3d(-12px, 8px, 0) scale(0.98); }
-            100% { transform: translate3d(0, 0, 0) scale(1); }
-          }
-
-          .noor-node {
-            transform-origin: center;
-            animation: noor-node-pulse 3.2s ease-in-out infinite;
-          }
-          .noor-node:nth-child(2n) { animation-duration: 4.4s; }
-          .noor-node:nth-child(3n) { animation-duration: 5.1s; }
-          @keyframes noor-node-pulse {
-            0% { opacity: 0.75; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.08); }
-            100% { opacity: 0.75; transform: scale(1); }
-          }
-
-          .noor-pulse-line {
-            stroke-dasharray: 36 220;
-            stroke-dashoffset: 0;
-            animation: noor-flow 6.8s linear infinite;
-          }
-          .noor-pulse-line-2 { animation-duration: 8.2s; animation-delay: -2.4s; }
-          .noor-pulse-line-3 { animation-duration: 9.6s; animation-delay: -4.2s; }
-          @keyframes noor-flow {
-            0% { stroke-dashoffset: 0; opacity: 0.45; }
-            35% { opacity: 0.9; }
-            100% { stroke-dashoffset: -520; opacity: 0.55; }
-          }
-
-          .noor-scan {
-            background: linear-gradient(
-              to bottom,
-              transparent,
-              rgba(255, 255, 255, 0.06),
-              transparent
-            );
-            mix-blend-mode: overlay;
-            opacity: 0.55;
-            transform: translateY(-40%);
-            animation: noor-scan 7.5s ease-in-out infinite;
-          }
-          @keyframes noor-scan {
-            0% { transform: translateY(-55%); opacity: 0.25; }
-            45% { opacity: 0.65; }
-            100% { transform: translateY(85%); opacity: 0.25; }
-          }
-
-          .noor-beam {
-            position: absolute;
-            left: -20%;
-            top: 0;
-            width: 45%;
-            height: 120%;
-            opacity: 0.22;
-            transform: rotate(18deg);
-            background: linear-gradient(
-              to bottom,
-              rgba(255, 255, 255, 0),
-              rgba(255, 255, 255, 0.28),
-              rgba(255, 255, 255, 0)
-            );
-            filter: blur(0.2px);
-            animation: noor-beam-move 7.8s ease-in-out infinite;
-            will-change: transform, opacity;
-          }
-          .noor-beam-2 { left: 2%; opacity: 0.16; animation-duration: 9.2s; animation-delay: -2.8s; }
-          .noor-beam-3 { left: 24%; opacity: 0.14; animation-duration: 10.6s; animation-delay: -5.1s; }
-          .noor-beam-4 { left: 48%; opacity: 0.12; animation-duration: 12.4s; animation-delay: -7.2s; }
-          @keyframes noor-beam-move {
-            0% { transform: translateX(-6%) rotate(18deg); opacity: 0.1; }
-            40% { opacity: 0.24; }
-            100% { transform: translateX(28%) rotate(18deg); opacity: 0.1; }
-          }
-        `}</style>
       </section>
 
+      {/* STATUS + INTRO + PoSS FRAMING */}
       <section className="container py-10 md:py-14">
         <div className="grid grid-cols-1 gap-6">
           <Reveal delayMs={0}>
             <div className="rounded-xl border border-gray-200 bg-white p-7 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
               <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Current Project Status</h2>
-                <p className="text-xs sm:text-sm text-gray-500">Last updated: 2026-01-01</p>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Current Project Status
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500">
+                  Last updated: 2026-01-01
+                </p>
               </div>
 
               <ul className="text-sm text-gray-700 leading-relaxed space-y-2">
-                <li><span className="font-semibold text-gray-900">Network:</span> Private mainnet-like environment (continuous operation)</li>
-                <li><span className="font-semibold text-gray-900">Consensus:</span> Permissioned BFT</li>
-                <li><span className="font-semibold text-gray-900">Layer 1:</span> Sovereign EVM L1</li>
-                <li><span className="font-semibold text-gray-900">PoSS:</span> Application layer for governance and verifiable contribution signals (not consensus)</li>
-                <li><span className="font-semibold text-gray-900">Public access:</span> Limited by design until feature completeness and security review</li>
-                <li><span className="font-semibold text-gray-900">Reference build:</span> M10-MAINNETLIKE-STABLE / M11-DAPPS-STABLE / M12.2-WORLDSTATE-RPC-NONCE-BALANCE</li>
+                <li>
+                  <span className="font-semibold text-gray-900">Network:</span>{" "}
+                  Private mainnet-like environment (continuous operation)
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Consensus:</span>{" "}
+                  Permissioned BFT
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Layer 1:</span>{" "}
+                  Sovereign EVM L1
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">PoSS:</span>{" "}
+                  Application layer for governance and verifiable contribution
+                  signals (not consensus)
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Public access:</span>{" "}
+                  Limited by design until feature completeness and security review
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Reference build:</span>{" "}
+                  M10-MAINNETLIKE-STABLE / M11-DAPPS-STABLE / M12.2-WORLDSTATE-RPC-NONCE-BALANCE
+                </li>
               </ul>
             </div>
           </Reveal>
@@ -400,7 +347,9 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Reveal delayMs={80}>
               <div className="rounded-xl border border-gray-200 bg-white p-7 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 md:min-h-[320px]">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">A New Approach to Blockchain Design</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                  A New Approach to Blockchain Design
+                </h2>
                 <p className="text-sm text-gray-700 leading-relaxed">
                   NOORCHAIN introduces a mission-driven blockchain architecture
                   focused on verified social participation rather than financial
@@ -415,19 +364,28 @@ export default function HomePage() {
             <Reveal delayMs={140}>
               <div className="rounded-xl border border-gray-200 bg-white p-7 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 md:min-h-[320px]">
                 <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
-                  <h2 className="text-xl font-bold text-gray-900">PoSS Framing (Non-Consensus)</h2>
-                  <a href="/poss" className="text-sm font-medium text-blue-700 hover:text-blue-900 transition">
+                  <h2 className="text-xl font-bold text-gray-900">
+                    PoSS Framing (Non-Consensus)
+                  </h2>
+                  <a
+                    href="/poss"
+                    className="text-sm font-medium text-blue-700 hover:text-blue-900 transition"
+                  >
                     Read PoSS framing
                   </a>
                 </div>
 
                 <ul className="text-sm text-gray-700 leading-relaxed space-y-2">
                   <li>
-                    <span className="font-semibold text-gray-900">PoSS is not consensus.</span>{" "}
+                    <span className="font-semibold text-gray-900">
+                      PoSS is not consensus.
+                    </span>{" "}
                     Network security is provided by a permissioned BFT consensus layer.
                   </li>
                   <li>
-                    <span className="font-semibold text-gray-900">PoSS is an application layer.</span>{" "}
+                    <span className="font-semibold text-gray-900">
+                      PoSS is an application layer.
+                    </span>{" "}
                     It structures governance, coordination, and verifiable contribution signals.
                   </li>
                   <li>
