@@ -59,7 +59,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* STATUS + INTRO — grouped for consistent spacing and visual rhythm */}
+      {/* STATUS + INTRO + PoSS FRAMING — grouped for consistent spacing and visual rhythm */}
       <section className="container py-10 md:py-14">
         <div className="max-w-3xl space-y-6">
           {/* CURRENT PROJECT STATUS — factual, dated */}
@@ -116,6 +116,36 @@ export default function HomePage() {
               infrastructure for curators, participants, institutions and
               communities.
             </p>
+          </div>
+
+          {/* PoSS framing — minimal, home-level, links to /poss */}
+          <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                PoSS Framing (Non-Consensus)
+              </h2>
+              <a
+                href="/poss"
+                className="text-sm font-medium text-blue-700 hover:text-blue-900 transition"
+              >
+                Read PoSS framing
+              </a>
+            </div>
+
+            <ul className="text-sm sm:text-base text-gray-700 leading-relaxed space-y-2">
+              <li>
+                <span className="font-semibold text-gray-900">PoSS is not consensus.</span>{" "}
+                Network security is provided by a permissioned BFT consensus layer.
+              </li>
+              <li>
+                <span className="font-semibold text-gray-900">PoSS is an application layer.</span>{" "}
+                It structures governance, coordination, and verifiable contribution signals.
+              </li>
+              <li>
+                <span className="font-semibold text-gray-900">Economic posture:</span>{" "}
+                NUR is the native gas token; NOORCHAIN does not offer returns or custody.
+              </li>
+            </ul>
           </div>
         </div>
       </section>
