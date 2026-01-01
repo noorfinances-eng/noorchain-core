@@ -27,7 +27,7 @@ export default function RoadmapPage() {
           {/* ROADMAP (STATUS-DRIVEN) */}
           <section className="space-y-6">
             {/* ✅ COMPLETED */}
-            <div className="p-5 border border-gray-soft bg-white rounded-xl shadow-sm">
+            <div className="p-5 border border-gray-soft bg-white rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
               <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-2">
                 <h2 className="text-xl font-semibold text-navy">
                   ✅ Completed
@@ -56,7 +56,7 @@ export default function RoadmapPage() {
             </div>
 
             {/* 🔧 IN PROGRESS */}
-            <div className="p-5 border border-gray-soft bg-white rounded-xl shadow-sm">
+            <div className="p-5 border border-gray-soft bg-white rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
               <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-2">
                 <h2 className="text-xl font-semibold text-navy">
                   🔧 In progress
@@ -83,7 +83,7 @@ export default function RoadmapPage() {
             </div>
 
             {/* ⏳ PLANNED */}
-            <div className="p-5 border border-gray-soft bg-white rounded-xl shadow-sm">
+            <div className="p-5 border border-gray-soft bg-white rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
               <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-2">
                 <h2 className="text-xl font-semibold text-navy">
                   ⏳ Planned
