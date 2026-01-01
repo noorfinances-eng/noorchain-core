@@ -24,7 +24,7 @@ export default function TechnologyPage() {
           </p>
 
           {/* Section 1 */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Core Stack
             </h2>
@@ -37,7 +37,7 @@ export default function TechnologyPage() {
           </section>
 
           {/* Section 2 */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               PoSS Integration
             </h2>
@@ -51,7 +51,7 @@ export default function TechnologyPage() {
           </section>
 
           {/* Section 3 */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Security &amp; Governance
             </h2>
@@ -63,7 +63,7 @@ export default function TechnologyPage() {
           </section>
 
           {/* Engineering Transparency (controlled) */}
-          <section className="p-6 border border-gray-soft rounded-xl bg-white shadow-sm mb-10">
+          <section className="p-6 border border-gray-soft rounded-xl bg-white shadow-sm mb-10 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Engineering Transparency (Controlled)
             </h2>
