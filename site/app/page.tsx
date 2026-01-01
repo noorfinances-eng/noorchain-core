@@ -58,6 +58,47 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* CURRENT PROJECT STATUS — factual, dated */}
+      <section className="container py-10 md:py-14">
+        <div className="max-w-3xl rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+              Current Project Status
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-500">
+              Last updated: 2026-01-01
+            </p>
+          </div>
+
+          <ul className="text-sm sm:text-base text-gray-700 leading-relaxed space-y-2">
+            <li>
+              <span className="font-semibold text-gray-900">Network:</span>{" "}
+              Private mainnet-like environment (continuous operation)
+            </li>
+            <li>
+              <span className="font-semibold text-gray-900">Consensus:</span>{" "}
+              Permissioned BFT
+            </li>
+            <li>
+              <span className="font-semibold text-gray-900">Layer 1:</span>{" "}
+              Sovereign EVM L1
+            </li>
+            <li>
+              <span className="font-semibold text-gray-900">PoSS:</span>{" "}
+              Application layer for governance and verifiable contribution signals (not consensus)
+            </li>
+            <li>
+              <span className="font-semibold text-gray-900">Public access:</span>{" "}
+              Limited by design until feature completeness and security review
+            </li>
+            <li>
+              <span className="font-semibold text-gray-900">Reference build:</span>{" "}
+              M10-MAINNETLIKE-STABLE / M11-DAPPS-STABLE / M12.2-WORLDSTATE-RPC-NONCE-BALANCE
+            </li>
+          </ul>
+        </div>
+      </section>
+
       {/* SECTION ÉPURÉE — BLANCHE + TITRE + TEXTE */}
       <section className="container py-12 md:py-20">
         <div className="max-w-3xl">
