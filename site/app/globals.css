@@ -15,22 +15,24 @@ body {
 }
 
 /* IMPORTANT:
-   Do NOT override Tailwind's .container globally.
-   It breaks centering and max-width site-wide.
+   Ne surcharge PAS `.container`.
+   Tailwind gère déjà les widths responsive.
+   (C’est ça qui a “niqué” le centrage et causé des débordements.)
 */
 
 /* -------------------------
    Motion safety (global)
 ------------------------- */
 @media (prefers-reduced-motion: reduce) {
-  .noor-anim,
-  .noor-reveal,
   .noor-particle,
+  .noor-scan,
   .noor-node,
   .noor-pulse-line,
-  .noor-scan,
   .noor-beam,
-  .noor-board-pulse {
+  .noor-reveal,
+  .noor-signal-orb,
+  .noor-connection,
+  .noor-pulse {
     animation: none !important;
     transition: none !important;
     transform: none !important;
@@ -39,7 +41,7 @@ body {
 }
 
 /* -------------------------
-   HERO particles (background)
+   HERO: particles
 ------------------------- */
 .noor-particle {
   position: absolute;
@@ -60,7 +62,7 @@ body {
 }
 
 /* -------------------------
-   Mesh nodes pulsing
+   HERO: mesh nodes pulse
 ------------------------- */
 .noor-node {
   transform-origin: center;
@@ -68,7 +70,6 @@ body {
 }
 .noor-node:nth-child(2n) { animation-duration: 4.4s; }
 .noor-node:nth-child(3n) { animation-duration: 5.1s; }
-
 @keyframes noor-node-pulse {
   0% { opacity: 0.75; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.08); }
@@ -76,7 +77,7 @@ body {
 }
 
 /* -------------------------
-   Pulses on lines
+   HERO: pulses on lines
 ------------------------- */
 .noor-pulse-line {
   stroke-dasharray: 36 220;
@@ -85,7 +86,6 @@ body {
 }
 .noor-pulse-line-2 { animation-duration: 8.2s; animation-delay: -2.4s; }
 .noor-pulse-line-3 { animation-duration: 9.6s; animation-delay: -4.2s; }
-
 @keyframes noor-flow {
   0% { stroke-dashoffset: 0; opacity: 0.45; }
   35% { opacity: 0.9; }
@@ -93,7 +93,7 @@ body {
 }
 
 /* -------------------------
-   Scan line
+   HERO: scan overlay
 ------------------------- */
 .noor-scan {
   background: linear-gradient(
@@ -114,7 +114,7 @@ body {
 }
 
 /* -------------------------
-   Board beams
+   BOARD: light beams
 ------------------------- */
 .noor-beam {
   position: absolute;
@@ -137,24 +137,8 @@ body {
 .noor-beam-2 { left: 2%; opacity: 0.16; animation-duration: 9.2s; animation-delay: -2.8s; }
 .noor-beam-3 { left: 24%; opacity: 0.14; animation-duration: 10.6s; animation-delay: -5.1s; }
 .noor-beam-4 { left: 48%; opacity: 0.12; animation-duration: 12.4s; animation-delay: -7.2s; }
-
 @keyframes noor-beam-move {
   0% { transform: translateX(-6%) rotate(18deg); opacity: 0.10; }
   40% { opacity: 0.24; }
   100% { transform: translateX(28%) rotate(18deg); opacity: 0.10; }
-}
-
-/* -------------------------
-   Board pulse dot
-------------------------- */
-.noor-board-pulse {
-  animation: noor-board-pulse 7.2s ease-in-out infinite;
-  transform-origin: center;
-}
-@keyframes noor-board-pulse {
-  0%   { transform: translateX(0) translateY(0) scale(0.75); opacity: 0; }
-  10%  { opacity: 0.85; }
-  55%  { transform: translateX(300px) translateY(92px) scale(1); opacity: 0.75; }
-  85%  { opacity: 0.0; }
-  100% { transform: translateX(378px) translateY(92px) scale(0.9); opacity: 0; }
 }
