@@ -26,9 +26,9 @@ export default function HomePage() {
               A Human-Centered Blockchain for Social Signals
             </p>
 
-            {/* Testnet status — discreet */}
+            {/* Project status — discreet */}
             <p className="text-xs sm:text-sm text-white/80 mb-4 font-medium">
-              Testnet phase ongoing — controlled, experimental, non-financial.
+              Private mainnet-like environment — controlled operation, non-public by design.
             </p>
 
             {/* Paragraphe explicatif */}
@@ -99,9 +99,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* SECTION ÉPURÉE — BLANCHE + TITRE + TEXTE */}
+      {/* SECTION ÉPURÉE — BLANCHE + TITRE + TEXTE (encadrée) */}
       <section className="container py-12 md:py-20">
-        <div className="max-w-3xl">
+        <div className="max-w-3xl rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-4">
             A New Approach to Blockchain Design
           </h2>
