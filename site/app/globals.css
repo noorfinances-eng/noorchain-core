@@ -14,13 +14,8 @@ body {
   background-color: #fafafa;
 }
 
-/* Optional container override (if you really want it) */
-.container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
+/* IMPORTANT:
+   
 
 /* -------------------------
    Motion safety (global)
@@ -28,9 +23,17 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .noor-anim,
   .noor-reveal,
+  .noor-orb-1,
+  .noor-orb-2,
+  .noor-orb-3,
   .noor-signal-orb,
   .noor-connection,
-  .noor-pulse {
+  .noor-pulse,
+  .noor-particle,
+  .noor-node,
+  .noor-pulse-line,
+  .noor-scan,
+  .noor-beam {
     animation: none !important;
     transition: none !important;
     transform: none !important;
@@ -42,7 +45,7 @@ body {
    NOORCHAIN UI dynamics (A1)
 ------------------------- */
 
-/* Subtle floating for hero orbs */
+/* Subtle floating for hero orbs (si tu les réutilises ailleurs) */
 @keyframes noorFloat {
   0% {
     transform: translate3d(0, 0, 0) scale(1);
@@ -65,16 +68,15 @@ body {
   animation: noorFloat 16s ease-in-out infinite;
 }
 
-/* Reveal: stronger than “mou”, still premium */
+/* Reveal (si Reveal.jsx se base dessus) */
 .noor-reveal {
   will-change: transform, opacity, filter;
 }
 
 /* -------------------------
-   NOORCHAIN: Signal Constellation (Hero background)
+   NOORCHAIN: Signal Constellation (legacy support)
+   (peut rester, mais non requis par la page actuelle)
 ------------------------- */
-
-/* Soft drifting blobs */
 .noor-signal-orb {
   position: absolute;
   border-radius: 9999px;
@@ -93,7 +95,6 @@ body {
   }
 }
 
-/* Very subtle connections that fade in/out */
 .noor-connection {
   position: absolute;
   height: 1px;
@@ -123,7 +124,6 @@ body {
   }
 }
 
-/* One slow pulse (signal) */
 .noor-pulse {
   position: absolute;
   width: 10px;
@@ -153,5 +153,177 @@ body {
   100% {
     opacity: 0;
     transform: translate3d(520px, 140px, 0) scale(0.9);
+  }
+}
+
+/* -------------------------
+   NOOR Hero animations (required by page.tsx)
+   mesh / particles / scan / beams
+------------------------- */
+
+/* Particles */
+.noor-particle {
+  position: absolute;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.9);
+  filter: blur(0.2px);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 28px rgba(255, 255, 255, 0.14);
+  animation: noor-drift var(--dur, 18s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+  will-change: transform;
+}
+
+@keyframes noor-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  35% {
+    transform: translate3d(10px, -12px, 0) scale(1.06);
+  }
+  70% {
+    transform: translate3d(-12px, 8px, 0) scale(0.98);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* SVG nodes pulse */
+.noor-node {
+  transform-origin: center;
+  animation: noor-node-pulse 3.2s ease-in-out infinite;
+}
+
+.noor-node:nth-child(2n) {
+  animation-duration: 4.4s;
+}
+.noor-node:nth-child(3n) {
+  animation-duration: 5.1s;
+}
+
+@keyframes noor-node-pulse {
+  0% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+}
+
+/* Pulses on lines */
+.noor-pulse-line {
+  stroke-dasharray: 36 220;
+  stroke-dashoffset: 0;
+  animation: noor-flow 6.8s linear infinite;
+}
+
+.noor-pulse-line-2 {
+  animation-duration: 8.2s;
+  animation-delay: -2.4s;
+}
+.noor-pulse-line-3 {
+  animation-duration: 9.6s;
+  animation-delay: -4.2s;
+}
+
+@keyframes noor-flow {
+  0% {
+    stroke-dashoffset: 0;
+    opacity: 0.45;
+  }
+  35% {
+    opacity: 0.9;
+  }
+  100% {
+    stroke-dashoffset: -520;
+    opacity: 0.55;
+  }
+}
+
+/* Scan line overlay */
+.noor-scan {
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255, 255, 255, 0.06),
+    transparent
+  );
+  mix-blend-mode: overlay;
+  opacity: 0.55;
+  transform: translateY(-40%);
+  animation: noor-scan 7.5s ease-in-out infinite;
+}
+
+@keyframes noor-scan {
+  0% {
+    transform: translateY(-55%);
+    opacity: 0.25;
+  }
+  45% {
+    opacity: 0.65;
+  }
+  100% {
+    transform: translateY(85%);
+    opacity: 0.25;
+  }
+}
+
+/* Moving beams inside PoSSSignalBoard */
+.noor-beam {
+  position: absolute;
+  left: -20%;
+  top: 0;
+  width: 45%;
+  height: 120%;
+  opacity: 0.22;
+  transform: rotate(18deg);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0.28),
+    rgba(255, 255, 255, 0)
+  );
+  filter: blur(0.2px);
+  animation: noor-beam-move 7.8s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.noor-beam-2 {
+  left: 2%;
+  opacity: 0.16;
+  animation-duration: 9.2s;
+  animation-delay: -2.8s;
+}
+.noor-beam-3 {
+  left: 24%;
+  opacity: 0.14;
+  animation-duration: 10.6s;
+  animation-delay: -5.1s;
+}
+.noor-beam-4 {
+  left: 48%;
+  opacity: 0.12;
+  animation-duration: 12.4s;
+  animation-delay: -7.2s;
+}
+
+@keyframes noor-beam-move {
+  0% {
+    transform: translateX(-6%) rotate(18deg);
+    opacity: 0.1;
+  }
+  40% {
+    opacity: 0.24;
+  }
+  100% {
+    transform: translateX(28%) rotate(18deg);
+    opacity: 0.1;
   }
 }
