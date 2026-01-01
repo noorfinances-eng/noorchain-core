@@ -25,7 +25,7 @@ export default function LegalPage() {
           </p>
 
           {/* LEGAL FRAMEWORK */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Legal Framework
             </h2>
@@ -38,7 +38,7 @@ export default function LegalPage() {
           </section>
 
           {/* GOVERNANCE & STRUCTURE (EARLY STAGE) */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Governance &amp; Structure (Early Stage)
             </h2>
@@ -76,7 +76,7 @@ export default function LegalPage() {
           </section>
 
           {/* RISK DISCLOSURE */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Risk Disclosure
             </h2>
@@ -89,7 +89,7 @@ export default function LegalPage() {
           </section>
 
           {/* NO INVESTMENT ADVICE */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               No Investment Advice
             </h2>
@@ -101,7 +101,7 @@ export default function LegalPage() {
           </section>
 
           {/* LEGAL NOTICES */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Legal Notices
             </h2>
@@ -113,7 +113,7 @@ export default function LegalPage() {
           </section>
 
           {/* CONTACT */}
-          <section className="p-6 border border-gray-soft rounded-xl bg-white shadow-sm mb-10">
+          <section className="p-6 border border-gray-soft rounded-xl bg-white shadow-sm mb-10 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Contact
             </h2>
