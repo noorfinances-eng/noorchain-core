@@ -4,7 +4,7 @@ import Reveal from "../components/ui/Reveal";
 export default function HomePage() {
   return (
     <main className="w-full">
-      {/* HERO SECTION — premium depth (UI only, same text) */}
+      {/* HERO SECTION — premium depth + PoSS-inspired "signal field" (no globe) */}
       <section className="relative isolate w-full overflow-hidden text-white">
         {/* Base gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#1A6AFF] to-[#00D1B2]" />
@@ -13,12 +13,91 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(900px_circle_at_18%_18%,rgba(255,255,255,0.18),transparent_55%),radial-gradient(900px_circle_at_85%_25%,rgba(0,0,0,0.18),transparent_55%),radial-gradient(1100px_circle_at_50%_115%,rgba(0,0,0,0.28),transparent_62%)]" />
 
         {/* Subtle grid */}
-        <div className="absolute inset-0 opacity-[0.16] bg-[linear-gradient(to_right,rgba(255,255,255,0.35)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.35)_1px,transparent_1px)] bg-[size:52px_52px]" />
+        <div className="absolute inset-0 opacity-[0.14] bg-[linear-gradient(to_right,rgba(255,255,255,0.35)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.35)_1px,transparent_1px)] bg-[size:52px_52px]" />
 
-        {/* Animated orbs */}
-        <div className="pointer-events-none absolute -top-24 -left-24 h-[420px] w-[420px] rounded-full bg-white/22 blur-3xl noor-anim noor-orb-1" />
-        <div className="pointer-events-none absolute -bottom-28 left-1/3 h-[520px] w-[520px] rounded-full bg-white/16 blur-3xl noor-anim noor-orb-2" />
-        <div className="pointer-events-none absolute top-10 -right-28 h-[460px] w-[460px] rounded-full bg-white/14 blur-3xl noor-anim noor-orb-3" />
+        {/* Signal field (PoSS-inspired): orbs + connections + gentle pulse */}
+        <div className="pointer-events-none absolute inset-0">
+          {/* Large atmospheric orbs */}
+          <div
+            className="absolute -top-24 -left-24 h-[420px] w-[420px] rounded-full bg-white/22 blur-3xl noor-signal-orb"
+            style={
+              {
+                ["--x" as any]: "26px",
+                ["--y" as any]: "-18px",
+                ["--d" as any]: "18s",
+              } as React.CSSProperties
+            }
+          />
+          <div
+            className="absolute -bottom-28 left-1/3 h-[520px] w-[520px] rounded-full bg-white/16 blur-3xl noor-signal-orb"
+            style={
+              {
+                ["--x" as any]: "18px",
+                ["--y" as any]: "20px",
+                ["--d" as any]: "26s",
+              } as React.CSSProperties
+            }
+          />
+          <div
+            className="absolute top-10 -right-28 h-[460px] w-[460px] rounded-full bg-white/14 blur-3xl noor-signal-orb"
+            style={
+              {
+                ["--x" as any]: "-22px",
+                ["--y" as any]: "14px",
+                ["--d" as any]: "22s",
+              } as React.CSSProperties
+            }
+          />
+
+          {/* Smaller "signal nodes" */}
+          <div
+            className="absolute top-24 left-[12%] h-24 w-24 rounded-full bg-white/16 blur-2xl noor-signal-orb"
+            style={
+              {
+                ["--x" as any]: "14px",
+                ["--y" as any]: "10px",
+                ["--d" as any]: "16s",
+              } as React.CSSProperties
+            }
+          />
+          <div
+            className="absolute top-44 right-[18%] h-28 w-28 rounded-full bg-white/14 blur-2xl noor-signal-orb"
+            style={
+              {
+                ["--x" as any]: "-12px",
+                ["--y" as any]: "-10px",
+                ["--d" as any]: "19s",
+              } as React.CSSProperties
+            }
+          />
+          <div
+            className="absolute bottom-24 left-[22%] h-24 w-24 rounded-full bg-white/12 blur-2xl noor-signal-orb"
+            style={
+              {
+                ["--x" as any]: "10px",
+                ["--y" as any]: "-12px",
+                ["--d" as any]: "17s",
+              } as React.CSSProperties
+            }
+          />
+
+          {/* Connections (subtle) */}
+          <div
+            className="noor-connection left-24 top-44 w-[420px]"
+            style={{ transform: "rotate(8deg)" }}
+          />
+          <div
+            className="noor-connection right-24 top-56 w-[360px]"
+            style={{ transform: "rotate(-10deg)" }}
+          />
+          <div
+            className="noor-connection left-40 bottom-40 w-[520px]"
+            style={{ transform: "rotate(-6deg)" }}
+          />
+
+          {/* Signal pulse */}
+          <div className="noor-pulse left-24 top-52" />
+        </div>
 
         {/* Content */}
         <div className="relative">
