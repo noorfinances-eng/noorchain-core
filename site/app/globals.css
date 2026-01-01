@@ -1,172 +1,463 @@
+"use client";
+
 import Image from "next/image";
+import { useEffect, useRef } from "react";
 import Reveal from "../components/ui/Reveal";
 
+/**
+ * Home — Refonte A+ (Hero + Signal Board)
+ * - No external deps
+ * - No randomness (no hydration mismatch)
+ * - Subtle parallax via CSS vars (mouse), disabled for prefers-reduced-motion
+ */
+
+const SIGNAL_PARTICLES = [
+  { left: "10%", top: "22%", s: 10, o: 0.18, d: "18s", delay: "-3s" },
+  { left: "14%", top: "66%", s: 14, o: 0.12, d: "22s", delay: "-9s" },
+  { left: "22%", top: "38%", s: 8, o: 0.16, d: "16s", delay: "-6s" },
+  { left: "32%", top: "18%", s: 9, o: 0.14, d: "20s", delay: "-11s" },
+  { left: "36%", top: "72%", s: 12, o: 0.11, d: "24s", delay: "-7s" },
+  { left: "48%", top: "28%", s: 13, o: 0.10, d: "26s", delay: "-12s" },
+  { left: "56%", top: "62%", s: 9, o: 0.12, d: "19s", delay: "-5s" },
+  { left: "64%", top: "20%", s: 8, o: 0.13, d: "21s", delay: "-10s" },
+  { left: "72%", top: "46%", s: 11, o: 0.10, d: "27s", delay: "-14s" },
+  { left: "82%", top: "30%", s: 12, o: 0.09, d: "25s", delay: "-8s" },
+  { left: "86%", top: "70%", s: 14, o: 0.08, d: "30s", delay: "-15s" },
+];
+
+function PoSSSignalBoard() {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] shadow-[0_26px_80px_rgba(0,0,0,0.28)] backdrop-blur-md">
+      {/* top sheen */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(800px_circle_at_20%_10%,rgba(255,255,255,0.18),transparent_55%),radial-gradient(700px_circle_at_85%_30%,rgba(255,255,255,0.10),transparent_60%)]" />
+
+      {/* animated grid stream */}
+      <div className="pointer-events-none absolute inset-0 opacity-[0.28] bg-[linear-gradient(to_right,rgba(255,255,255,0.22)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.22)_1px,transparent_1px)] bg-[size:42px_42px] noor-grid-stream" />
+
+      {/* content */}
+      <div className="relative p-6">
+        <div className="flex items-start justify-between gap-4 mb-5">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-white/70">
+              PoSS Signal Board
+            </p>
+            <h3 className="text-lg font-semibold text-white mt-1">
+              Verifiable Signals • Curator Validation
+            </h3>
+          </div>
+
+          <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/80">
+            Controlled
+          </div>
+        </div>
+
+        <div className="relative rounded-xl border border-white/15 bg-black/10 p-4 overflow-hidden">
+          {/* scan */}
+          <div className="pointer-events-none absolute inset-0 noor-board-scan" />
+
+          {/* animated lines + pulses */}
+          <svg
+            className="block w-full h-[190px]"
+            viewBox="0 0 540 190"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stopColor="rgba(255,255,255,0.06)" />
+                <stop offset="0.5" stopColor="rgba(255,255,255,0.22)" />
+                <stop offset="1" stopColor="rgba(255,255,255,0.06)" />
+              </linearGradient>
+              <linearGradient id="pulse" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stopColor="rgba(255,255,255,0)" />
+                <stop offset="0.45" stopColor="rgba(255,255,255,0.70)" />
+                <stop offset="0.55" stopColor="rgba(255,255,255,0.70)" />
+                <stop offset="1" stopColor="rgba(255,255,255,0)" />
+              </linearGradient>
+              <filter id="g" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="1.8" result="b" />
+                <feMerge>
+                  <feMergeNode in="b" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            {/* baseline layers */}
+            <g stroke="url(#line)" strokeWidth="1" opacity="0.95" fill="none">
+              <path d="M20 30 C120 10, 210 60, 310 42 C390 30, 450 18, 520 34" />
+              <path d="M20 86 C120 66, 210 118, 310 96 C390 78, 450 70, 520 90" />
+              <path d="M20 140 C120 126, 210 170, 310 150 C390 134, 450 120, 520 146" />
+            </g>
+
+            {/* flowing pulses */}
+            <g
+              filter="url(#g)"
+              stroke="url(#pulse)"
+              strokeWidth="2"
+              opacity="0.70"
+              fill="none"
+            >
+              <path className="noor-flow noor-flow-1" d="M20 30 C120 10, 210 60, 310 42 C390 30, 450 18, 520 34" />
+              <path className="noor-flow noor-flow-2" d="M20 86 C120 66, 210 118, 310 96 C390 78, 450 70, 520 90" />
+              <path className="noor-flow noor-flow-3" d="M20 140 C120 126, 210 170, 310 150 C390 134, 450 120, 520 146" />
+            </g>
+
+            {/* nodes */}
+            <g filter="url(#g)">
+              {[
+                [88, 22],
+                [170, 46],
+                [250, 52],
+                [330, 40],
+                [420, 26],
+                [492, 36],
+                [92, 78],
+                [178, 98],
+                [260, 112],
+                [338, 96],
+                [430, 84],
+                [505, 92],
+                [86, 132],
+                [176, 154],
+                [260, 166],
+                [340, 152],
+                [430, 132],
+                [506, 146],
+              ].map(([cx, cy], i) => (
+                <g key={i} className="noor-node">
+                  <circle cx={cx} cy={cy} r="2.6" fill="rgba(255,255,255,0.78)" />
+                  <circle cx={cx} cy={cy} r="10" fill="rgba(255,255,255,0.06)" />
+                </g>
+              ))}
+            </g>
+          </svg>
+
+          {/* small legend */}
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-white/70">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-2 py-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-white/70" />
+              Signal stream
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-2 py-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-white/50" />
+              Curator checkpoints
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-2 py-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
+              Auditability-first
+            </span>
+          </div>
+        </div>
+
+        {/* facts */}
+        <div className="mt-5 grid grid-cols-2 gap-3 text-xs text-white/80">
+          <div className="rounded-lg border border-white/12 bg-white/5 px-3 py-2">
+            <div className="text-white/60">Network</div>
+            <div className="font-medium text-white">Private mainnet-like</div>
+          </div>
+          <div className="rounded-lg border border-white/12 bg-white/5 px-3 py-2">
+            <div className="text-white/60">Consensus</div>
+            <div className="font-medium text-white">Permissioned BFT</div>
+          </div>
+          <div className="rounded-lg border border-white/12 bg-white/5 px-3 py-2">
+            <div className="text-white/60">Layer</div>
+            <div className="font-medium text-white">Sovereign EVM L1</div>
+          </div>
+          <div className="rounded-lg border border-white/12 bg-white/5 px-3 py-2">
+            <div className="text-white/60">PoSS</div>
+            <div className="font-medium text-white">Application-layer</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HomePage() {
+  const heroRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el) return;
+
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (media.matches) return;
+
+    const onMove = (e: MouseEvent) => {
+      const r = el.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width; // 0..1
+      const y = (e.clientY - r.top) / r.height; // 0..1
+      // map to -1..1
+      const mx = (x - 0.5) * 2;
+      const my = (y - 0.5) * 2;
+      el.style.setProperty("--mx", mx.toFixed(3));
+      el.style.setProperty("--my", my.toFixed(3));
+    };
+
+    window.addEventListener("mousemove", onMove, { passive: true });
+    return () => window.removeEventListener("mousemove", onMove);
+  }, []);
+
   return (
     <main className="w-full">
-      {/* HERO SECTION — premium depth + PoSS-inspired "signal field" (no globe) */}
-      <section className="relative isolate w-full overflow-hidden text-white">
+      {/* HERO — stronger composition (text + signal board) */}
+      <section
+        ref={(n) => {
+          heroRef.current = n;
+        }}
+        className="relative isolate w-full overflow-hidden text-white"
+      >
         {/* Base gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#1A6AFF] to-[#00D1B2]" />
 
-        {/* Depth: soft radial shading */}
-        <div className="absolute inset-0 bg-[radial-gradient(900px_circle_at_18%_18%,rgba(255,255,255,0.18),transparent_55%),radial-gradient(900px_circle_at_85%_25%,rgba(0,0,0,0.18),transparent_55%),radial-gradient(1100px_circle_at_50%_115%,rgba(0,0,0,0.28),transparent_62%)]" />
+        {/* Spotlight + depth */}
+        <div className="absolute inset-0 noor-spotlight" />
 
         {/* Subtle grid */}
-        <div className="absolute inset-0 opacity-[0.14] bg-[linear-gradient(to_right,rgba(255,255,255,0.35)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.35)_1px,transparent_1px)] bg-[size:52px_52px]" />
+        <div className="absolute inset-0 opacity-[0.12] bg-[linear-gradient(to_right,rgba(255,255,255,0.35)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.35)_1px,transparent_1px)] bg-[size:56px_56px]" />
 
-        {/* Signal field (PoSS-inspired): orbs + connections + gentle pulse */}
-        <div className="pointer-events-none absolute inset-0">
-          {/* Large atmospheric orbs */}
-          <div
-            className="absolute -top-24 -left-24 h-[420px] w-[420px] rounded-full bg-white/22 blur-3xl noor-signal-orb"
-            style={
-              {
-                ["--x" as any]: "26px",
-                ["--y" as any]: "-18px",
-                ["--d" as any]: "18s",
-              } as React.CSSProperties
-            }
-          />
-          <div
-            className="absolute -bottom-28 left-1/3 h-[520px] w-[520px] rounded-full bg-white/16 blur-3xl noor-signal-orb"
-            style={
-              {
-                ["--x" as any]: "18px",
-                ["--y" as any]: "20px",
-                ["--d" as any]: "26s",
-              } as React.CSSProperties
-            }
-          />
-          <div
-            className="absolute top-10 -right-28 h-[460px] w-[460px] rounded-full bg-white/14 blur-3xl noor-signal-orb"
-            style={
-              {
-                ["--x" as any]: "-22px",
-                ["--y" as any]: "14px",
-                ["--d" as any]: "22s",
-              } as React.CSSProperties
-            }
-          />
-
-          {/* Smaller "signal nodes" */}
-          <div
-            className="absolute top-24 left-[12%] h-24 w-24 rounded-full bg-white/16 blur-2xl noor-signal-orb"
-            style={
-              {
-                ["--x" as any]: "14px",
-                ["--y" as any]: "10px",
-                ["--d" as any]: "16s",
-              } as React.CSSProperties
-            }
-          />
-          <div
-            className="absolute top-44 right-[18%] h-28 w-28 rounded-full bg-white/14 blur-2xl noor-signal-orb"
-            style={
-              {
-                ["--x" as any]: "-12px",
-                ["--y" as any]: "-10px",
-                ["--d" as any]: "19s",
-              } as React.CSSProperties
-            }
-          />
-          <div
-            className="absolute bottom-24 left-[22%] h-24 w-24 rounded-full bg-white/12 blur-2xl noor-signal-orb"
-            style={
-              {
-                ["--x" as any]: "10px",
-                ["--y" as any]: "-12px",
-                ["--d" as any]: "17s",
-              } as React.CSSProperties
-            }
-          />
-
-          {/* Connections (subtle) */}
-          <div
-            className="noor-connection left-24 top-44 w-[420px]"
-            style={{ transform: "rotate(8deg)" }}
-          />
-          <div
-            className="noor-connection right-24 top-56 w-[360px]"
-            style={{ transform: "rotate(-10deg)" }}
-          />
-          <div
-            className="noor-connection left-40 bottom-40 w-[520px]"
-            style={{ transform: "rotate(-6deg)" }}
-          />
-
-          {/* Signal pulse */}
-          <div className="noor-pulse left-24 top-52" />
+        {/* Particles (anchored, not “a single dot”) */}
+        <div className="pointer-events-none absolute inset-0 noor-parallax-1">
+          {SIGNAL_PARTICLES.map((p, i) => (
+            <span
+              key={i}
+              className="noor-particle"
+              style={
+                {
+                  left: p.left,
+                  top: p.top,
+                  width: `${p.s}px`,
+                  height: `${p.s}px`,
+                  opacity: p.o,
+                  ["--dur" as any]: p.d,
+                  ["--delay" as any]: p.delay,
+                } as React.CSSProperties
+              }
+            />
+          ))}
         </div>
 
-        {/* Content */}
+        {/* Scan line */}
+        <div className="pointer-events-none absolute inset-0 noor-scan" />
+
         <div className="relative">
           <div className="container py-14 sm:py-16 md:py-24">
-            <div className="max-w-3xl">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-5">
-                <div className="relative">
-                  <div className="absolute -inset-3 rounded-2xl bg-white/15 blur-xl" />
-                  <div className="relative rounded-2xl bg-white/10 ring-1 ring-white/25 p-2">
-                    <Image
-                      src="/logo-white.svg"
-                      alt="NOORCHAIN Logo"
-                      width={52}
-                      height={52}
-                      priority
-                    />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+              {/* LEFT — copy */}
+              <div className="lg:col-span-7">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="relative">
+                    <div className="absolute -inset-3 rounded-2xl bg-white/15 blur-xl" />
+                    <div className="relative rounded-2xl bg-white/10 ring-1 ring-white/25 p-2">
+                      <Image
+                        src="/logo-white.svg"
+                        alt="NOORCHAIN Logo"
+                        width={52}
+                        height={52}
+                        priority
+                      />
+                    </div>
                   </div>
+
+                  <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight">
+                    NOORCHAIN
+                  </h1>
                 </div>
 
-                <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight">
-                  NOORCHAIN
-                </h1>
+                <p className="text-base sm:text-lg md:text-xl text-white/90 mb-3 font-medium">
+                  A Human-Centered Blockchain for Social Signals
+                </p>
+
+                <p className="text-xs sm:text-sm text-white/80 mb-6 font-medium">
+                  Private mainnet-like environment — controlled operation, non-public by design.
+                </p>
+
+                <p className="text-sm sm:text-base md:text-lg text-white/92 leading-relaxed mb-8 max-w-2xl">
+                  A Social Signal Blockchain powered by PoSS. Designed for transparent
+                  participation, curator validation, and a fixed-supply digital model
+                  free from financial speculation.
+                </p>
+
+                <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
+                  <a
+                    href="/technology"
+                    className="w-full sm:w-auto text-center px-6 py-3 rounded-md text-sm md:text-base font-medium
+                               bg-white text-[#0B1B3A] ring-1 ring-white/30
+                               shadow-[0_14px_44px_rgba(0,0,0,0.22)]
+                               transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_58px_rgba(0,0,0,0.28)]"
+                  >
+                    Explore Technology
+                  </a>
+
+                  <a
+                    href="/genesis"
+                    className="w-full sm:w-auto text-center px-6 py-3 rounded-md text-sm md:text-base font-medium
+                               border border-white/70 text-white
+                               bg-white/0 transition-all duration-200
+                               hover:bg-white/10 hover:-translate-y-0.5"
+                  >
+                    Genesis Overview
+                  </a>
+                </div>
+
+                {/* micro-proof line (serious, not marketing) */}
+                <div className="mt-8 flex flex-wrap gap-2 text-xs text-white/75">
+                  <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">
+                    Tagged builds: M10 / M11 / M12.2
+                  </span>
+                  <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">
+                    PoSS: application-layer (not consensus)
+                  </span>
+                  <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">
+                    Legal-Light posture (no yield, no custody)
+                  </span>
+                </div>
               </div>
 
-              <p className="text-base sm:text-lg md:text-xl text-white/90 mb-3 font-medium">
-                A Human-Centered Blockchain for Social Signals
-              </p>
-
-              <p className="text-xs sm:text-sm text-white/80 mb-6 font-medium">
-                Private mainnet-like environment — controlled operation, non-public
-                by design.
-              </p>
-
-              <p className="text-sm sm:text-base md:text-lg text-white/90 leading-relaxed mb-8">
-                A Social Signal Blockchain powered by PoSS. Designed for transparent
-                participation, curator validation, and a fixed-supply digital model
-                free from financial speculation.
-              </p>
-
-              <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
-                <a
-                  href="/technology"
-                  className="w-full sm:w-auto text-center px-6 py-3 rounded-md text-sm md:text-base font-medium
-                             bg-white text-[#0B1B3A] ring-1 ring-white/30
-                             shadow-[0_12px_34px_rgba(0,0,0,0.18)]
-                             transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_46px_rgba(0,0,0,0.22)]"
-                >
-                  Explore Technology
-                </a>
-
-                <a
-                  href="/genesis"
-                  className="w-full sm:w-auto text-center px-6 py-3 rounded-md text-sm md:text-base font-medium
-                             border border-white/70 text-white
-                             bg-white/0 transition-all duration-200
-                             hover:bg-white/10 hover:-translate-y-0.5"
-                >
-                  Genesis Overview
-                </a>
+              {/* RIGHT — Signal Board (the “clack” piece) */}
+              <div className="lg:col-span-5 noor-parallax-2">
+                <PoSSSignalBoard />
               </div>
             </div>
           </div>
         </div>
+
+        {/* Global CSS, scoped by noor-* classnames */}
+        <style jsx global>{`
+          @media (prefers-reduced-motion: reduce) {
+            .noor-particle,
+            .noor-scan,
+            .noor-flow,
+            .noor-node,
+            .noor-grid-stream,
+            .noor-board-scan,
+            .noor-parallax-1,
+            .noor-parallax-2,
+            .noor-spotlight {
+              animation: none !important;
+              transform: none !important;
+            }
+          }
+
+          /* spotlight + parallax */
+          .noor-spotlight {
+            background:
+              radial-gradient(900px circle at 18% 18%, rgba(255,255,255,0.18), transparent 55%),
+              radial-gradient(900px circle at 85% 25%, rgba(0,0,0,0.22), transparent 55%),
+              radial-gradient(1200px circle at 50% 120%, rgba(0,0,0,0.32), transparent 62%);
+            transform: translate3d(calc(var(--mx, 0) * 10px), calc(var(--my, 0) * 10px), 0);
+            transition: transform 120ms linear;
+            will-change: transform;
+          }
+          .noor-parallax-1 {
+            transform: translate3d(calc(var(--mx, 0) * 8px), calc(var(--my, 0) * 6px), 0);
+            transition: transform 120ms linear;
+            will-change: transform;
+          }
+          .noor-parallax-2 {
+            transform: translate3d(calc(var(--mx, 0) * -10px), calc(var(--my, 0) * -8px), 0);
+            transition: transform 120ms linear;
+            will-change: transform;
+          }
+
+          /* particles */
+          .noor-particle {
+            position: absolute;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow:
+              0 0 0 1px rgba(255, 255, 255, 0.08),
+              0 0 34px rgba(255, 255, 255, 0.14);
+            animation: noor-drift var(--dur, 20s) ease-in-out infinite;
+            animation-delay: var(--delay, 0s);
+          }
+          @keyframes noor-drift {
+            0% { transform: translate3d(0,0,0) scale(1); }
+            35% { transform: translate3d(12px,-12px,0) scale(1.05); }
+            70% { transform: translate3d(-14px,10px,0) scale(0.98); }
+            100% { transform: translate3d(0,0,0) scale(1); }
+          }
+
+          /* scan */
+          .noor-scan {
+            background: linear-gradient(
+              to bottom,
+              transparent,
+              rgba(255, 255, 255, 0.06),
+              transparent
+            );
+            mix-blend-mode: overlay;
+            opacity: 0.55;
+            transform: translateY(-40%);
+            animation: noor-scan 7.2s ease-in-out infinite;
+          }
+          @keyframes noor-scan {
+            0% { transform: translateY(-55%); opacity: 0.25; }
+            45% { opacity: 0.68; }
+            100% { transform: translateY(85%); opacity: 0.25; }
+          }
+
+          /* board grid stream */
+          .noor-grid-stream {
+            background-position: 0 0;
+            animation: noor-grid 10s linear infinite;
+          }
+          @keyframes noor-grid {
+            0% { background-position: 0 0; }
+            100% { background-position: 120px 80px; }
+          }
+
+          /* board scan */
+          .noor-board-scan {
+            background: linear-gradient(
+              to right,
+              transparent,
+              rgba(255,255,255,0.10),
+              transparent
+            );
+            opacity: 0.55;
+            transform: translateX(-40%);
+            animation: noor-board-scan 6.6s ease-in-out infinite;
+          }
+          @keyframes noor-board-scan {
+            0% { transform: translateX(-55%); opacity: 0.22; }
+            45% { opacity: 0.62; }
+            100% { transform: translateX(85%); opacity: 0.22; }
+          }
+
+          /* flowing pulses on svg paths */
+          .noor-flow {
+            stroke-dasharray: 36 210;
+            stroke-dashoffset: 0;
+            animation: noor-flow 6.8s linear infinite;
+          }
+          .noor-flow-2 { animation-duration: 8.2s; animation-delay: -2.2s; }
+          .noor-flow-3 { animation-duration: 9.6s; animation-delay: -3.6s; }
+          @keyframes noor-flow {
+            0% { stroke-dashoffset: 0; opacity: 0.45; }
+            35% { opacity: 0.92; }
+            100% { stroke-dashoffset: -520; opacity: 0.55; }
+          }
+
+          /* svg nodes pulse */
+          .noor-node {
+            transform-origin: center;
+            animation: noor-node-pulse 3.6s ease-in-out infinite;
+          }
+          .noor-node:nth-child(2n) { animation-duration: 4.6s; }
+          .noor-node:nth-child(3n) { animation-duration: 5.3s; }
+          @keyframes noor-node-pulse {
+            0% { opacity: 0.72; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.08); }
+            100% { opacity: 0.72; transform: scale(1); }
+          }
+        `}</style>
       </section>
 
-      {/* STATUS + INTRO + PoSS FRAMING — 1 full-width + 2 half-width */}
+      {/* STATUS + INTRO + PoSS FRAMING — layout validé (1 full + 2 half) */}
       <section className="container py-10 md:py-14">
         <div className="grid grid-cols-1 gap-6">
-          {/* ROW 1: FULL WIDTH */}
           <Reveal delayMs={0}>
             <div
               className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm
@@ -196,8 +487,7 @@ export default function HomePage() {
                 </li>
                 <li>
                   <span className="font-semibold text-gray-900">PoSS:</span>{" "}
-                  Application layer for governance and verifiable contribution
-                  signals (not consensus)
+                  Application layer for governance and verifiable contribution signals (not consensus)
                 </li>
                 <li>
                   <span className="font-semibold text-gray-900">Public access:</span>{" "}
@@ -211,7 +501,6 @@ export default function HomePage() {
             </div>
           </Reveal>
 
-          {/* ROW 2: TWO COLUMNS (md+) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Reveal delayMs={80}>
               <div
@@ -227,8 +516,7 @@ export default function HomePage() {
                   focused on verified social participation rather than financial
                   speculation. Powered by the PoSS protocol and aligned with Legal
                   Light CH, it provides a transparent and sustainable digital
-                  infrastructure for curators, participants, institutions and
-                  communities.
+                  infrastructure for curators, participants, institutions and communities.
                 </p>
               </div>
             </Reveal>
