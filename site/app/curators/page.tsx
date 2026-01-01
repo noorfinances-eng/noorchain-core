@@ -26,7 +26,7 @@ export default function CuratorsPage() {
           </p>
 
           {/* WHO ARE THE CURATORS */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Who are the Curators?
             </h2>
@@ -39,7 +39,7 @@ export default function CuratorsPage() {
           </section>
 
           {/* LEVELS */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Curator Levels
             </h2>
@@ -60,7 +60,7 @@ export default function CuratorsPage() {
           </section>
 
           {/* RECOGNITION */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Recognition & Contribution
             </h2>
@@ -74,7 +74,7 @@ export default function CuratorsPage() {
           </section>
 
           {/* BECOMING A CURATOR */}
-          <section className="p-6 border border-gray-soft rounded-xl bg-white shadow-sm mb-10">
+          <section className="p-6 border border-gray-soft rounded-xl bg-white shadow-sm mb-10 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Becoming a Curator
             </h2>
