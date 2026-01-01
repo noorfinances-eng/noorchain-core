@@ -24,7 +24,7 @@ export default function DocsPage() {
           </p>
 
           {/* BRANDING / BRANDBOOK */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Branding
             </h2>
@@ -55,7 +55,7 @@ export default function DocsPage() {
           </section>
 
           {/* WHITE PAPERS */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               White Papers
             </h2>
@@ -122,7 +122,7 @@ export default function DocsPage() {
           </section>
 
           {/* TECHNICAL DOCS */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Technical & Genesis Documents
             </h2>
@@ -179,7 +179,7 @@ export default function DocsPage() {
           </section>
 
           {/* LEGAL & GOVERNANCE */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Legal & Governance
             </h2>
@@ -242,7 +242,7 @@ export default function DocsPage() {
           </section>
 
           {/* DOWNLOAD */}
-          <section className="p-6 border border-gray-soft rounded-xl bg-white shadow-sm mb-10">
+          <section className="p-6 border border-gray-soft rounded-xl bg-white shadow-sm mb-10 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Downloads
             </h2>
