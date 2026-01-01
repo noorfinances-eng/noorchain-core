@@ -242,8 +242,7 @@ export default function HomePage() {
         <div className="pointer-events-none absolute inset-0 noor-scan" />
 
         <div className="relative">
-          {/* Ajout du padding latéral ici */}
-          <div className="container px-4 sm:px-6 py-14 sm:py-16 md:py-24">
+          <div className="container py-14 sm:py-16 md:py-24">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
               {/* LEFT — copy */}
               <div className="lg:col-span-7">
