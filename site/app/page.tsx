@@ -61,9 +61,9 @@ export default function HomePage() {
 
       {/* STATUS + INTRO + PoSS FRAMING — grouped for consistent spacing and visual rhythm */}
       <section className="container py-10 md:py-14">
-        <div className="max-w-3xl space-y-6">
+        <div className="max-w-6xl grid gap-6 md:grid-cols-2">
           {/* CURRENT PROJECT STATUS — factual, dated */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm md:col-span-2">
             <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
               <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                 Current Project Status
