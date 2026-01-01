@@ -2,8 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global font + reset */
-html, body {
+/* -------------------------
+   Base / Global reset
+------------------------- */
+html,
+body {
   margin: 0;
   padding: 0;
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
@@ -11,19 +14,23 @@ html, body {
   background-color: #fafafa;
 }
 
-/* Optional container classes */
+/* Optional container override (if you really want it) */
 .container {
   max-width: 900px;
   margin: 0 auto;
   padding-left: 1rem;
   padding-right: 1rem;
 }
-/* --- NOORCHAIN UI dynamics (A1) --- */
 
-/* Respect user preference */
+/* -------------------------
+   Motion safety (global)
+------------------------- */
 @media (prefers-reduced-motion: reduce) {
   .noor-anim,
-  .noor-reveal {
+  .noor-reveal,
+  .noor-signal-orb,
+  .noor-connection,
+  .noor-pulse {
     animation: none !important;
     transition: none !important;
     transform: none !important;
@@ -31,97 +38,120 @@ html, body {
   }
 }
 
+/* -------------------------
+   NOORCHAIN UI dynamics (A1)
+------------------------- */
+
 /* Subtle floating for hero orbs */
 @keyframes noorFloat {
-  0% { transform: translate3d(0,0,0) scale(1); }
-  50% { transform: translate3d(0,-18px,0) scale(1.03); }
-  100% { transform: translate3d(0,0,0) scale(1); }
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -18px, 0) scale(1.03);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
-.noor-orb-1 { animation: noorFloat 10s ease-in-out infinite; }
-.noor-orb-2 { animation: noorFloat 13s ease-in-out infinite; }
-.noor-orb-3 { animation: noorFloat 16s ease-in-out infinite; }
+
+.noor-orb-1 {
+  animation: noorFloat 10s ease-in-out infinite;
+}
+.noor-orb-2 {
+  animation: noorFloat 13s ease-in-out infinite;
+}
+.noor-orb-3 {
+  animation: noorFloat 16s ease-in-out infinite;
+}
 
 /* Reveal: stronger than “mou”, still premium */
 .noor-reveal {
   will-change: transform, opacity, filter;
 }
-@media (prefers-reduced-motion: reduce) {
-  .noor-anim,
-  .noor-reveal {
-    animation: none !important;
-    transition: none !important;
-    transform: none !important;
-    filter: none !important;
-  }
-}
 
-@keyframes noorFloat {
-  0% { transform: translate3d(0,0,0) scale(1); }
-  50% { transform: translate3d(0,-18px,0) scale(1.03); }
-  100% { transform: translate3d(0,0,0) scale(1); }
-}
-.noor-orb-1 { animation: noorFloat 10s ease-in-out infinite; }
-.noor-orb-2 { animation: noorFloat 13s ease-in-out infinite; }
-.noor-orb-3 { animation: noorFloat 16s ease-in-out infinite; }
+/* -------------------------
+   NOORCHAIN: Signal Constellation (Hero background)
+------------------------- */
 
-.noor-reveal { will-change: transform, opacity, filter; }
-/* ---- NOORCHAIN: Signal Constellation (Hero background) ---- */
+/* Soft drifting blobs */
 .noor-signal-orb {
   position: absolute;
   border-radius: 9999px;
   filter: blur(28px);
   opacity: 0.22;
-  transform: translate3d(0,0,0);
+  transform: translate3d(0, 0, 0);
   animation: noor-orb-drift var(--d, 16s) ease-in-out infinite alternate;
 }
 
 @keyframes noor-orb-drift {
-  0%   { transform: translate3d(0,0,0) scale(1); }
-  100% { transform: translate3d(var(--x, 22px), var(--y, -18px), 0) scale(1.04); }
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(var(--x, 22px), var(--y, -18px), 0) scale(1.04);
+  }
 }
 
-/* very subtle "connections" that fade in/out */
+/* Very subtle connections that fade in/out */
 .noor-connection {
   position: absolute;
   height: 1px;
-  background: linear-gradient(to right, transparent, rgba(255,255,255,0.35), transparent);
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    transparent
+  );
   opacity: 0.18;
   transform-origin: left center;
   animation: noor-conn 10s ease-in-out infinite;
 }
 
 @keyframes noor-conn {
-  0%, 20%   { opacity: 0.0; }
-  35%, 65%  { opacity: 0.18; }
-  80%, 100% { opacity: 0.0; }
+  0%,
+  20% {
+    opacity: 0;
+  }
+  35%,
+  65% {
+    opacity: 0.18;
+  }
+  80%,
+  100% {
+    opacity: 0;
+  }
 }
 
-/* one slow pulse (signal) */
+/* One slow pulse (signal) */
 .noor-pulse {
   position: absolute;
   width: 10px;
   height: 10px;
   border-radius: 9999px;
-  background: rgba(255,255,255,0.75);
-  box-shadow: 0 0 24px rgba(255,255,255,0.45);
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.45);
   opacity: 0;
   animation: noor-pulse-move 9s ease-in-out infinite;
 }
 
 @keyframes noor-pulse-move {
-  0%   { opacity: 0; transform: translate3d(0,0,0) scale(0.7); }
-  10%  { opacity: 0.85; }
-  50%  { opacity: 0.75; transform: translate3d(320px, 90px, 0) scale(1); }
-  80%  { opacity: 0.0; }
-  100% { opacity: 0.0; transform: translate3d(520px, 140px, 0) scale(0.9); }
-}
-
-/* Respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .noor-signal-orb,
-  .noor-connection,
-  .noor-pulse {
-    animation: none !important;
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.7);
+  }
+  10% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 0.75;
+    transform: translate3d(320px, 90px, 0) scale(1);
+  }
+  80% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(520px, 140px, 0) scale(0.9);
   }
 }
-
