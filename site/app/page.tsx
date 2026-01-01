@@ -3,10 +3,11 @@ import Reveal from "../components/ui/Reveal";
 import type { CSSProperties } from "react";
 
 /**
- * Home — Refonte A (Hero + PoSS signal mesh + signal board)
+ * Home — Refonte A (Hero + PoSS signal mesh + PoSS signal board)
  * - No external deps
  * - No randomness (no hydration mismatch)
- * - Animations are CSS-based + respects prefers-reduced-motion
+ * - No styled-jsx (Server Component safe)
+ * - Animations are CSS-based (globals.css) + respects prefers-reduced-motion
  */
 
 const SIGNAL_PARTICLES = [
@@ -38,7 +39,7 @@ function SignalMesh() {
     >
       <defs>
         <linearGradient id="meshStroke" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="rgba(255,255,255,0.16)" />
+          <stop offset="0" stopColor="rgba(255,255,255,0.18)" />
           <stop offset="1" stopColor="rgba(255,255,255,0.04)" />
         </linearGradient>
 
@@ -67,6 +68,7 @@ function SignalMesh() {
         </filter>
       </defs>
 
+      {/* Static mesh */}
       <g opacity="0.9" stroke="url(#meshStroke)" strokeWidth="1">
         <path d="M80 120 L380 80 L640 160 L930 110 L1120 180" fill="none" />
         <path d="M120 280 L360 220 L640 260 L900 240 L1140 310" fill="none" />
@@ -77,6 +79,7 @@ function SignalMesh() {
         <path d="M1060 90 L980 240 L900 420" fill="none" />
       </g>
 
+      {/* Pulses on some lines */}
       <g
         filter="url(#softGlow)"
         stroke="url(#pulseStroke)"
@@ -98,6 +101,7 @@ function SignalMesh() {
         />
       </g>
 
+      {/* Nodes */}
       <g filter="url(#softGlow)">
         {[
           { cx: 80, cy: 120, r: 4 },
@@ -121,12 +125,7 @@ function SignalMesh() {
         ].map((n, i) => (
           <g key={i} className="noor-node">
             <circle cx={n.cx} cy={n.cy} r={n.r} fill="rgba(255,255,255,0.65)" />
-            <circle
-              cx={n.cx}
-              cy={n.cy}
-              r={n.r * 3.2}
-              fill="rgba(255,255,255,0.06)"
-            />
+            <circle cx={n.cx} cy={n.cy} r={n.r * 3.2} fill="rgba(255,255,255,0.06)" />
           </g>
         ))}
       </g>
@@ -139,12 +138,14 @@ function PoSSSignalBoard() {
     <div
       className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06]
                  shadow-[0_26px_80px_rgba(0,0,0,0.28)] backdrop-blur-md
-                 h-[320px] w-[620px]"
+                 h-[300px] w-full max-w-[640px]"
       aria-hidden="true"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(800px_circle_at_20%_18%,rgba(255,255,255,0.22),transparent_60%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_circle_at_88%_70%,rgba(0,0,0,0.28),transparent_60%)]" />
+      {/* subtle lighting */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_circle_at_18%_18%,rgba(255,255,255,0.18),transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_circle_at_86%_76%,rgba(0,0,0,0.30),transparent_62%)]" />
 
+      {/* beams */}
       <div className="pointer-events-none absolute inset-0">
         <span className="noor-beam noor-beam-1" />
         <span className="noor-beam noor-beam-2" />
@@ -153,34 +154,53 @@ function PoSSSignalBoard() {
       </div>
 
       <div className="relative p-7">
-        <div className="flex items-center justify-between mb-5">
-          <div className="h-3 w-28 rounded bg-white/20" />
-          <div className="h-3 w-16 rounded bg-white/14" />
-        </div>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold tracking-wide text-white/70 uppercase">
+              PoSS Signal Board
+            </p>
+            <p className="mt-1 text-sm text-white/85 leading-snug">
+              Illustrative overview of the PoSS application layer (non-consensus).
+            </p>
+          </div>
 
-        <div className="space-y-3">
-          <div className="h-4 w-[72%] rounded bg-white/18" />
-          <div className="h-4 w-[88%] rounded bg-white/14" />
-          <div className="h-4 w-[64%] rounded bg-white/14" />
+          <div className="rounded-full border border-white/15 bg-white/10 px-3 py-1">
+            <p className="text-xs text-white/75">Private mainnet-like</p>
+          </div>
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-white/12 bg-white/[0.06] p-4">
-            <div className="h-3 w-16 rounded bg-white/18 mb-3" />
-            <div className="h-7 w-24 rounded bg-white/16" />
+          <div className="rounded-xl border border-white/12 bg-white/[0.05] p-4">
+            <p className="text-xs text-white/70">Curator validation</p>
+            <p className="mt-2 text-xl font-semibold text-white/92">70 / 30</p>
+            <p className="mt-1 text-xs text-white/60">Participants / Curators</p>
           </div>
-          <div className="rounded-xl border border-white/12 bg-white/[0.06] p-4">
-            <div className="h-3 w-16 rounded bg-white/18 mb-3" />
-            <div className="h-7 w-24 rounded bg-white/16" />
-          </div>
-        </div>
 
-        <div className="mt-4 rounded-xl border border-white/12 bg-white/[0.05] p-4">
-          <div className="h-3 w-24 rounded bg-white/16 mb-3" />
-          <div className="grid grid-cols-3 gap-2">
-            <div className="h-6 rounded bg-white/12" />
-            <div className="h-6 rounded bg-white/10" />
-            <div className="h-6 rounded bg-white/12" />
+          <div className="rounded-xl border border-white/12 bg-white/[0.05] p-4">
+            <p className="text-xs text-white/70">Signal snapshots</p>
+            <p className="mt-2 text-xl font-semibold text-white/92">On-chain</p>
+            <p className="mt-1 text-xs text-white/60">Auditable records</p>
+          </div>
+
+          <div className="col-span-2 rounded-xl border border-white/12 bg-white/[0.04] p-4">
+            <p className="text-xs text-white/70 mb-3">Hard framing</p>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-lg bg-white/[0.06] p-3">
+                <p className="text-[11px] text-white/65">Consensus</p>
+                <p className="mt-1 text-sm font-semibold text-white/90">BFT</p>
+              </div>
+              <div className="rounded-lg bg-white/[0.06] p-3">
+                <p className="text-[11px] text-white/65">PoSS</p>
+                <p className="mt-1 text-sm font-semibold text-white/90">App-layer</p>
+              </div>
+              <div className="rounded-lg bg-white/[0.06] p-3">
+                <p className="text-[11px] text-white/65">Token</p>
+                <p className="mt-1 text-sm font-semibold text-white/90">NUR (gas)</p>
+              </div>
+            </div>
+            <p className="mt-3 text-[11px] text-white/55 leading-relaxed">
+              No custody. No yield. No financial promises. Controlled public exposure by design.
+            </p>
           </div>
         </div>
       </div>
@@ -193,10 +213,15 @@ function PoSSSignalBoard() {
 export default function HomePage() {
   return (
     <main className="w-full">
+      {/* HERO */}
       <section className="relative isolate w-full overflow-hidden text-white">
-        {/* Background */}
+        {/* Base gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#1A6AFF] to-[#00D1B2]" />
+
+        {/* Depth shading */}
         <div className="absolute inset-0 bg-[radial-gradient(900px_circle_at_18%_18%,rgba(255,255,255,0.18),transparent_55%),radial-gradient(900px_circle_at_85%_25%,rgba(0,0,0,0.20),transparent_55%),radial-gradient(1100px_circle_at_50%_115%,rgba(0,0,0,0.30),transparent_62%)]" />
+
+        {/* Grid */}
         <div className="absolute inset-0 opacity-[0.14] bg-[linear-gradient(to_right,rgba(255,255,255,0.35)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.35)_1px,transparent_1px)] bg-[size:52px_52px]" />
 
         {/* Mesh */}
@@ -228,11 +253,11 @@ export default function HomePage() {
         {/* Scan */}
         <div className="pointer-events-none absolute inset-0 noor-scan" />
 
-        {/* Content */}
+        {/* Content grid */}
         <div className="relative">
           <div className="container py-16 sm:py-18 md:py-24">
-            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_620px] gap-10 items-start">
-              {/* Left */}
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,640px)] gap-10 items-start">
+              {/* LEFT */}
               <div className="max-w-3xl">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-5">
                   <div className="relative">
@@ -258,14 +283,12 @@ export default function HomePage() {
                 </p>
 
                 <p className="text-xs sm:text-sm text-white/80 mb-6 font-medium">
-                  Private mainnet-like environment — controlled operation, non-public
-                  by design.
+                  Private mainnet-like environment — controlled operation, non-public by design.
                 </p>
 
                 <p className="text-sm sm:text-base md:text-lg text-white/90 leading-relaxed mb-8">
-                  A Social Signal Blockchain powered by PoSS. Designed for transparent
-                  participation, curator validation, and a fixed-supply digital model
-                  free from financial speculation.
+                  A Social Signal Blockchain powered by PoSS. Designed for transparent participation,
+                  curator validation, and a fixed-supply digital model free from financial speculation.
                 </p>
 
                 <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
@@ -291,8 +314,8 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Right (board) — moved right + lower top + size tuned */}
-              <div className="hidden lg:block justify-self-end translate-x-8 mt-10">
+              {/* RIGHT (no overflow, tuned position) */}
+              <div className="hidden lg:block justify-self-end lg:translate-x-6 lg:mt-10">
                 <PoSSSignalBoard />
               </div>
             </div>
@@ -300,46 +323,23 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* STATUS + INTRO + PoSS FRAMING */}
+      {/* BELOW HERO (layout validé) */}
       <section className="container py-10 md:py-14">
         <div className="grid grid-cols-1 gap-6">
           <Reveal delayMs={0}>
             <div className="rounded-xl border border-gray-200 bg-white p-7 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
               <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
-                <h2 className="text-xl font-bold text-gray-900">
-                  Current Project Status
-                </h2>
-                <p className="text-xs sm:text-sm text-gray-500">
-                  Last updated: 2026-01-01
-                </p>
+                <h2 className="text-xl font-bold text-gray-900">Current Project Status</h2>
+                <p className="text-xs sm:text-sm text-gray-500">Last updated: 2026-01-01</p>
               </div>
 
               <ul className="text-sm text-gray-700 leading-relaxed space-y-2">
-                <li>
-                  <span className="font-semibold text-gray-900">Network:</span>{" "}
-                  Private mainnet-like environment (continuous operation)
-                </li>
-                <li>
-                  <span className="font-semibold text-gray-900">Consensus:</span>{" "}
-                  Permissioned BFT
-                </li>
-                <li>
-                  <span className="font-semibold text-gray-900">Layer 1:</span>{" "}
-                  Sovereign EVM L1
-                </li>
-                <li>
-                  <span className="font-semibold text-gray-900">PoSS:</span>{" "}
-                  Application layer for governance and verifiable contribution
-                  signals (not consensus)
-                </li>
-                <li>
-                  <span className="font-semibold text-gray-900">Public access:</span>{" "}
-                  Limited by design until feature completeness and security review
-                </li>
-                <li>
-                  <span className="font-semibold text-gray-900">Reference build:</span>{" "}
-                  M10-MAINNETLIKE-STABLE / M11-DAPPS-STABLE / M12.2-WORLDSTATE-RPC-NONCE-BALANCE
-                </li>
+                <li><span className="font-semibold text-gray-900">Network:</span> Private mainnet-like environment (continuous operation)</li>
+                <li><span className="font-semibold text-gray-900">Consensus:</span> Permissioned BFT</li>
+                <li><span className="font-semibold text-gray-900">Layer 1:</span> Sovereign EVM L1</li>
+                <li><span className="font-semibold text-gray-900">PoSS:</span> Application layer for governance and verifiable contribution signals (not consensus)</li>
+                <li><span className="font-semibold text-gray-900">Public access:</span> Limited by design until feature completeness and security review</li>
+                <li><span className="font-semibold text-gray-900">Reference build:</span> M10-MAINNETLIKE-STABLE / M11-DAPPS-STABLE / M12.2-WORLDSTATE-RPC-NONCE-BALANCE</li>
               </ul>
             </div>
           </Reveal>
@@ -347,16 +347,11 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Reveal delayMs={80}>
               <div className="rounded-xl border border-gray-200 bg-white p-7 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 md:min-h-[320px]">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">
-                  A New Approach to Blockchain Design
-                </h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">A New Approach to Blockchain Design</h2>
                 <p className="text-sm text-gray-700 leading-relaxed">
-                  NOORCHAIN introduces a mission-driven blockchain architecture
-                  focused on verified social participation rather than financial
-                  speculation. Powered by the PoSS protocol and aligned with Legal
-                  Light CH, it provides a transparent and sustainable digital
-                  infrastructure for curators, participants, institutions and
-                  communities.
+                  NOORCHAIN introduces a mission-driven blockchain architecture focused on verified social participation rather than
+                  financial speculation. Powered by the PoSS protocol and aligned with Legal Light CH, it provides a transparent and
+                  sustainable digital infrastructure for curators, participants, institutions and communities.
                 </p>
               </div>
             </Reveal>
@@ -364,28 +359,19 @@ export default function HomePage() {
             <Reveal delayMs={140}>
               <div className="rounded-xl border border-gray-200 bg-white p-7 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 md:min-h-[320px]">
                 <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
-                  <h2 className="text-xl font-bold text-gray-900">
-                    PoSS Framing (Non-Consensus)
-                  </h2>
-                  <a
-                    href="/poss"
-                    className="text-sm font-medium text-blue-700 hover:text-blue-900 transition"
-                  >
+                  <h2 className="text-xl font-bold text-gray-900">PoSS Framing (Non-Consensus)</h2>
+                  <a href="/poss" className="text-sm font-medium text-blue-700 hover:text-blue-900 transition">
                     Read PoSS framing
                   </a>
                 </div>
 
                 <ul className="text-sm text-gray-700 leading-relaxed space-y-2">
                   <li>
-                    <span className="font-semibold text-gray-900">
-                      PoSS is not consensus.
-                    </span>{" "}
+                    <span className="font-semibold text-gray-900">PoSS is not consensus.</span>{" "}
                     Network security is provided by a permissioned BFT consensus layer.
                   </li>
                   <li>
-                    <span className="font-semibold text-gray-900">
-                      PoSS is an application layer.
-                    </span>{" "}
+                    <span className="font-semibold text-gray-900">PoSS is an application layer.</span>{" "}
                     It structures governance, coordination, and verifiable contribution signals.
                   </li>
                   <li>
