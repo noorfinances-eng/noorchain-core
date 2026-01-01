@@ -63,7 +63,7 @@ export default function HomePage() {
       <section className="container py-10 md:py-14">
         <div className="max-w-3xl space-y-6">
           {/* CURRENT PROJECT STATUS — factual, dated */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
               <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                 Current Project Status
@@ -103,7 +103,7 @@ export default function HomePage() {
           </div>
 
           {/* INTRO — boxed, same dimensions as status */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
               A New Approach to Blockchain Design
             </h2>
@@ -119,7 +119,7 @@ export default function HomePage() {
           </div>
 
           {/* PoSS framing — minimal, home-level, links to /poss */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
               <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                 PoSS Framing (Non-Consensus)
