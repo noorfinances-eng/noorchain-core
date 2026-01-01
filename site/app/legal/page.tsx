@@ -37,6 +37,44 @@ export default function LegalPage() {
             </p>
           </section>
 
+          {/* GOVERNANCE & STRUCTURE (EARLY STAGE) */}
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+            <h2 className="text-2xl font-semibold text-navy mb-3">
+              Governance &amp; Structure (Early Stage)
+            </h2>
+
+            <p className="text-gray-700 leading-relaxed mb-4">
+              NOORCHAIN follows a separation-of-roles model designed to reduce
+              conflicts of interest, improve auditability, and support a Legal
+              Light CH posture.
+            </p>
+
+            <ul className="list-disc pl-6 text-gray-700 leading-relaxed space-y-2">
+              <li>
+                <span className="font-semibold text-navy">Protocol vs applications:</span>{" "}
+                the base protocol is engineered as infrastructure; applications and
+                community tooling evolve on top of it.
+              </li>
+              <li>
+                <span className="font-semibold text-navy">Foundation (planned):</span>{" "}
+                a Swiss foundation structure is in preparation to support
+                long-term stewardship and public-interest alignment.
+              </li>
+              <li>
+                <span className="font-semibold text-navy">Operational controls:</span>{" "}
+                critical parameters and allocations are intended to be governed
+                through auditable processes, including multi-signature controls
+                where applicable.
+              </li>
+              <li>
+                <span className="font-semibold text-navy">No financial services:</span>{" "}
+                NOORCHAIN does not provide custody, payment services, or returns.
+                The project prioritizes transparency, risk disclosure, and controlled
+                public exposure.
+              </li>
+            </ul>
+          </section>
+
           {/* RISK DISCLOSURE */}
           <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
             <h2 className="text-2xl font-semibold text-navy mb-3">
