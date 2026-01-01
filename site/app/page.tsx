@@ -84,7 +84,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Cards: same text, better rhythm + reveal */}
+      {/* STATUS + INTRO + PoSS FRAMING — same content, reveal animation */}
       <section className="container py-10 md:py-14">
         <div className="max-w-3xl space-y-6">
           <Reveal delayMs={0}>
