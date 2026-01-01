@@ -1,70 +1,93 @@
 import Image from "next/image";
-import Reveal from "../components/Reveal";
+import Reveal from "../components/ui/Reveal";
 
 export default function HomePage() {
   return (
     <main className="w-full">
-      {/* HERO SECTION — gradient + logo + tagline + texte + boutons */}
-      <section className="w-full bg-gradient-to-br from-[#1A6AFF] to-[#00D1B2]">
-        <div className="container py-12 sm:py-16 md:py-20 text-white">
-          <div className="max-w-3xl">
-            {/* Logo + nom + tagline */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 mb-4">
-              <Image
-                src="/logo-white.svg"
-                alt="NOORCHAIN Logo"
-                width={52}
-                height={52}
-                priority
-              />
-              <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight">
-                NOORCHAIN
-              </h1>
-            </div>
+      {/* HERO SECTION — premium depth (UI only, same text) */}
+      <section className="relative isolate w-full overflow-hidden text-white">
+        {/* Base gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1A6AFF] to-[#00D1B2]" />
 
-            {/* Tagline officielle */}
-            <p className="text-base sm:text-lg md:text-xl text-white/90 mb-2 font-medium">
-              A Human-Centered Blockchain for Social Signals
-            </p>
+        {/* Depth: soft radial shading */}
+        <div className="absolute inset-0 bg-[radial-gradient(900px_circle_at_18%_18%,rgba(255,255,255,0.18),transparent_55%),radial-gradient(900px_circle_at_85%_25%,rgba(0,0,0,0.18),transparent_55%),radial-gradient(1100px_circle_at_50%_115%,rgba(0,0,0,0.28),transparent_62%)]" />
 
-            {/* Project status — discreet */}
-            <p className="text-xs sm:text-sm text-white/80 mb-4 font-medium">
-              Private mainnet-like environment — controlled operation, non-public
-              by design.
-            </p>
+        {/* Subtle grid */}
+        <div className="absolute inset-0 opacity-[0.16] bg-[linear-gradient(to_right,rgba(255,255,255,0.35)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.35)_1px,transparent_1px)] bg-[size:52px_52px]" />
 
-            {/* Paragraphe explicatif */}
-            <p className="text-sm sm:text-base md:text-lg text-white/85 leading-relaxed mb-6 sm:mb-8">
-              A Social Signal Blockchain powered by PoSS. Designed for transparent
-              participation, curator validation, and a fixed-supply digital model
-              free from financial speculation.
-            </p>
+        {/* Animated orbs */}
+        <div className="pointer-events-none absolute -top-24 -left-24 h-[420px] w-[420px] rounded-full bg-white/22 blur-3xl noor-anim noor-orb-1" />
+        <div className="pointer-events-none absolute -bottom-28 left-1/3 h-[520px] w-[520px] rounded-full bg-white/16 blur-3xl noor-anim noor-orb-2" />
+        <div className="pointer-events-none absolute top-10 -right-28 h-[460px] w-[460px] rounded-full bg-white/14 blur-3xl noor-anim noor-orb-3" />
 
-            {/* Boutons — version premium NOORCHAIN */}
-            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
-              <a
-                href="/technology"
-                className="w-full sm:w-auto text-center px-6 py-3 bg-primary text-white rounded-md text-sm md:text-base font-medium hover:bg-blue-700 transition"
-              >
-                Explore Technology
-              </a>
+        {/* Content */}
+        <div className="relative">
+          <div className="container py-14 sm:py-18 md:py-24">
+            <div className="max-w-3xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-5">
+                <div className="relative">
+                  <div className="absolute -inset-3 rounded-2xl bg-white/15 blur-xl" />
+                  <div className="relative rounded-2xl bg-white/10 ring-1 ring-white/25 p-2">
+                    <Image
+                      src="/logo-white.svg"
+                      alt="NOORCHAIN Logo"
+                      width={52}
+                      height={52}
+                      priority
+                    />
+                  </div>
+                </div>
 
-              <a
-                href="/genesis"
-                className="w-full sm:w-auto text-center px-6 py-3 border border-white text-white rounded-md text-sm md:text-base font-medium hover:bg-white/10 transition"
-              >
-                Genesis Overview
-              </a>
+                <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight">
+                  NOORCHAIN
+                </h1>
+              </div>
+
+              <p className="text-base sm:text-lg md:text-xl text-white/90 mb-3 font-medium">
+                A Human-Centered Blockchain for Social Signals
+              </p>
+
+              <p className="text-xs sm:text-sm text-white/80 mb-6 font-medium">
+                Private mainnet-like environment — controlled operation, non-public
+                by design.
+              </p>
+
+              <p className="text-sm sm:text-base md:text-lg text-white/90 leading-relaxed mb-8">
+                A Social Signal Blockchain powered by PoSS. Designed for transparent
+                participation, curator validation, and a fixed-supply digital model
+                free from financial speculation.
+              </p>
+
+              <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
+                <a
+                  href="/technology"
+                  className="w-full sm:w-auto text-center px-6 py-3 rounded-md text-sm md:text-base font-medium
+                             bg-white text-[#0B1B3A] ring-1 ring-white/30
+                             shadow-[0_12px_34px_rgba(0,0,0,0.18)]
+                             transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_46px_rgba(0,0,0,0.22)]"
+                >
+                  Explore Technology
+                </a>
+
+                <a
+                  href="/genesis"
+                  className="w-full sm:w-auto text-center px-6 py-3 rounded-md text-sm md:text-base font-medium
+                             border border-white/70 text-white
+                             bg-white/0 transition-all duration-200
+                             hover:bg-white/10 hover:-translate-y-0.5"
+                >
+                  Genesis Overview
+                </a>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* STATUS + INTRO + PoSS FRAMING — grouped for consistent spacing and visual rhythm */}
+      {/* Cards: same text, better rhythm + reveal */}
       <section className="container py-10 md:py-14">
-        <div className="max-w-6xl grid gap-6 md:grid-cols-2">
-          {/* CURRENT PROJECT STATUS — factual, dated */}
-          <Reveal className="md:col-span-2" delayMs={0}>
+        <div className="max-w-3xl space-y-6">
+          <Reveal delayMs={0}>
             <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">
@@ -105,7 +128,6 @@ export default function HomePage() {
             </div>
           </Reveal>
 
-          {/* INTRO — boxed, same dimensions as status */}
           <Reveal delayMs={80}>
             <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm">
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
@@ -123,7 +145,6 @@ export default function HomePage() {
             </div>
           </Reveal>
 
-          {/* PoSS framing — minimal, home-level, links to /poss */}
           <Reveal delayMs={140}>
             <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
