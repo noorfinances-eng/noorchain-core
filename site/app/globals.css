@@ -45,3 +45,23 @@ html, body {
 .noor-reveal {
   will-change: transform, opacity, filter;
 }
+@media (prefers-reduced-motion: reduce) {
+  .noor-anim,
+  .noor-reveal {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+@keyframes noorFloat {
+  0% { transform: translate3d(0,0,0) scale(1); }
+  50% { transform: translate3d(0,-18px,0) scale(1.03); }
+  100% { transform: translate3d(0,0,0) scale(1); }
+}
+.noor-orb-1 { animation: noorFloat 10s ease-in-out infinite; }
+.noor-orb-2 { animation: noorFloat 13s ease-in-out infinite; }
+.noor-orb-3 { animation: noorFloat 16s ease-in-out infinite; }
+
+.noor-reveal { will-change: transform, opacity, filter; }
