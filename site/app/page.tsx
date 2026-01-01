@@ -1,224 +1,223 @@
-"use client";
-
 import Image from "next/image";
-import { useEffect, useRef } from "react";
 import Reveal from "../components/ui/Reveal";
 
 /**
- * Home — Refonte A+ (Hero + Signal Board)
+ * Home — Refonte A (Hero + PoSS signal mesh + signal board)
  * - No external deps
  * - No randomness (no hydration mismatch)
- * - Subtle parallax via CSS vars (mouse), disabled for prefers-reduced-motion
+ * - Animations are CSS-based + respects prefers-reduced-motion
+ * - Homogeneous sizing: consistent paddings, typography, and card heights
  */
 
 const SIGNAL_PARTICLES = [
-  { left: "10%", top: "22%", s: 10, o: 0.18, d: "18s", delay: "-3s" },
-  { left: "14%", top: "66%", s: 14, o: 0.12, d: "22s", delay: "-9s" },
-  { left: "22%", top: "38%", s: 8, o: 0.16, d: "16s", delay: "-6s" },
-  { left: "32%", top: "18%", s: 9, o: 0.14, d: "20s", delay: "-11s" },
-  { left: "36%", top: "72%", s: 12, o: 0.11, d: "24s", delay: "-7s" },
-  { left: "48%", top: "28%", s: 13, o: 0.10, d: "26s", delay: "-12s" },
-  { left: "56%", top: "62%", s: 9, o: 0.12, d: "19s", delay: "-5s" },
-  { left: "64%", top: "20%", s: 8, o: 0.13, d: "21s", delay: "-10s" },
-  { left: "72%", top: "46%", s: 11, o: 0.10, d: "27s", delay: "-14s" },
-  { left: "82%", top: "30%", s: 12, o: 0.09, d: "25s", delay: "-8s" },
-  { left: "86%", top: "70%", s: 14, o: 0.08, d: "30s", delay: "-15s" },
+  { left: "6%", top: "18%", size: 10, o: 0.22, d: "14s", delay: "0s" },
+  { left: "10%", top: "62%", size: 14, o: 0.16, d: "18s", delay: "-4s" },
+  { left: "18%", top: "34%", size: 8, o: 0.18, d: "12s", delay: "-2s" },
+  { left: "22%", top: "78%", size: 12, o: 0.14, d: "20s", delay: "-9s" },
+  { left: "28%", top: "22%", size: 9, o: 0.17, d: "16s", delay: "-6s" },
+  { left: "34%", top: "52%", size: 16, o: 0.12, d: "22s", delay: "-10s" },
+  { left: "40%", top: "14%", size: 7, o: 0.18, d: "15s", delay: "-3s" },
+  { left: "44%", top: "70%", size: 11, o: 0.13, d: "19s", delay: "-8s" },
+  { left: "52%", top: "30%", size: 13, o: 0.13, d: "21s", delay: "-11s" },
+  { left: "58%", top: "58%", size: 9, o: 0.15, d: "17s", delay: "-5s" },
+  { left: "64%", top: "20%", size: 8, o: 0.16, d: "14s", delay: "-7s" },
+  { left: "68%", top: "74%", size: 15, o: 0.12, d: "24s", delay: "-12s" },
+  { left: "74%", top: "40%", size: 10, o: 0.14, d: "18s", delay: "-6s" },
+  { left: "80%", top: "16%", size: 12, o: 0.12, d: "20s", delay: "-9s" },
+  { left: "84%", top: "66%", size: 8, o: 0.16, d: "16s", delay: "-2s" },
+  { left: "90%", top: "36%", size: 14, o: 0.1, d: "25s", delay: "-13s" },
 ];
+
+function SignalMesh() {
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      viewBox="0 0 1200 520"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="meshStroke" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="rgba(255,255,255,0.16)" />
+          <stop offset="1" stopColor="rgba(255,255,255,0.04)" />
+        </linearGradient>
+
+        <linearGradient id="pulseStroke" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="rgba(255,255,255,0)" />
+          <stop offset="0.45" stopColor="rgba(255,255,255,0.55)" />
+          <stop offset="0.55" stopColor="rgba(255,255,255,0.55)" />
+          <stop offset="1" stopColor="rgba(255,255,255,0)" />
+        </linearGradient>
+
+        <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="2.2" result="b" />
+          <feColorMatrix
+            in="b"
+            type="matrix"
+            values="
+              1 0 0 0 0
+              0 1 0 0 0
+              0 0 1 0 0
+              0 0 0 0.8 0"
+          />
+          <feMerge>
+            <feMergeNode />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      {/* Static mesh lines */}
+      <g opacity="0.9" stroke="url(#meshStroke)" strokeWidth="1">
+        <path d="M80 120 L380 80 L640 160 L930 110 L1120 180" fill="none" />
+        <path d="M120 280 L360 220 L640 260 L900 240 L1140 310" fill="none" />
+        <path d="M200 420 L420 360 L690 400 L980 360 L1160 420" fill="none" />
+        <path d="M260 60 L300 220 L360 420" fill="none" />
+        <path d="M520 40 L520 210 L560 420" fill="none" />
+        <path d="M860 50 L840 240 L820 430" fill="none" />
+        <path d="M1060 90 L980 240 L900 420" fill="none" />
+      </g>
+
+      {/* Pulses flowing over some lines */}
+      <g
+        filter="url(#softGlow)"
+        stroke="url(#pulseStroke)"
+        strokeWidth="2"
+        fill="none"
+        opacity="0.65"
+      >
+        <path
+          className="noor-pulse-line noor-pulse-line-1"
+          d="M80 120 L380 80 L640 160 L930 110 L1120 180"
+        />
+        <path
+          className="noor-pulse-line noor-pulse-line-2"
+          d="M120 280 L360 220 L640 260 L900 240 L1140 310"
+        />
+        <path
+          className="noor-pulse-line noor-pulse-line-3"
+          d="M200 420 L420 360 L690 400 L980 360 L1160 420"
+        />
+      </g>
+
+      {/* Nodes */}
+      <g filter="url(#softGlow)">
+        {[
+          { cx: 80, cy: 120, r: 4 },
+          { cx: 380, cy: 80, r: 4 },
+          { cx: 640, cy: 160, r: 4 },
+          { cx: 930, cy: 110, r: 4 },
+          { cx: 1120, cy: 180, r: 4 },
+          { cx: 120, cy: 280, r: 4 },
+          { cx: 360, cy: 220, r: 4 },
+          { cx: 640, cy: 260, r: 4 },
+          { cx: 900, cy: 240, r: 4 },
+          { cx: 1140, cy: 310, r: 4 },
+          { cx: 200, cy: 420, r: 4 },
+          { cx: 420, cy: 360, r: 4 },
+          { cx: 690, cy: 400, r: 4 },
+          { cx: 980, cy: 360, r: 4 },
+          { cx: 1160, cy: 420, r: 4 },
+          { cx: 300, cy: 220, r: 3 },
+          { cx: 520, cy: 210, r: 3 },
+          { cx: 840, cy: 240, r: 3 },
+        ].map((n, i) => (
+          <g key={i} className="noor-node">
+            <circle cx={n.cx} cy={n.cy} r={n.r} fill="rgba(255,255,255,0.65)" />
+            <circle
+              cx={n.cx}
+              cy={n.cy}
+              r={n.r * 3.2}
+              fill="rgba(255,255,255,0.06)"
+            />
+          </g>
+        ))}
+      </g>
+    </svg>
+  );
+}
 
 function PoSSSignalBoard() {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] shadow-[0_26px_80px_rgba(0,0,0,0.28)] backdrop-blur-md">
-      {/* top sheen */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(800px_circle_at_20%_10%,rgba(255,255,255,0.18),transparent_55%),radial-gradient(700px_circle_at_85%_30%,rgba(255,255,255,0.10),transparent_60%)]" />
+    <div
+      className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06]
+                 shadow-[0_26px_80px_rgba(0,0,0,0.28)] backdrop-blur-md
+                 min-h-[420px] lg:min-h-[460px]"
+      aria-hidden="true"
+    >
+      {/* Subtle inner highlight */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(800px_circle_at_20%_18%,rgba(255,255,255,0.22),transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_circle_at_88%_70%,rgba(0,0,0,0.28),transparent_60%)]" />
 
-      {/* animated grid stream */}
-      <div className="pointer-events-none absolute inset-0 opacity-[0.28] bg-[linear-gradient(to_right,rgba(255,255,255,0.22)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.22)_1px,transparent_1px)] bg-[size:42px_42px] noor-grid-stream" />
+      {/* Animated “signals” */}
+      <div className="pointer-events-none absolute inset-0">
+        <span className="noor-beam noor-beam-1" />
+        <span className="noor-beam noor-beam-2" />
+        <span className="noor-beam noor-beam-3" />
+        <span className="noor-beam noor-beam-4" />
+      </div>
 
-      {/* content */}
-      <div className="relative p-6">
-        <div className="flex items-start justify-between gap-4 mb-5">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-white/70">
-              PoSS Signal Board
-            </p>
-            <h3 className="text-lg font-semibold text-white mt-1">
-              Verifiable Signals • Curator Validation
-            </h3>
+      {/* Content-like skeleton (keeps it serious, not decorative-only) */}
+      <div className="relative p-7">
+        <div className="flex items-center justify-between mb-5">
+          <div className="h-3 w-28 rounded bg-white/20" />
+          <div className="h-3 w-16 rounded bg-white/14" />
+        </div>
+
+        <div className="space-y-3">
+          <div className="h-4 w-[72%] rounded bg-white/18" />
+          <div className="h-4 w-[88%] rounded bg-white/14" />
+          <div className="h-4 w-[64%] rounded bg-white/14" />
+        </div>
+
+        <div className="mt-8 grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-white/12 bg-white/[0.06] p-4">
+            <div className="h-3 w-16 rounded bg-white/18 mb-3" />
+            <div className="h-7 w-24 rounded bg-white/16" />
           </div>
-
-          <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/80">
-            Controlled
+          <div className="rounded-xl border border-white/12 bg-white/[0.06] p-4">
+            <div className="h-3 w-16 rounded bg-white/18 mb-3" />
+            <div className="h-7 w-24 rounded bg-white/16" />
           </div>
         </div>
 
-        <div className="relative rounded-xl border border-white/15 bg-black/10 p-4 overflow-hidden">
-          {/* scan */}
-          <div className="pointer-events-none absolute inset-0 noor-board-scan" />
-
-          {/* animated lines + pulses */}
-          <svg
-            className="block w-full h-[190px]"
-            viewBox="0 0 540 190"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-          >
-            <defs>
-              <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0" stopColor="rgba(255,255,255,0.06)" />
-                <stop offset="0.5" stopColor="rgba(255,255,255,0.22)" />
-                <stop offset="1" stopColor="rgba(255,255,255,0.06)" />
-              </linearGradient>
-              <linearGradient id="pulse" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0" stopColor="rgba(255,255,255,0)" />
-                <stop offset="0.45" stopColor="rgba(255,255,255,0.70)" />
-                <stop offset="0.55" stopColor="rgba(255,255,255,0.70)" />
-                <stop offset="1" stopColor="rgba(255,255,255,0)" />
-              </linearGradient>
-              <filter id="g" x="-30%" y="-30%" width="160%" height="160%">
-                <feGaussianBlur stdDeviation="1.8" result="b" />
-                <feMerge>
-                  <feMergeNode in="b" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
-            {/* baseline layers */}
-            <g stroke="url(#line)" strokeWidth="1" opacity="0.95" fill="none">
-              <path d="M20 30 C120 10, 210 60, 310 42 C390 30, 450 18, 520 34" />
-              <path d="M20 86 C120 66, 210 118, 310 96 C390 78, 450 70, 520 90" />
-              <path d="M20 140 C120 126, 210 170, 310 150 C390 134, 450 120, 520 146" />
-            </g>
-
-            {/* flowing pulses */}
-            <g
-              filter="url(#g)"
-              stroke="url(#pulse)"
-              strokeWidth="2"
-              opacity="0.70"
-              fill="none"
-            >
-              <path className="noor-flow noor-flow-1" d="M20 30 C120 10, 210 60, 310 42 C390 30, 450 18, 520 34" />
-              <path className="noor-flow noor-flow-2" d="M20 86 C120 66, 210 118, 310 96 C390 78, 450 70, 520 90" />
-              <path className="noor-flow noor-flow-3" d="M20 140 C120 126, 210 170, 310 150 C390 134, 450 120, 520 146" />
-            </g>
-
-            {/* nodes */}
-            <g filter="url(#g)">
-              {[
-                [88, 22],
-                [170, 46],
-                [250, 52],
-                [330, 40],
-                [420, 26],
-                [492, 36],
-                [92, 78],
-                [178, 98],
-                [260, 112],
-                [338, 96],
-                [430, 84],
-                [505, 92],
-                [86, 132],
-                [176, 154],
-                [260, 166],
-                [340, 152],
-                [430, 132],
-                [506, 146],
-              ].map(([cx, cy], i) => (
-                <g key={i} className="noor-node">
-                  <circle cx={cx} cy={cy} r="2.6" fill="rgba(255,255,255,0.78)" />
-                  <circle cx={cx} cy={cy} r="10" fill="rgba(255,255,255,0.06)" />
-                </g>
-              ))}
-            </g>
-          </svg>
-
-          {/* small legend */}
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-white/70">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-2 py-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-white/70" />
-              Signal stream
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-2 py-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-white/50" />
-              Curator checkpoints
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-2 py-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
-              Auditability-first
-            </span>
-          </div>
-        </div>
-
-        {/* facts */}
-        <div className="mt-5 grid grid-cols-2 gap-3 text-xs text-white/80">
-          <div className="rounded-lg border border-white/12 bg-white/5 px-3 py-2">
-            <div className="text-white/60">Network</div>
-            <div className="font-medium text-white">Private mainnet-like</div>
-          </div>
-          <div className="rounded-lg border border-white/12 bg-white/5 px-3 py-2">
-            <div className="text-white/60">Consensus</div>
-            <div className="font-medium text-white">Permissioned BFT</div>
-          </div>
-          <div className="rounded-lg border border-white/12 bg-white/5 px-3 py-2">
-            <div className="text-white/60">Layer</div>
-            <div className="font-medium text-white">Sovereign EVM L1</div>
-          </div>
-          <div className="rounded-lg border border-white/12 bg-white/5 px-3 py-2">
-            <div className="text-white/60">PoSS</div>
-            <div className="font-medium text-white">Application-layer</div>
+        <div className="mt-4 rounded-xl border border-white/12 bg-white/[0.05] p-4">
+          <div className="h-3 w-24 rounded bg-white/16 mb-3" />
+          <div className="grid grid-cols-3 gap-2">
+            <div className="h-6 rounded bg-white/12" />
+            <div className="h-6 rounded bg-white/10" />
+            <div className="h-6 rounded bg-white/12" />
           </div>
         </div>
       </div>
+
+      {/* Gloss */}
+      <div className="pointer-events-none absolute inset-0 ring-1 ring-white/10" />
     </div>
   );
 }
 
 export default function HomePage() {
-  const heroRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    const el = heroRef.current;
-    if (!el) return;
-
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (media.matches) return;
-
-    const onMove = (e: MouseEvent) => {
-      const r = el.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width; // 0..1
-      const y = (e.clientY - r.top) / r.height; // 0..1
-      // map to -1..1
-      const mx = (x - 0.5) * 2;
-      const my = (y - 0.5) * 2;
-      el.style.setProperty("--mx", mx.toFixed(3));
-      el.style.setProperty("--my", my.toFixed(3));
-    };
-
-    window.addEventListener("mousemove", onMove, { passive: true });
-    return () => window.removeEventListener("mousemove", onMove);
-  }, []);
-
   return (
     <main className="w-full">
-      {/* HERO — stronger composition (text + signal board) */}
-      <section
-        ref={(n) => {
-          heroRef.current = n;
-        }}
-        className="relative isolate w-full overflow-hidden text-white"
-      >
+      {/* HERO SECTION — strong visual identity (serious, PoSS-inspired) */}
+      <section className="relative isolate w-full overflow-hidden text-white">
         {/* Base gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#1A6AFF] to-[#00D1B2]" />
 
-        {/* Spotlight + depth */}
-        <div className="absolute inset-0 noor-spotlight" />
+        {/* Depth shading */}
+        <div className="absolute inset-0 bg-[radial-gradient(900px_circle_at_18%_18%,rgba(255,255,255,0.18),transparent_55%),radial-gradient(900px_circle_at_85%_25%,rgba(0,0,0,0.20),transparent_55%),radial-gradient(1100px_circle_at_50%_115%,rgba(0,0,0,0.30),transparent_62%)]" />
 
         {/* Subtle grid */}
-        <div className="absolute inset-0 opacity-[0.12] bg-[linear-gradient(to_right,rgba(255,255,255,0.35)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.35)_1px,transparent_1px)] bg-[size:56px_56px]" />
+        <div className="absolute inset-0 opacity-[0.14] bg-[linear-gradient(to_right,rgba(255,255,255,0.35)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.35)_1px,transparent_1px)] bg-[size:52px_52px]" />
 
-        {/* Particles (anchored, not “a single dot”) */}
-        <div className="pointer-events-none absolute inset-0 noor-parallax-1">
+        {/* PoSS Signal Mesh */}
+        <div className="absolute inset-0 opacity-[0.85]">
+          <SignalMesh />
+        </div>
+
+        {/* Particles */}
+        <div className="pointer-events-none absolute inset-0">
           {SIGNAL_PARTICLES.map((p, i) => (
             <span
               key={i}
@@ -227,8 +226,8 @@ export default function HomePage() {
                 {
                   left: p.left,
                   top: p.top,
-                  width: `${p.s}px`,
-                  height: `${p.s}px`,
+                  width: `${p.size}px`,
+                  height: `${p.size}px`,
                   opacity: p.o,
                   ["--dur" as any]: p.d,
                   ["--delay" as any]: p.delay,
@@ -238,15 +237,21 @@ export default function HomePage() {
           ))}
         </div>
 
+        {/* Right board (non-globe, PoSS-ish) */}
+        <div className="pointer-events-none absolute right-[-80px] top-1/2 hidden -translate-y-1/2 lg:block w-[520px]">
+          <PoSSSignalBoard />
+        </div>
+
         {/* Scan line */}
         <div className="pointer-events-none absolute inset-0 noor-scan" />
 
+        {/* Content */}
         <div className="relative">
-          <div className="container py-14 sm:py-16 md:py-24">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-              {/* LEFT — copy */}
-              <div className="lg:col-span-7">
-                <div className="flex items-center gap-3 mb-6">
+          <div className="container py-16 sm:py-18 md:py-24">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_520px] gap-10 items-center">
+              {/* Left text */}
+              <div className="max-w-3xl">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-5">
                   <div className="relative">
                     <div className="absolute -inset-3 rounded-2xl bg-white/15 blur-xl" />
                     <div className="relative rounded-2xl bg-white/10 ring-1 ring-white/25 p-2">
@@ -270,19 +275,20 @@ export default function HomePage() {
                 </p>
 
                 <p className="text-xs sm:text-sm text-white/80 mb-6 font-medium">
-                  Private mainnet-like environment — controlled operation, non-public by design.
+                  Private mainnet-like environment — controlled operation,
+                  non-public by design.
                 </p>
 
-                <p className="text-sm sm:text-base md:text-lg text-white/92 leading-relaxed mb-8 max-w-2xl">
-                  A Social Signal Blockchain powered by PoSS. Designed for transparent
-                  participation, curator validation, and a fixed-supply digital model
-                  free from financial speculation.
+                <p className="text-sm sm:text-base md:text-lg text-white/90 leading-relaxed mb-8">
+                  A Social Signal Blockchain powered by PoSS. Designed for
+                  transparent participation, curator validation, and a fixed-supply
+                  digital model free from financial speculation.
                 </p>
 
                 <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
                   <a
                     href="/technology"
-                    className="w-full sm:w-auto text-center px-6 py-3 rounded-md text-sm md:text-base font-medium
+                    className="w-full sm:w-auto text-center h-11 inline-flex items-center justify-center px-6 rounded-md text-sm md:text-base font-medium
                                bg-white text-[#0B1B3A] ring-1 ring-white/30
                                shadow-[0_14px_44px_rgba(0,0,0,0.22)]
                                transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_58px_rgba(0,0,0,0.28)]"
@@ -292,7 +298,7 @@ export default function HomePage() {
 
                   <a
                     href="/genesis"
-                    className="w-full sm:w-auto text-center px-6 py-3 rounded-md text-sm md:text-base font-medium
+                    className="w-full sm:w-auto text-center h-11 inline-flex items-center justify-center px-6 rounded-md text-sm md:text-base font-medium
                                border border-white/70 text-white
                                bg-white/0 transition-all duration-200
                                hover:bg-white/10 hover:-translate-y-0.5"
@@ -300,86 +306,110 @@ export default function HomePage() {
                     Genesis Overview
                   </a>
                 </div>
-
-                {/* micro-proof line (serious, not marketing) */}
-                <div className="mt-8 flex flex-wrap gap-2 text-xs text-white/75">
-                  <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">
-                    Tagged builds: M10 / M11 / M12.2
-                  </span>
-                  <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">
-                    PoSS: application-layer (not consensus)
-                  </span>
-                  <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">
-                    Legal-Light posture (no yield, no custody)
-                  </span>
-                </div>
               </div>
 
-              {/* RIGHT — Signal Board (the “clack” piece) */}
-              <div className="lg:col-span-5 noor-parallax-2">
-                <PoSSSignalBoard />
-              </div>
+              {/* Right column placeholder (keeps layout aligned when board hidden) */}
+              <div className="hidden lg:block" />
             </div>
           </div>
         </div>
 
-        {/* Global CSS, scoped by noor-* classnames */}
+        {/* Inline global CSS — scoped by classnames, doesn't touch the rest of the site */}
         <style jsx global>{`
+          /* ---------- Motion safety ---------- */
           @media (prefers-reduced-motion: reduce) {
             .noor-particle,
             .noor-scan,
-            .noor-flow,
             .noor-node,
-            .noor-grid-stream,
-            .noor-board-scan,
-            .noor-parallax-1,
-            .noor-parallax-2,
-            .noor-spotlight {
+            .noor-pulse-line,
+            .noor-beam {
               animation: none !important;
               transform: none !important;
             }
           }
 
-          /* spotlight + parallax */
-          .noor-spotlight {
-            background:
-              radial-gradient(900px circle at 18% 18%, rgba(255,255,255,0.18), transparent 55%),
-              radial-gradient(900px circle at 85% 25%, rgba(0,0,0,0.22), transparent 55%),
-              radial-gradient(1200px circle at 50% 120%, rgba(0,0,0,0.32), transparent 62%);
-            transform: translate3d(calc(var(--mx, 0) * 10px), calc(var(--my, 0) * 10px), 0);
-            transition: transform 120ms linear;
-            will-change: transform;
-          }
-          .noor-parallax-1 {
-            transform: translate3d(calc(var(--mx, 0) * 8px), calc(var(--my, 0) * 6px), 0);
-            transition: transform 120ms linear;
-            will-change: transform;
-          }
-          .noor-parallax-2 {
-            transform: translate3d(calc(var(--mx, 0) * -10px), calc(var(--my, 0) * -8px), 0);
-            transition: transform 120ms linear;
-            will-change: transform;
-          }
-
-          /* particles */
+          /* ---------- Particles ---------- */
           .noor-particle {
             position: absolute;
             border-radius: 9999px;
-            background: rgba(255, 255, 255, 0.92);
-            box-shadow:
-              0 0 0 1px rgba(255, 255, 255, 0.08),
-              0 0 34px rgba(255, 255, 255, 0.14);
-            animation: noor-drift var(--dur, 20s) ease-in-out infinite;
+            background: rgba(255, 255, 255, 0.9);
+            filter: blur(0.2px);
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08),
+              0 0 28px rgba(255, 255, 255, 0.14);
+            animation: noor-drift var(--dur, 18s) ease-in-out infinite;
             animation-delay: var(--delay, 0s);
+            will-change: transform;
           }
           @keyframes noor-drift {
-            0% { transform: translate3d(0,0,0) scale(1); }
-            35% { transform: translate3d(12px,-12px,0) scale(1.05); }
-            70% { transform: translate3d(-14px,10px,0) scale(0.98); }
-            100% { transform: translate3d(0,0,0) scale(1); }
+            0% {
+              transform: translate3d(0, 0, 0) scale(1);
+            }
+            35% {
+              transform: translate3d(10px, -12px, 0) scale(1.06);
+            }
+            70% {
+              transform: translate3d(-12px, 8px, 0) scale(0.98);
+            }
+            100% {
+              transform: translate3d(0, 0, 0) scale(1);
+            }
           }
 
-          /* scan */
+          /* ---------- Mesh nodes ---------- */
+          .noor-node {
+            transform-origin: center;
+            animation: noor-node-pulse 3.2s ease-in-out infinite;
+          }
+          .noor-node:nth-child(2n) {
+            animation-duration: 4.4s;
+          }
+          .noor-node:nth-child(3n) {
+            animation-duration: 5.1s;
+          }
+          @keyframes noor-node-pulse {
+            0% {
+              opacity: 0.75;
+              transform: scale(1);
+            }
+            50% {
+              opacity: 1;
+              transform: scale(1.08);
+            }
+            100% {
+              opacity: 0.75;
+              transform: scale(1);
+            }
+          }
+
+          /* ---------- Pulses flowing on lines ---------- */
+          .noor-pulse-line {
+            stroke-dasharray: 36 220;
+            stroke-dashoffset: 0;
+            animation: noor-flow 6.8s linear infinite;
+          }
+          .noor-pulse-line-2 {
+            animation-duration: 8.2s;
+            animation-delay: -2.4s;
+          }
+          .noor-pulse-line-3 {
+            animation-duration: 9.6s;
+            animation-delay: -4.2s;
+          }
+          @keyframes noor-flow {
+            0% {
+              stroke-dashoffset: 0;
+              opacity: 0.45;
+            }
+            35% {
+              opacity: 0.9;
+            }
+            100% {
+              stroke-dashoffset: -520;
+              opacity: 0.55;
+            }
+          }
+
+          /* ---------- Scan line ---------- */
           .noor-scan {
             background: linear-gradient(
               to bottom,
@@ -390,81 +420,86 @@ export default function HomePage() {
             mix-blend-mode: overlay;
             opacity: 0.55;
             transform: translateY(-40%);
-            animation: noor-scan 7.2s ease-in-out infinite;
+            animation: noor-scan 7.5s ease-in-out infinite;
           }
           @keyframes noor-scan {
-            0% { transform: translateY(-55%); opacity: 0.25; }
-            45% { opacity: 0.68; }
-            100% { transform: translateY(85%); opacity: 0.25; }
+            0% {
+              transform: translateY(-55%);
+              opacity: 0.25;
+            }
+            45% {
+              opacity: 0.65;
+            }
+            100% {
+              transform: translateY(85%);
+              opacity: 0.25;
+            }
           }
 
-          /* board grid stream */
-          .noor-grid-stream {
-            background-position: 0 0;
-            animation: noor-grid 10s linear infinite;
-          }
-          @keyframes noor-grid {
-            0% { background-position: 0 0; }
-            100% { background-position: 120px 80px; }
-          }
-
-          /* board scan */
-          .noor-board-scan {
+          /* ---------- Signal Board beams ---------- */
+          .noor-beam {
+            position: absolute;
+            left: -20%;
+            top: 0;
+            width: 45%;
+            height: 120%;
+            opacity: 0.22;
+            transform: rotate(18deg);
             background: linear-gradient(
-              to right,
-              transparent,
-              rgba(255,255,255,0.10),
-              transparent
+              to bottom,
+              rgba(255, 255, 255, 0),
+              rgba(255, 255, 255, 0.28),
+              rgba(255, 255, 255, 0)
             );
-            opacity: 0.55;
-            transform: translateX(-40%);
-            animation: noor-board-scan 6.6s ease-in-out infinite;
+            filter: blur(0.2px);
+            animation: noor-beam-move 7.8s ease-in-out infinite;
+            will-change: transform, opacity;
           }
-          @keyframes noor-board-scan {
-            0% { transform: translateX(-55%); opacity: 0.22; }
-            45% { opacity: 0.62; }
-            100% { transform: translateX(85%); opacity: 0.22; }
+          .noor-beam-2 {
+            left: 2%;
+            opacity: 0.16;
+            animation-duration: 9.2s;
+            animation-delay: -2.8s;
           }
-
-          /* flowing pulses on svg paths */
-          .noor-flow {
-            stroke-dasharray: 36 210;
-            stroke-dashoffset: 0;
-            animation: noor-flow 6.8s linear infinite;
+          .noor-beam-3 {
+            left: 24%;
+            opacity: 0.14;
+            animation-duration: 10.6s;
+            animation-delay: -5.1s;
           }
-          .noor-flow-2 { animation-duration: 8.2s; animation-delay: -2.2s; }
-          .noor-flow-3 { animation-duration: 9.6s; animation-delay: -3.6s; }
-          @keyframes noor-flow {
-            0% { stroke-dashoffset: 0; opacity: 0.45; }
-            35% { opacity: 0.92; }
-            100% { stroke-dashoffset: -520; opacity: 0.55; }
+          .noor-beam-4 {
+            left: 48%;
+            opacity: 0.12;
+            animation-duration: 12.4s;
+            animation-delay: -7.2s;
           }
-
-          /* svg nodes pulse */
-          .noor-node {
-            transform-origin: center;
-            animation: noor-node-pulse 3.6s ease-in-out infinite;
-          }
-          .noor-node:nth-child(2n) { animation-duration: 4.6s; }
-          .noor-node:nth-child(3n) { animation-duration: 5.3s; }
-          @keyframes noor-node-pulse {
-            0% { opacity: 0.72; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.08); }
-            100% { opacity: 0.72; transform: scale(1); }
+          @keyframes noor-beam-move {
+            0% {
+              transform: translateX(-6%) rotate(18deg);
+              opacity: 0.1;
+            }
+            40% {
+              opacity: 0.24;
+            }
+            100% {
+              transform: translateX(28%) rotate(18deg);
+              opacity: 0.1;
+            }
           }
         `}</style>
       </section>
 
-      {/* STATUS + INTRO + PoSS FRAMING — layout validé (1 full + 2 half) */}
+      {/* STATUS + INTRO + PoSS FRAMING — 1 full-width + 2 half-width (homogeneous sizing) */}
       <section className="container py-10 md:py-14">
         <div className="grid grid-cols-1 gap-6">
+          {/* ROW 1: FULL WIDTH */}
           <Reveal delayMs={0}>
             <div
-              className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm
+              className="rounded-xl border border-gray-200 bg-white p-7 shadow-sm
                          transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
             >
               <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                <h2 className="text-xl font-bold text-gray-900">
                   Current Project Status
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-500">
@@ -472,7 +507,7 @@ export default function HomePage() {
                 </p>
               </div>
 
-              <ul className="text-sm sm:text-base text-gray-700 leading-relaxed space-y-2">
+              <ul className="text-sm text-gray-700 leading-relaxed space-y-2">
                 <li>
                   <span className="font-semibold text-gray-900">Network:</span>{" "}
                   Private mainnet-like environment (continuous operation)
@@ -487,7 +522,8 @@ export default function HomePage() {
                 </li>
                 <li>
                   <span className="font-semibold text-gray-900">PoSS:</span>{" "}
-                  Application layer for governance and verifiable contribution signals (not consensus)
+                  Application layer for governance and verifiable contribution
+                  signals (not consensus)
                 </li>
                 <li>
                   <span className="font-semibold text-gray-900">Public access:</span>{" "}
@@ -501,33 +537,37 @@ export default function HomePage() {
             </div>
           </Reveal>
 
+          {/* ROW 2: TWO COLUMNS (md+) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Reveal delayMs={80}>
               <div
-                className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm
-                           transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+                className="rounded-xl border border-gray-200 bg-white p-7 shadow-sm
+                           transition-all duration-200 hover:shadow-md hover:-translate-y-0.5
+                           md:min-h-[320px]"
               >
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">
                   A New Approach to Blockchain Design
                 </h2>
 
-                <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                <p className="text-sm text-gray-700 leading-relaxed">
                   NOORCHAIN introduces a mission-driven blockchain architecture
                   focused on verified social participation rather than financial
                   speculation. Powered by the PoSS protocol and aligned with Legal
                   Light CH, it provides a transparent and sustainable digital
-                  infrastructure for curators, participants, institutions and communities.
+                  infrastructure for curators, participants, institutions and
+                  communities.
                 </p>
               </div>
             </Reveal>
 
             <Reveal delayMs={140}>
               <div
-                className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm
-                           transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+                className="rounded-xl border border-gray-200 bg-white p-7 shadow-sm
+                           transition-all duration-200 hover:shadow-md hover:-translate-y-0.5
+                           md:min-h-[320px]"
               >
                 <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
-                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                  <h2 className="text-xl font-bold text-gray-900">
                     PoSS Framing (Non-Consensus)
                   </h2>
                   <a
@@ -538,17 +578,23 @@ export default function HomePage() {
                   </a>
                 </div>
 
-                <ul className="text-sm sm:text-base text-gray-700 leading-relaxed space-y-2">
+                <ul className="text-sm text-gray-700 leading-relaxed space-y-2">
                   <li>
-                    <span className="font-semibold text-gray-900">PoSS is not consensus.</span>{" "}
+                    <span className="font-semibold text-gray-900">
+                      PoSS is not consensus.
+                    </span>{" "}
                     Network security is provided by a permissioned BFT consensus layer.
                   </li>
                   <li>
-                    <span className="font-semibold text-gray-900">PoSS is an application layer.</span>{" "}
+                    <span className="font-semibold text-gray-900">
+                      PoSS is an application layer.
+                    </span>{" "}
                     It structures governance, coordination, and verifiable contribution signals.
                   </li>
                   <li>
-                    <span className="font-semibold text-gray-900">Economic posture:</span>{" "}
+                    <span className="font-semibold text-gray-900">
+                      Economic posture:
+                    </span>{" "}
                     NUR is the native gas token; NOORCHAIN does not offer returns or custody.
                   </li>
                 </ul>
