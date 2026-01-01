@@ -10,13 +10,13 @@ export default function Footer() {
 
         {/* INTERNAL LINKS */}
         <div className="flex flex-wrap justify-center gap-4 text-gray-700">
-          <a href="/legal" className="hover:text-primary transition">
+          <a href="/legal#legal-notices" className="hover:text-primary transition">
             Legal Notices
           </a>
-          <a href="/legal" className="hover:text-primary transition">
+          <a href="/legal#risk-disclosure" className="hover:text-primary transition">
             Compliance & Risks
           </a>
-          <a href="/legal" className="hover:text-primary transition">
+          <a href="/legal#privacy" className="hover:text-primary transition">
             Privacy
           </a>
         </div>
