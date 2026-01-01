@@ -8,7 +8,7 @@ export default function PoSSPage() {
           <div className="inline-flex items-center gap-2 rounded-full bg-white border border-gray-soft px-3 py-1 mb-6">
             <span className="h-2 w-2 rounded-full bg-primary" />
             <span className="text-xs font-medium uppercase tracking-wide text-gray-700">
-              Consensus Layer
+              Application Layer (Non-Consensus)
             </span>
           </div>
 
@@ -19,10 +19,11 @@ export default function PoSSPage() {
 
           {/* INTRO */}
           <p className="text-lg text-gray-700 leading-relaxed mb-10 border-l-4 border-primary pl-4 bg-white/60 py-3 rounded-r-lg">
-            PoSS is a participation-based consensus mechanism rewarding verified
-            social signals instead of computational work or financial staking.
-            It aligns blockchain rewards with real-world contribution and
-            curator validation.
+            PoSS is an application-layer mechanism for governance, coordination,
+            and verifiable social signals. It is not the consensus layer: network
+            security is provided by a permissioned BFT consensus. PoSS structures
+            curator validation and participation signals without offering yield
+            promises or custody.
           </p>
 
           {/* TYPES OF SIGNALS */}
