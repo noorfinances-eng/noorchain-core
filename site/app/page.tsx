@@ -2,6 +2,13 @@ import Image from "next/image";
 import Reveal from "../components/ui/Reveal";
 import type { CSSProperties } from "react";
 
+/**
+ * Home — Refonte A (Hero + PoSS signal mesh + PoSS board)
+ * - No external deps
+ * - No randomness (no hydration mismatch)
+ * - No styled-jsx (must stay Server Component compatible)
+ */
+
 const SIGNAL_PARTICLES = [
   { left: "6%", top: "18%", size: 10, o: 0.22, d: "14s", delay: "0s" },
   { left: "10%", top: "62%", size: 14, o: 0.16, d: "18s", delay: "-4s" },
@@ -70,10 +77,25 @@ function SignalMesh() {
         <path d="M1060 90 L980 240 L900 420" fill="none" />
       </g>
 
-      <g filter="url(#softGlow)" stroke="url(#pulseStroke)" strokeWidth="2" fill="none" opacity="0.65">
-        <path className="noor-pulse-line noor-pulse-line-1" d="M80 120 L380 80 L640 160 L930 110 L1120 180" />
-        <path className="noor-pulse-line noor-pulse-line-2" d="M120 280 L360 220 L640 260 L900 240 L1140 310" />
-        <path className="noor-pulse-line noor-pulse-line-3" d="M200 420 L420 360 L690 400 L980 360 L1160 420" />
+      <g
+        filter="url(#softGlow)"
+        stroke="url(#pulseStroke)"
+        strokeWidth="2"
+        fill="none"
+        opacity="0.65"
+      >
+        <path
+          className="noor-pulse-line noor-pulse-line-1"
+          d="M80 120 L380 80 L640 160 L930 110 L1120 180"
+        />
+        <path
+          className="noor-pulse-line noor-pulse-line-2"
+          d="M120 280 L360 220 L640 260 L900 240 L1140 310"
+        />
+        <path
+          className="noor-pulse-line noor-pulse-line-3"
+          d="M200 420 L420 360 L690 400 L980 360 L1160 420"
+        />
       </g>
 
       <g filter="url(#softGlow)">
@@ -98,8 +120,18 @@ function SignalMesh() {
           { cx: 840, cy: 240, r: 3 },
         ].map((n, i) => (
           <g key={i} className="noor-node">
-            <circle cx={n.cx} cy={n.cy} r={n.r} fill="rgba(255,255,255,0.65)" />
-            <circle cx={n.cx} cy={n.cy} r={n.r * 3.2} fill="rgba(255,255,255,0.06)" />
+            <circle
+              cx={n.cx}
+              cy={n.cy}
+              r={n.r}
+              fill="rgba(255,255,255,0.65)"
+            />
+            <circle
+              cx={n.cx}
+              cy={n.cy}
+              r={n.r * 3.2}
+              fill="rgba(255,255,255,0.06)"
+            />
           </g>
         ))}
       </g>
@@ -109,16 +141,15 @@ function SignalMesh() {
 
 function BoardChart() {
   return (
-    <svg className="h-full w-full" viewBox="0 0 520 220" preserveAspectRatio="none" aria-hidden="true">
+    <svg
+      className="h-full w-full"
+      viewBox="0 0 420 190"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
       <defs>
-        <linearGradient id="boardLine" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="rgba(255,255,255,0.06)" />
-          <stop offset="0.5" stopColor="rgba(255,255,255,0.26)" />
-          <stop offset="1" stopColor="rgba(255,255,255,0.06)" />
-        </linearGradient>
-
         <filter id="boardGlow" x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="2.2" result="b" />
+          <feGaussianBlur stdDeviation="2.0" result="b" />
           <feColorMatrix
             in="b"
             type="matrix"
@@ -126,52 +157,73 @@ function BoardChart() {
               1 0 0 0 0
               0 1 0 0 0
               0 0 1 0 0
-              0 0 0 0.85 0"
+              0 0 0 0.75 0"
           />
           <feMerge>
             <feMergeNode />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
+        <linearGradient id="lineSoft" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="rgba(255,255,255,0.00)" />
+          <stop offset="0.25" stopColor="rgba(255,255,255,0.26)" />
+          <stop offset="0.75" stopColor="rgba(255,255,255,0.26)" />
+          <stop offset="1" stopColor="rgba(255,255,255,0.00)" />
+        </linearGradient>
       </defs>
 
-      <g opacity="0.65" stroke="rgba(255,255,255,0.12)" strokeWidth="1" fill="none">
-        <path d="M24 56 C96 28, 156 92, 228 64 S 360 76, 496 44" />
-        <path d="M24 112 C92 92, 160 146, 236 120 S 360 136, 496 106" />
-        <path d="M24 168 C100 154, 168 202, 248 176 S 372 190, 496 158" />
+      {/* 3 waves */}
+      <g opacity="0.9" stroke="url(#lineSoft)" strokeWidth="2" fill="none">
+        <path d="M20 48 C90 20, 150 78, 210 50 C270 22, 330 78, 400 50" />
+        <path d="M20 94 C90 66, 150 124, 210 96 C270 68, 330 124, 400 96" />
+        <path d="M20 140 C90 112, 150 170, 210 142 C270 114, 330 170, 400 142" />
       </g>
 
-      <g filter="url(#boardGlow)" stroke="url(#boardLine)" strokeWidth="3" fill="none" opacity="0.8">
-        <path className="noor-pulse-line noor-pulse-line-1" d="M24 56 C96 28, 156 92, 228 64 S 360 76, 496 44" />
-        <path className="noor-pulse-line noor-pulse-line-2" d="M24 112 C92 92, 160 146, 236 120 S 360 136, 496 106" />
-        <path className="noor-pulse-line noor-pulse-line-3" d="M24 168 C100 154, 168 202, 248 176 S 372 190, 496 158" />
-      </g>
-
+      {/* nodes */}
       <g filter="url(#boardGlow)">
         {[
-          [70, 52], [122, 78], [200, 72], [286, 60], [360, 74], [440, 54],
-          [74, 110], [160, 128], [244, 124], [332, 134], [420, 114],
-          [86, 166], [176, 188], [260, 182], [350, 190], [452, 168],
+          [55, 44],
+          [125, 62],
+          [205, 48],
+          [280, 62],
+          [360, 50],
+          [70, 92],
+          [160, 108],
+          [240, 92],
+          [320, 110],
+          [385, 96],
+          [60, 142],
+          [140, 158],
+          [220, 140],
+          [300, 156],
+          [380, 142],
         ].map(([x, y], i) => (
-          <g key={i} className="noor-node">
-            <circle cx={x} cy={y} r="4" fill="rgba(255,255,255,0.72)" />
-            <circle cx={x} cy={y} r="14" fill="rgba(255,255,255,0.07)" />
+          <g key={i}>
+            <circle cx={x} cy={y} r="2.6" fill="rgba(255,255,255,0.85)" />
+            <circle cx={x} cy={y} r="10" fill="rgba(255,255,255,0.06)" />
           </g>
         ))}
       </g>
+
+      {/* moving pulse dot */}
+      <circle className="noor-board-pulse" cx="22" cy="48" r="4" fill="rgba(255,255,255,0.85)" />
     </svg>
   );
 }
 
 function PoSSSignalBoard() {
+  // Target size: width -25% (560 -> 420), height -1/6 (360 -> 300)
   return (
     <div
       className="relative overflow-hidden rounded-[28px] border border-white/18 bg-white/[0.08]
-                 shadow-[0_28px_90px_rgba(0,0,0,0.30)] backdrop-blur-md"
+                 shadow-[0_30px_96px_rgba(0,0,0,0.32)] backdrop-blur-md
+                 h-[300px] w-[420px]"
+      aria-hidden="true"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_circle_at_18%_18%,rgba(255,255,255,0.20),transparent_60%)]" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_circle_at_86%_76%,rgba(0,0,0,0.30),transparent_62%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_circle_at_18%_16%,rgba(255,255,255,0.20),transparent_62%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_circle_at_86%_78%,rgba(0,0,0,0.30),transparent_62%)]" />
 
+      {/* beams */}
       <div className="pointer-events-none absolute inset-0">
         <span className="noor-beam noor-beam-1" />
         <span className="noor-beam noor-beam-2" />
@@ -179,61 +231,69 @@ function PoSSSignalBoard() {
         <span className="noor-beam noor-beam-4" />
       </div>
 
-      <div className="relative p-8">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-6">
+      <div className="relative h-full p-6">
+        {/* header */}
+        <div className="flex items-start justify-between gap-5">
           <div>
-            <p className="text-xs font-semibold tracking-[0.18em] text-white/70 uppercase">
+            <p className="text-[11px] font-semibold tracking-[0.18em] text-white/70 uppercase">
               POSS SIGNAL BOARD
             </p>
-            <h3 className="mt-3 text-[34px] leading-[1.08] font-extrabold text-white/95">
+            <h3 className="mt-3 text-[28px] leading-[1.08] font-extrabold text-white/95">
               Verifiable Signals<span className="text-white/70"> •</span>
               <br />
               Curator Validation
             </h3>
           </div>
 
-          <div className="rounded-full border border-white/18 bg-white/10 px-5 py-2">
+          <div className="rounded-full border border-white/18 bg-white/10 px-4 py-2">
             <p className="text-sm font-medium text-white/80">Controlled</p>
           </div>
         </div>
 
-        {/* Chart panel */}
-        <div className="mt-7 rounded-2xl border border-white/12 bg-white/[0.05] p-5">
-          <div className="h-[220px] w-full opacity-[0.92]">
+        {/* chart card */}
+        <div className="mt-5 rounded-2xl border border-white/12 bg-white/[0.05] p-4">
+          <div className="h-[150px] w-full opacity-[0.92]">
             <BoardChart />
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-3">
-            <span className="rounded-full border border-white/14 bg-white/[0.06] px-4 py-2 text-sm text-white/75">
+          <div className="mt-3 flex flex-wrap gap-2.5">
+            <span className="rounded-full border border-white/14 bg-white/[0.06] px-3.5 py-2 text-[13px] text-white/75">
               ●&nbsp; Signal stream
             </span>
-            <span className="rounded-full border border-white/14 bg-white/[0.06] px-4 py-2 text-sm text-white/75">
+            <span className="rounded-full border border-white/14 bg-white/[0.06] px-3.5 py-2 text-[13px] text-white/75">
               ●&nbsp; Curator checkpoints
             </span>
-            <span className="rounded-full border border-white/14 bg-white/[0.06] px-4 py-2 text-sm text-white/75">
+            <span className="rounded-full border border-white/14 bg-white/[0.06] px-3.5 py-2 text-[13px] text-white/75">
               ●&nbsp; Auditability-first
             </span>
           </div>
         </div>
 
-        {/* Bottom grid */}
-        <div className="mt-7 grid grid-cols-2 gap-4">
-          <div className="rounded-2xl border border-white/14 bg-white/[0.05] p-5">
-            <p className="text-sm text-white/65">Network</p>
-            <p className="mt-2 text-xl font-semibold text-white/92">Private mainnet-like</p>
+        {/* bottom stats */}
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-white/14 bg-white/[0.05] p-4">
+            <p className="text-[13px] text-white/65">Network</p>
+            <p className="mt-2 text-[18px] leading-tight font-semibold text-white/92">
+              Private mainnet-like
+            </p>
           </div>
-          <div className="rounded-2xl border border-white/14 bg-white/[0.05] p-5">
-            <p className="text-sm text-white/65">Consensus</p>
-            <p className="mt-2 text-xl font-semibold text-white/92">Permissioned BFT</p>
+          <div className="rounded-2xl border border-white/14 bg-white/[0.05] p-4">
+            <p className="text-[13px] text-white/65">Consensus</p>
+            <p className="mt-2 text-[18px] leading-tight font-semibold text-white/92">
+              Permissioned BFT
+            </p>
           </div>
-          <div className="rounded-2xl border border-white/14 bg-white/[0.05] p-5">
-            <p className="text-sm text-white/65">Layer</p>
-            <p className="mt-2 text-xl font-semibold text-white/92">Sovereign EVM L1</p>
+          <div className="rounded-2xl border border-white/14 bg-white/[0.05] p-4">
+            <p className="text-[13px] text-white/65">Layer</p>
+            <p className="mt-2 text-[18px] leading-tight font-semibold text-white/92">
+              Sovereign EVM L1
+            </p>
           </div>
-          <div className="rounded-2xl border border-white/14 bg-white/[0.05] p-5">
-            <p className="text-sm text-white/65">PoSS</p>
-            <p className="mt-2 text-xl font-semibold text-white/92">Application-layer</p>
+          <div className="rounded-2xl border border-white/14 bg-white/[0.05] p-4">
+            <p className="text-[13px] text-white/65">PoSS</p>
+            <p className="mt-2 text-[18px] leading-tight font-semibold text-white/92">
+              Application-layer
+            </p>
           </div>
         </div>
       </div>
@@ -248,6 +308,7 @@ export default function HomePage() {
     <main className="w-full">
       {/* HERO */}
       <section className="relative isolate w-full overflow-hidden text-white">
+        {/* Background layers */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#1A6AFF] to-[#00D1B2]" />
         <div className="absolute inset-0 bg-[radial-gradient(900px_circle_at_18%_18%,rgba(255,255,255,0.18),transparent_55%),radial-gradient(900px_circle_at_85%_25%,rgba(0,0,0,0.20),transparent_55%),radial-gradient(1100px_circle_at_50%_115%,rgba(0,0,0,0.30),transparent_62%)]" />
         <div className="absolute inset-0 opacity-[0.14] bg-[linear-gradient(to_right,rgba(255,255,255,0.35)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.35)_1px,transparent_1px)] bg-[size:52px_52px]" />
@@ -256,6 +317,7 @@ export default function HomePage() {
           <SignalMesh />
         </div>
 
+        {/* Particles */}
         <div className="pointer-events-none absolute inset-0">
           {SIGNAL_PARTICLES.map((p, i) => (
             <span
@@ -276,19 +338,26 @@ export default function HomePage() {
           ))}
         </div>
 
+        {/* Scan */}
         <div className="pointer-events-none absolute inset-0 noor-scan" />
 
-        <div className="relative">
-          {/* IMPORTANT: use Tailwind container (do NOT override in globals.css) */}
-          <div className="container mx-auto px-6 py-14 sm:py-16 md:py-20">
-            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,620px)] gap-10 items-start">
-              {/* LEFT */}
+        {/* Content */}
+        <div className="relative mx-auto w-full max-w-6xl px-4">
+          <div className="py-14 sm:py-16 md:py-24">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-10 items-start">
+              {/* Left */}
               <div className="max-w-3xl">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-5">
                   <div className="relative">
                     <div className="absolute -inset-3 rounded-2xl bg-white/15 blur-xl" />
                     <div className="relative rounded-2xl bg-white/10 ring-1 ring-white/25 p-2">
-                      <Image src="/logo-white.svg" alt="NOORCHAIN Logo" width={52} height={52} priority />
+                      <Image
+                        src="/logo-white.svg"
+                        alt="NOORCHAIN Logo"
+                        width={52}
+                        height={52}
+                        priority
+                      />
                     </div>
                   </div>
 
@@ -302,12 +371,14 @@ export default function HomePage() {
                 </p>
 
                 <p className="text-xs sm:text-sm text-white/80 mb-6 font-medium">
-                  Private mainnet-like environment — controlled operation, non-public by design.
+                  Private mainnet-like environment — controlled operation, non-public
+                  by design.
                 </p>
 
                 <p className="text-sm sm:text-base md:text-lg text-white/90 leading-relaxed mb-8">
-                  A Social Signal Blockchain powered by PoSS. Designed for transparent participation,
-                  curator validation, and a fixed-supply digital model free from financial speculation.
+                  A Social Signal Blockchain powered by PoSS. Designed for transparent
+                  participation, curator validation, and a fixed-supply digital model
+                  free from financial speculation.
                 </p>
 
                 <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
@@ -325,24 +396,28 @@ export default function HomePage() {
                     href="/genesis"
                     className="w-full sm:w-auto text-center h-11 inline-flex items-center justify-center px-6 rounded-md text-sm md:text-base font-medium
                                border border-white/70 text-white
-                               bg-white/0 transition-all duration-200 hover:bg-white/10 hover:-translate-y-0.5"
+                               bg-white/0 transition-all duration-200
+                               hover:bg-white/10 hover:-translate-y-0.5"
                   >
                     Genesis Overview
                   </a>
                 </div>
               </div>
 
-              {/* RIGHT — same module as your screenshot; aligned right; slightly lower; wider; less tall via padding */}
-              <div className="hidden lg:block justify-self-end translate-x-4 mt-8 w-full max-w-[620px]">
-                <PoSSSignalBoard />
+              {/* Right board (aligned, no overflow) */}
+              <div className="hidden lg:block justify-self-end">
+                {/* IMPORTANT: the board top should not exceed the big NOORCHAIN — we keep it aligned lower */}
+                <div className="mt-6">
+                  <PoSSSignalBoard />
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* BELOW HERO */}
-      <section className="container mx-auto px-6 py-10 md:py-14">
+      {/* 3 blocks — centered, no custom container */}
+      <section className="mx-auto w-full max-w-6xl px-4 py-10 md:py-14">
         <div className="grid grid-cols-1 gap-6">
           <Reveal delayMs={0}>
             <div className="rounded-xl border border-gray-200 bg-white p-7 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
@@ -367,9 +442,12 @@ export default function HomePage() {
               <div className="rounded-xl border border-gray-200 bg-white p-7 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 md:min-h-[320px]">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">A New Approach to Blockchain Design</h2>
                 <p className="text-sm text-gray-700 leading-relaxed">
-                  NOORCHAIN introduces a mission-driven blockchain architecture focused on verified social participation rather than
-                  financial speculation. Powered by the PoSS protocol and aligned with Legal Light CH, it provides a transparent and
-                  sustainable digital infrastructure for curators, participants, institutions and communities.
+                  NOORCHAIN introduces a mission-driven blockchain architecture
+                  focused on verified social participation rather than financial
+                  speculation. Powered by the PoSS protocol and aligned with Legal
+                  Light CH, it provides a transparent and sustainable digital
+                  infrastructure for curators, participants, institutions and
+                  communities.
                 </p>
               </div>
             </Reveal>
