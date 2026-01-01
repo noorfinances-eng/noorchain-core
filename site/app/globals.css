@@ -14,20 +14,10 @@ body {
   background-color: #fafafa;
 }
 
-/* Hard safety: prevent any accidental horizontal scroll */
-body {
-  overflow-x: hidden;
-}
-
 /* IMPORTANT:
-   Do NOT override Tailwind's .container class here.
-   If you want a custom container, define another class (e.g. .noor-shell). */
-.noor-shell {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
+   Do NOT override Tailwind's .container globally.
+   It breaks centering and max-width site-wide.
+*/
 
 /* -------------------------
    Motion safety (global)
@@ -35,14 +25,12 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .noor-anim,
   .noor-reveal,
-  .noor-signal-orb,
-  .noor-connection,
-  .noor-pulse,
   .noor-particle,
-  .noor-scan,
   .noor-node,
   .noor-pulse-line,
-  .noor-beam {
+  .noor-scan,
+  .noor-beam,
+  .noor-board-pulse {
     animation: none !important;
     transition: none !important;
     transform: none !important;
@@ -51,119 +39,45 @@ body {
 }
 
 /* -------------------------
-   NOORCHAIN UI dynamics (Hero)
+   HERO particles (background)
 ------------------------- */
-
-/* Floating orbs */
-@keyframes noorFloat {
-  0% { transform: translate3d(0,0,0) scale(1); }
-  50% { transform: translate3d(0,-18px,0) scale(1.03); }
-  100% { transform: translate3d(0,0,0) scale(1); }
-}
-.noor-orb-1 { animation: noorFloat 10s ease-in-out infinite; }
-.noor-orb-2 { animation: noorFloat 13s ease-in-out infinite; }
-.noor-orb-3 { animation: noorFloat 16s ease-in-out infinite; }
-
-.noor-reveal { will-change: transform, opacity, filter; }
-
-/* Soft drifting blobs (optional) */
-.noor-signal-orb {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(28px);
-  opacity: 0.22;
-  transform: translate3d(0,0,0);
-  animation: noor-orb-drift var(--d, 16s) ease-in-out infinite alternate;
-}
-@keyframes noor-orb-drift {
-  0%   { transform: translate3d(0,0,0) scale(1); }
-  100% { transform: translate3d(var(--x, 22px), var(--y, -18px), 0) scale(1.04); }
-}
-
-/* Connections (optional) */
-.noor-connection {
-  position: absolute;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(255,255,255,0.35), transparent);
-  opacity: 0.18;
-  transform-origin: left center;
-  animation: noor-conn 10s ease-in-out infinite;
-}
-@keyframes noor-conn {
-  0%, 20%   { opacity: 0; }
-  35%, 65%  { opacity: 0.18; }
-  80%, 100% { opacity: 0; }
-}
-
-/* Pulse dot (optional) */
-.noor-pulse {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 9999px;
-  background: rgba(255,255,255,0.75);
-  box-shadow: 0 0 24px rgba(255,255,255,0.45);
-  opacity: 0;
-  animation: noor-pulse-move 9s ease-in-out infinite;
-}
-@keyframes noor-pulse-move {
-  0%   { opacity: 0; transform: translate3d(0,0,0) scale(0.7); }
-  10%  { opacity: 0.85; }
-  50%  { opacity: 0.75; transform: translate3d(320px, 90px, 0) scale(1); }
-  80%  { opacity: 0; }
-  100% { opacity: 0; transform: translate3d(520px, 140px, 0) scale(0.9); }
-}
-
-/* -------------------------
-   Elements used by page.tsx (moved from styled-jsx to global)
-------------------------- */
-
-/* Particles */
 .noor-particle {
   position: absolute;
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.9);
   filter: blur(0.2px);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 28px rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 28px rgba(255, 255, 255, 0.14);
   animation: noor-drift var(--dur, 18s) ease-in-out infinite;
   animation-delay: var(--delay, 0s);
   will-change: transform;
 }
 @keyframes noor-drift {
-  0%   { transform: translate3d(0, 0, 0) scale(1); }
-  35%  { transform: translate3d(10px, -12px, 0) scale(1.06); }
-  70%  { transform: translate3d(-12px, 8px, 0) scale(0.98); }
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  35% { transform: translate3d(10px, -12px, 0) scale(1.06); }
+  70% { transform: translate3d(-12px, 8px, 0) scale(0.98); }
   100% { transform: translate3d(0, 0, 0) scale(1); }
 }
 
-/* Scan line */
-.noor-scan {
-  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.06), transparent);
-  mix-blend-mode: overlay;
-  opacity: 0.55;
-  transform: translateY(-40%);
-  animation: noor-scan 7.5s ease-in-out infinite;
-}
-@keyframes noor-scan {
-  0%   { transform: translateY(-55%); opacity: 0.25; }
-  45%  { opacity: 0.65; }
-  100% { transform: translateY(85%); opacity: 0.25; }
-}
-
-/* Mesh nodes pulse */
+/* -------------------------
+   Mesh nodes pulsing
+------------------------- */
 .noor-node {
   transform-origin: center;
   animation: noor-node-pulse 3.2s ease-in-out infinite;
 }
 .noor-node:nth-child(2n) { animation-duration: 4.4s; }
 .noor-node:nth-child(3n) { animation-duration: 5.1s; }
+
 @keyframes noor-node-pulse {
-  0%   { opacity: 0.75; transform: scale(1); }
-  50%  { opacity: 1; transform: scale(1.08); }
+  0% { opacity: 0.75; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
   100% { opacity: 0.75; transform: scale(1); }
 }
 
-/* Pulses on lines */
+/* -------------------------
+   Pulses on lines
+------------------------- */
 .noor-pulse-line {
   stroke-dasharray: 36 220;
   stroke-dashoffset: 0;
@@ -171,13 +85,37 @@ body {
 }
 .noor-pulse-line-2 { animation-duration: 8.2s; animation-delay: -2.4s; }
 .noor-pulse-line-3 { animation-duration: 9.6s; animation-delay: -4.2s; }
+
 @keyframes noor-flow {
-  0%   { stroke-dashoffset: 0; opacity: 0.45; }
-  35%  { opacity: 0.9; }
+  0% { stroke-dashoffset: 0; opacity: 0.45; }
+  35% { opacity: 0.9; }
   100% { stroke-dashoffset: -520; opacity: 0.55; }
 }
 
-/* Beams */
+/* -------------------------
+   Scan line
+------------------------- */
+.noor-scan {
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255, 255, 255, 0.06),
+    transparent
+  );
+  mix-blend-mode: overlay;
+  opacity: 0.55;
+  transform: translateY(-40%);
+  animation: noor-scan 7.5s ease-in-out infinite;
+}
+@keyframes noor-scan {
+  0% { transform: translateY(-55%); opacity: 0.25; }
+  45% { opacity: 0.65; }
+  100% { transform: translateY(85%); opacity: 0.25; }
+}
+
+/* -------------------------
+   Board beams
+------------------------- */
 .noor-beam {
   position: absolute;
   left: -20%;
@@ -186,16 +124,37 @@ body {
   height: 120%;
   opacity: 0.22;
   transform: rotate(18deg);
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0.28),
+    rgba(255, 255, 255, 0)
+  );
   filter: blur(0.2px);
   animation: noor-beam-move 7.8s ease-in-out infinite;
   will-change: transform, opacity;
 }
-.noor-beam-2 { left: 2%;  opacity: 0.16; animation-duration: 9.2s;  animation-delay: -2.8s; }
+.noor-beam-2 { left: 2%; opacity: 0.16; animation-duration: 9.2s; animation-delay: -2.8s; }
 .noor-beam-3 { left: 24%; opacity: 0.14; animation-duration: 10.6s; animation-delay: -5.1s; }
 .noor-beam-4 { left: 48%; opacity: 0.12; animation-duration: 12.4s; animation-delay: -7.2s; }
+
 @keyframes noor-beam-move {
-  0%   { transform: translateX(-6%) rotate(18deg); opacity: 0.1; }
-  40%  { opacity: 0.24; }
-  100% { transform: translateX(28%) rotate(18deg); opacity: 0.1; }
+  0% { transform: translateX(-6%) rotate(18deg); opacity: 0.10; }
+  40% { opacity: 0.24; }
+  100% { transform: translateX(28%) rotate(18deg); opacity: 0.10; }
+}
+
+/* -------------------------
+   Board pulse dot
+------------------------- */
+.noor-board-pulse {
+  animation: noor-board-pulse 7.2s ease-in-out infinite;
+  transform-origin: center;
+}
+@keyframes noor-board-pulse {
+  0%   { transform: translateX(0) translateY(0) scale(0.75); opacity: 0; }
+  10%  { opacity: 0.85; }
+  55%  { transform: translateX(300px) translateY(92px) scale(1); opacity: 0.75; }
+  85%  { opacity: 0.0; }
+  100% { transform: translateX(378px) translateY(92px) scale(0.9); opacity: 0; }
 }
