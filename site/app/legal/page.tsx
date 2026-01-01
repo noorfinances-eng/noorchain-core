@@ -25,7 +25,10 @@ export default function LegalPage() {
           </p>
 
           {/* LEGAL FRAMEWORK */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+          <section
+            id="legal-framework"
+            className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 scroll-mt-24"
+          >
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Legal Framework
             </h2>
@@ -76,7 +79,10 @@ export default function LegalPage() {
           </section>
 
           {/* RISK DISCLOSURE */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+          <section
+            id="risk-disclosure"
+            className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 scroll-mt-24"
+          >
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Risk Disclosure
             </h2>
@@ -101,7 +107,12 @@ export default function LegalPage() {
           </section>
 
           {/* LEGAL NOTICES */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+          <section
+            id="legal-notices"
+            className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 scroll-mt-24"
+          >
+            <div id="privacy" className="scroll-mt-24" />
+
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Legal Notices
             </h2>
