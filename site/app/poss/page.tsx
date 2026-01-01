@@ -27,7 +27,7 @@ export default function PoSSPage() {
           </p>
 
           {/* TYPES OF SIGNALS */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Types of Social Signals
             </h2>
@@ -40,7 +40,7 @@ export default function PoSSPage() {
           </section>
 
           {/* REWARD DISTRIBUTION */}
-          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Reward Distribution
             </h2>
@@ -61,7 +61,7 @@ export default function PoSSPage() {
           </section>
 
           {/* TRANSPARENCY */}
-          <section className="p-6 border border-gray-soft rounded-xl bg-white shadow-sm mb-10">
+          <section className="p-6 border border-gray-soft rounded-xl bg-white shadow-sm mb-10 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Transparency & Parameters
             </h2>
