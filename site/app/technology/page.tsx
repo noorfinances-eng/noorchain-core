@@ -51,7 +51,7 @@ export default function TechnologyPage() {
           </section>
 
           {/* Section 3 */}
-          <section className="p-6 border border-gray-soft rounded-xl bg-white shadow-sm mb-10">
+          <section className="mb-8 p-6 border border-gray-soft rounded-xl bg-white shadow-sm">
             <h2 className="text-2xl font-semibold text-navy mb-3">
               Security &amp; Governance
             </h2>
@@ -60,6 +60,34 @@ export default function TechnologyPage() {
               parameters and institutional allocations. All changes are auditable
               and aligned with NOORCHAIN’s mission-driven, long-term vision.
             </p>
+          </section>
+
+          {/* Engineering Transparency (controlled) */}
+          <section className="p-6 border border-gray-soft rounded-xl bg-white shadow-sm mb-10">
+            <h2 className="text-2xl font-semibold text-navy mb-3">
+              Engineering Transparency (Controlled)
+            </h2>
+
+            <p className="text-gray-700 leading-relaxed mb-4">
+              NOORCHAIN is operated in a controlled, private mainnet-like environment.
+              Public exposure is intentionally limited while feature completeness and
+              security validation are in progress.
+            </p>
+
+            <ul className="list-disc pl-6 text-gray-700 leading-relaxed space-y-2">
+              <li>
+                <span className="font-semibold text-navy">Layer 1:</span> sovereign EVM L1 with a permissioned BFT consensus layer.
+              </li>
+              <li>
+                <span className="font-semibold text-navy">PoSS:</span> application layer for governance and verifiable contribution signals (not consensus).
+              </li>
+              <li>
+                <span className="font-semibold text-navy">Release artifacts:</span> development is tracked through tagged milestones and versioned documentation.
+              </li>
+              <li>
+                <span className="font-semibold text-navy">Public access posture:</span> interfaces are opened progressively after review, not by default.
+              </li>
+            </ul>
           </section>
 
           {/* Ligne de fin subtile pour donner l’impression de “page finie” */}
