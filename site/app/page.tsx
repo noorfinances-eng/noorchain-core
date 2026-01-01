@@ -6,7 +6,11 @@ import Reveal from "../components/ui/Reveal";
  * - No external deps
  * - No randomness (no hydration mismatch)
  * - Animations are CSS-based + respects prefers-reduced-motion
- * - Homogeneous sizing: consistent paddings, typography, and card heights
+ * - Signal board tuned per screenshot feedback:
+ *   - pushed a bit more to the right
+ *   - slightly wider
+ *   - less tall
+ *   - top edge does NOT exceed the "NOORCHAIN" H1 baseline
  */
 
 const SIGNAL_PARTICLES = [
@@ -142,7 +146,7 @@ function PoSSSignalBoard() {
     <div
       className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06]
                  shadow-[0_26px_80px_rgba(0,0,0,0.28)] backdrop-blur-md
-                 min-h-[420px] lg:min-h-[460px]"
+                 h-[360px] w-[560px]"
       aria-hidden="true"
     >
       {/* Subtle inner highlight */}
@@ -157,7 +161,7 @@ function PoSSSignalBoard() {
         <span className="noor-beam noor-beam-4" />
       </div>
 
-      {/* Content-like skeleton (keeps it serious, not decorative-only) */}
+      {/* Content-like skeleton */}
       <div className="relative p-7">
         <div className="flex items-center justify-between mb-5">
           <div className="h-3 w-28 rounded bg-white/20" />
@@ -170,7 +174,7 @@ function PoSSSignalBoard() {
           <div className="h-4 w-[64%] rounded bg-white/14" />
         </div>
 
-        <div className="mt-8 grid grid-cols-2 gap-3">
+        <div className="mt-7 grid grid-cols-2 gap-3">
           <div className="rounded-xl border border-white/12 bg-white/[0.06] p-4">
             <div className="h-3 w-16 rounded bg-white/18 mb-3" />
             <div className="h-7 w-24 rounded bg-white/16" />
@@ -237,8 +241,13 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Right board (non-globe, PoSS-ish) */}
-        <div className="pointer-events-none absolute right-[-80px] top-1/2 hidden -translate-y-1/2 lg:block w-[520px]">
+        {/* Right board:
+            - more to the right: negative right offset increased
+            - wider: 560px (was 520/560 previously depending version)
+            - less tall: 360px
+            - top should not exceed "NOORCHAIN" -> anchor to top with padding
+        */}
+        <div className="pointer-events-none absolute right-[-120px] top-[112px] hidden lg:block w-[560px]">
           <PoSSSignalBoard />
         </div>
 
@@ -248,7 +257,7 @@ export default function HomePage() {
         {/* Content */}
         <div className="relative">
           <div className="container py-16 sm:py-18 md:py-24">
-            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_520px] gap-10 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_560px] gap-10 items-start">
               {/* Left text */}
               <div className="max-w-3xl">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-5">
@@ -275,14 +284,14 @@ export default function HomePage() {
                 </p>
 
                 <p className="text-xs sm:text-sm text-white/80 mb-6 font-medium">
-                  Private mainnet-like environment — controlled operation,
-                  non-public by design.
+                  Private mainnet-like environment — controlled operation, non-public
+                  by design.
                 </p>
 
                 <p className="text-sm sm:text-base md:text-lg text-white/90 leading-relaxed mb-8">
-                  A Social Signal Blockchain powered by PoSS. Designed for
-                  transparent participation, curator validation, and a fixed-supply
-                  digital model free from financial speculation.
+                  A Social Signal Blockchain powered by PoSS. Designed for transparent
+                  participation, curator validation, and a fixed-supply digital model
+                  free from financial speculation.
                 </p>
 
                 <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
@@ -308,7 +317,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Right column placeholder (keeps layout aligned when board hidden) */}
+              {/* Right column empty placeholder (keeps grid stable). The actual board is absolutely positioned. */}
               <div className="hidden lg:block" />
             </div>
           </div>
