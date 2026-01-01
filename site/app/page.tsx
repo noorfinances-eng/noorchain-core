@@ -43,14 +43,14 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
               <a
                 href="/technology"
-                className="w-full sm:w-auto text-center px-6 py-3 bg-primary text-white rounded-md text-sm md:text-base font-medium hover:bg-blue-700 transition"
+                className="w-full sm:w-auto text-center px-6 py-3 bg-primary text-white rounded-md text-sm md:text-base font-medium hover:bg-blue-700 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
               >
                 Explore Technology
               </a>
 
               <a
                 href="/genesis"
-                className="w-full sm:w-auto text-center px-6 py-3 border border-white text-white rounded-md text-sm md:text-base font-medium hover:bg-white/10 transition"
+                className="w-full sm:w-auto text-center px-6 py-3 border border-white text-white rounded-md text-sm md:text-base font-medium hover:bg-white/10 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
               >
                 Genesis Overview
               </a>
