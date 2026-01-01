@@ -37,6 +37,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Brandbook_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   NOORCHAIN Brandbook 1.1 (PDF)
@@ -46,6 +47,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Press_Kit_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   NOORCHAIN Press Kit 1.1 (PDF)
@@ -64,6 +66,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Whitepaper_Investor_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   Investor Whitepaper 1.1 (PDF)
@@ -73,6 +76,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Whitepaper_Storytelling_EN_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   Storytelling Whitepaper EN 1.1 (PDF)
@@ -82,6 +86,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Whitepaper_Storytelling_FR_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   Storytelling Whitepaper FR 1.1 (PDF)
@@ -93,6 +98,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Public_Whitepaper_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   Public Whitepaper 1.1 (PDF)
@@ -104,6 +110,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Whitepaper_Long_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   Long Whitepaper 1.1 (PDF)
@@ -113,6 +120,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/Tokenomics_Public_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   Tokenomics Public 1.1 (PDF)
@@ -131,6 +139,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Genesis_Pack_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   NOORCHAIN Genesis Pack 1.1 (PDF)
@@ -143,6 +152,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Genesis_Allocation_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   Genesis Allocation 1.1 (PDF)
@@ -152,6 +162,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Genesis_Parameters_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   Genesis Parameters 1.1 (PDF)
@@ -161,6 +172,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Genesis_Governance_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   Genesis Governance 1.1 (PDF)
@@ -170,6 +182,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Economic_Model_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   Economic Model 1.1 (PDF)
@@ -188,6 +201,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/Legal_Light_Framework_Public_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   Legal Light Framework 2025 (Public 1.1, PDF)
@@ -197,6 +211,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Legal_Architecture_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   NOORCHAIN Legal Architecture 1.1 (PDF)
@@ -206,6 +221,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Foundation_Statutes_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   Foundation Statutes 1.1 (PDF)
@@ -215,6 +231,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Compliance_Framework_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   Compliance Framework 1.1 (PDF)
@@ -224,6 +241,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Multisig_Charter_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   Multisig Committee Charter 1.1 (PDF)
@@ -233,6 +251,7 @@ export default function DocsPage() {
                 <a
                   href="/docs/NOORCHAIN_Legal_Notices_1.1.pdf"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
                   Legal Notices & Disclaimers 1.1 (PDF)
