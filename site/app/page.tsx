@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Reveal from "../components/Reveal";
 
 export default function HomePage() {
   return (
@@ -63,90 +64,96 @@ export default function HomePage() {
       <section className="container py-10 md:py-14">
         <div className="max-w-6xl grid gap-6 md:grid-cols-2">
           {/* CURRENT PROJECT STATUS — factual, dated */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm md:col-span-2">
-            <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                Current Project Status
-              </h2>
-              <p className="text-xs sm:text-sm text-gray-500">
-                Last updated: 2026-01-01
-              </p>
-            </div>
+          <Reveal className="md:col-span-2" delayMs={0}>
+            <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                  Current Project Status
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500">
+                  Last updated: 2026-01-01
+                </p>
+              </div>
 
-            <ul className="text-sm sm:text-base text-gray-700 leading-relaxed space-y-2">
-              <li>
-                <span className="font-semibold text-gray-900">Network:</span>{" "}
-                Private mainnet-like environment (continuous operation)
-              </li>
-              <li>
-                <span className="font-semibold text-gray-900">Consensus:</span>{" "}
-                Permissioned BFT
-              </li>
-              <li>
-                <span className="font-semibold text-gray-900">Layer 1:</span>{" "}
-                Sovereign EVM L1
-              </li>
-              <li>
-                <span className="font-semibold text-gray-900">PoSS:</span>{" "}
-                Application layer for governance and verifiable contribution
-                signals (not consensus)
-              </li>
-              <li>
-                <span className="font-semibold text-gray-900">Public access:</span>{" "}
-                Limited by design until feature completeness and security review
-              </li>
-              <li>
-                <span className="font-semibold text-gray-900">Reference build:</span>{" "}
-                M10-MAINNETLIKE-STABLE / M11-DAPPS-STABLE / M12.2-WORLDSTATE-RPC-NONCE-BALANCE
-              </li>
-            </ul>
-          </div>
+              <ul className="text-sm sm:text-base text-gray-700 leading-relaxed space-y-2">
+                <li>
+                  <span className="font-semibold text-gray-900">Network:</span>{" "}
+                  Private mainnet-like environment (continuous operation)
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Consensus:</span>{" "}
+                  Permissioned BFT
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Layer 1:</span>{" "}
+                  Sovereign EVM L1
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">PoSS:</span>{" "}
+                  Application layer for governance and verifiable contribution
+                  signals (not consensus)
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Public access:</span>{" "}
+                  Limited by design until feature completeness and security review
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Reference build:</span>{" "}
+                  M10-MAINNETLIKE-STABLE / M11-DAPPS-STABLE / M12.2-WORLDSTATE-RPC-NONCE-BALANCE
+                </li>
+              </ul>
+            </div>
+          </Reveal>
 
           {/* INTRO — boxed, same dimensions as status */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
-              A New Approach to Blockchain Design
-            </h2>
+          <Reveal delayMs={80}>
+            <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
+                A New Approach to Blockchain Design
+              </h2>
 
-            <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
-              NOORCHAIN introduces a mission-driven blockchain architecture
-              focused on verified social participation rather than financial
-              speculation. Powered by the PoSS protocol and aligned with Legal
-              Light CH, it provides a transparent and sustainable digital
-              infrastructure for curators, participants, institutions and
-              communities.
-            </p>
-          </div>
+              <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                NOORCHAIN introduces a mission-driven blockchain architecture
+                focused on verified social participation rather than financial
+                speculation. Powered by the PoSS protocol and aligned with Legal
+                Light CH, it provides a transparent and sustainable digital
+                infrastructure for curators, participants, institutions and
+                communities.
+              </p>
+            </div>
+          </Reveal>
 
           {/* PoSS framing — minimal, home-level, links to /poss */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                PoSS Framing (Non-Consensus)
-              </h2>
-              <a
-                href="/poss"
-                className="text-sm font-medium text-blue-700 hover:text-blue-900 transition"
-              >
-                Read PoSS framing
-              </a>
-            </div>
+          <Reveal delayMs={140}>
+            <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                  PoSS Framing (Non-Consensus)
+                </h2>
+                <a
+                  href="/poss"
+                  className="text-sm font-medium text-blue-700 hover:text-blue-900 transition"
+                >
+                  Read PoSS framing
+                </a>
+              </div>
 
-            <ul className="text-sm sm:text-base text-gray-700 leading-relaxed space-y-2">
-              <li>
-                <span className="font-semibold text-gray-900">PoSS is not consensus.</span>{" "}
-                Network security is provided by a permissioned BFT consensus layer.
-              </li>
-              <li>
-                <span className="font-semibold text-gray-900">PoSS is an application layer.</span>{" "}
-                It structures governance, coordination, and verifiable contribution signals.
-              </li>
-              <li>
-                <span className="font-semibold text-gray-900">Economic posture:</span>{" "}
-                NUR is the native gas token; NOORCHAIN does not offer returns or custody.
-              </li>
-            </ul>
-          </div>
+              <ul className="text-sm sm:text-base text-gray-700 leading-relaxed space-y-2">
+                <li>
+                  <span className="font-semibold text-gray-900">PoSS is not consensus.</span>{" "}
+                  Network security is provided by a permissioned BFT consensus layer.
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">PoSS is an application layer.</span>{" "}
+                  It structures governance, coordination, and verifiable contribution signals.
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Economic posture:</span>{" "}
+                  NUR is the native gas token; NOORCHAIN does not offer returns or custody.
+                </li>
+              </ul>
+            </div>
+          </Reveal>
         </div>
       </section>
     </main>
