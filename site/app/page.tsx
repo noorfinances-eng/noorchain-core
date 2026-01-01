@@ -22,7 +22,7 @@ export default function HomePage() {
 
         {/* Content */}
         <div className="relative">
-          <div className="container py-14 sm:py-18 md:py-24">
+          <div className="container py-14 sm:py-16 md:py-24">
             <div className="max-w-3xl">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-5">
                 <div className="relative">
@@ -84,13 +84,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* STATUS + INTRO + PoSS FRAMING — reveal + hover + staggered layout */}
+      {/* STATUS + INTRO + PoSS FRAMING — 1 full-width + 2 half-width */}
       <section className="container py-10 md:py-14">
-        <div className="max-w-3xl space-y-6">
-          {/* CURRENT PROJECT STATUS */}
+        <div className="grid grid-cols-1 gap-6">
+          {/* ROW 1: FULL WIDTH */}
           <Reveal delayMs={0}>
-            <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm
-                            transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+            <div
+              className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm
+                         transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+            >
               <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                   Current Project Status
@@ -130,59 +132,62 @@ export default function HomePage() {
             </div>
           </Reveal>
 
-          {/* INTRO (slight stagger on md+) */}
-          <Reveal delayMs={80}>
-            <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm
-                            transition-all duration-200 hover:shadow-md hover:-translate-y-0.5
-                            md:translate-x-6">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
-                A New Approach to Blockchain Design
-              </h2>
-
-              <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
-                NOORCHAIN introduces a mission-driven blockchain architecture
-                focused on verified social participation rather than financial
-                speculation. Powered by the PoSS protocol and aligned with Legal
-                Light CH, it provides a transparent and sustainable digital
-                infrastructure for curators, participants, institutions and
-                communities.
-              </p>
-            </div>
-          </Reveal>
-
-          {/* PoSS framing (medium stagger on md+) */}
-          <Reveal delayMs={140}>
-            <div className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm
-                            transition-all duration-200 hover:shadow-md hover:-translate-y-0.5
-                            md:translate-x-3">
-              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                  PoSS Framing (Non-Consensus)
+          {/* ROW 2: TWO COLUMNS (md+) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Reveal delayMs={80}>
+              <div
+                className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm
+                           transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+              >
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
+                  A New Approach to Blockchain Design
                 </h2>
-                <a
-                  href="/poss"
-                  className="text-sm font-medium text-blue-700 hover:text-blue-900 transition"
-                >
-                  Read PoSS framing
-                </a>
-              </div>
 
-              <ul className="text-sm sm:text-base text-gray-700 leading-relaxed space-y-2">
-                <li>
-                  <span className="font-semibold text-gray-900">PoSS is not consensus.</span>{" "}
-                  Network security is provided by a permissioned BFT consensus layer.
-                </li>
-                <li>
-                  <span className="font-semibold text-gray-900">PoSS is an application layer.</span>{" "}
-                  It structures governance, coordination, and verifiable contribution signals.
-                </li>
-                <li>
-                  <span className="font-semibold text-gray-900">Economic posture:</span>{" "}
-                  NUR is the native gas token; NOORCHAIN does not offer returns or custody.
-                </li>
-              </ul>
-            </div>
-          </Reveal>
+                <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                  NOORCHAIN introduces a mission-driven blockchain architecture
+                  focused on verified social participation rather than financial
+                  speculation. Powered by the PoSS protocol and aligned with Legal
+                  Light CH, it provides a transparent and sustainable digital
+                  infrastructure for curators, participants, institutions and
+                  communities.
+                </p>
+              </div>
+            </Reveal>
+
+            <Reveal delayMs={140}>
+              <div
+                className="rounded-xl border border-gray-200 bg-white p-6 md:p-8 shadow-sm
+                           transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-4">
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                    PoSS Framing (Non-Consensus)
+                  </h2>
+                  <a
+                    href="/poss"
+                    className="text-sm font-medium text-blue-700 hover:text-blue-900 transition"
+                  >
+                    Read PoSS framing
+                  </a>
+                </div>
+
+                <ul className="text-sm sm:text-base text-gray-700 leading-relaxed space-y-2">
+                  <li>
+                    <span className="font-semibold text-gray-900">PoSS is not consensus.</span>{" "}
+                    Network security is provided by a permissioned BFT consensus layer.
+                  </li>
+                  <li>
+                    <span className="font-semibold text-gray-900">PoSS is an application layer.</span>{" "}
+                    It structures governance, coordination, and verifiable contribution signals.
+                  </li>
+                  <li>
+                    <span className="font-semibold text-gray-900">Economic posture:</span>{" "}
+                    NUR is the native gas token; NOORCHAIN does not offer returns or custody.
+                  </li>
+                </ul>
+              </div>
+            </Reveal>
+          </div>
         </div>
       </section>
     </main>
