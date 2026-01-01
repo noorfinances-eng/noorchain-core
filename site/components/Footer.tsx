@@ -26,6 +26,7 @@ export default function Footer() {
           <a
             href="https://github.com/noorfinances-eng/noorchain-core"
             target="_blank"
+            rel="noopener noreferrer"
             className="hover:text-primary transition"
           >
             GitHub
@@ -33,6 +34,7 @@ export default function Footer() {
           <a
             href="https://x.com/noorchainOrg"
             target="_blank"
+            rel="noopener noreferrer"
             className="hover:text-primary transition"
           >
             X (Twitter)
