@@ -26,47 +26,6 @@ const SIGNAL_PARTICLES = [
 ];
 
 function PoSSSignalBoard() {
-  const [live, setLive] = useState<{
-    chain_id?: string;
-    leader_height?: number;
-    observed_at?: string;
-    uptime_seconds?: number;
-  } | null>(null);
-
-  useEffect(() => {
-    let stopped = false;
-
-    const load = async () => {
-      try {
-        const res = await fetch("/liveness.json", { cache: "no-store" });
-        if (!res.ok) return;
-        const j = await res.json();
-
-        // Strict allowlist: only keep the four authorized fields.
-        const next = {
-          chain_id: typeof j?.chain_id === "string" ? j.chain_id : undefined,
-          leader_height:
-            typeof j?.leader_height === "number" ? j.leader_height : undefined,
-          observed_at:
-            typeof j?.observed_at === "string" ? j.observed_at : undefined,
-          uptime_seconds:
-            typeof j?.uptime_seconds === "number" ? j.uptime_seconds : undefined,
-        };
-
-        if (!stopped) setLive(next);
-      } catch {
-        // silent by design (no extra exposure)
-      }
-    };
-
-    load();
-    const t = window.setInterval(load, 30_000);
-    return () => {
-      stopped = true;
-      window.clearInterval(t);
-    };
-  }, []);
-
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] shadow-[0_26px_80px_rgba(0,0,0,0.28)] backdrop-blur-md">
       {/* top sheen */}
@@ -87,41 +46,8 @@ function PoSSSignalBoard() {
             </h3>
           </div>
 
-          <div className="flex flex-col items-end gap-2">
-            <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/80">
-              Controlled
-            </div>
-
-            {/* proof-of-liveness (strict fields only) */}
-            <div className="rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-[11px] leading-tight text-white/80 text-right">
-              <div className="font-mono">
-                {live?.chain_id ? live.chain_id : "liveness: pending"}
-              </div>
-              <div className="mt-0.5 flex flex-col gap-0.5">
-                <div>
-                  <span className="text-white/60">height</span>{" "}
-                  <span className="font-mono">
-                    {typeof live?.leader_height === "number"
-                      ? live.leader_height
-                      : "—"}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-white/60">observed</span>{" "}
-                  <span className="font-mono">
-                    {live?.observed_at ? live.observed_at : "—"}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-white/60">uptime</span>{" "}
-                  <span className="font-mono">
-                    {typeof live?.uptime_seconds === "number"
-                      ? `${live.uptime_seconds}s`
-                      : "—"}
-                  </span>
-                </div>
-              </div>
-            </div>
+          <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/80">
+            Controlled
           </div>
         </div>
 
@@ -172,9 +98,18 @@ function PoSSSignalBoard() {
               opacity="0.70"
               fill="none"
             >
-              <path className="noor-flow noor-flow-1" d="M20 30 C120 10, 210 60, 310 42 C390 30, 450 18, 520 34" />
-              <path className="noor-flow noor-flow-2" d="M20 86 C120 66, 210 118, 310 96 C390 78, 450 70, 520 90" />
-              <path className="noor-flow noor-flow-3" d="M20 140 C120 126, 210 170, 310 150 C390 134, 450 120, 520 146" />
+              <path
+                className="noor-flow noor-flow-1"
+                d="M20 30 C120 10, 210 60, 310 42 C390 30, 450 18, 520 34"
+              />
+              <path
+                className="noor-flow noor-flow-2"
+                d="M20 86 C120 66, 210 118, 310 96 C390 78, 450 70, 520 90"
+              />
+              <path
+                className="noor-flow noor-flow-3"
+                d="M20 140 C120 126, 210 170, 310 150 C390 134, 450 120, 520 146"
+              />
             </g>
 
             {/* nodes */}
@@ -200,8 +135,18 @@ function PoSSSignalBoard() {
                 [506, 146],
               ].map(([cx, cy], i) => (
                 <g key={i} className="noor-node">
-                  <circle cx={cx} cy={cy} r="2.6" fill="rgba(255,255,255,0.78)" />
-                  <circle cx={cx} cy={cy} r="10" fill="rgba(255,255,255,0.06)" />
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r="2.6"
+                    fill="rgba(255,255,255,0.78)"
+                  />
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r="10"
+                    fill="rgba(255,255,255,0.06)"
+                  />
                 </g>
               ))}
             </g>
@@ -248,6 +193,110 @@ function PoSSSignalBoard() {
   );
 }
 
+function LivenessMiniPanel() {
+  const [live, setLive] = useState<{
+    chain_id?: string;
+    leader_height?: number;
+    observed_at?: string;
+    uptime_seconds?: number;
+  } | null>(null);
+
+  useEffect(() => {
+    let stopped = false;
+
+    const load = async () => {
+      try {
+        const res = await fetch("/liveness.json", { cache: "no-store" });
+        if (!res.ok) return;
+        const j = await res.json();
+
+        // Strict allowlist: keep only the four authorized fields.
+        const next = {
+          chain_id: typeof j?.chain_id === "string" ? j.chain_id : undefined,
+          leader_height:
+            typeof j?.leader_height === "number" ? j.leader_height : undefined,
+          observed_at:
+            typeof j?.observed_at === "string" ? j.observed_at : undefined,
+          uptime_seconds:
+            typeof j?.uptime_seconds === "number" ? j.uptime_seconds : undefined,
+        };
+
+        if (!stopped) setLive(next);
+      } catch {
+        // silent by design
+      }
+    };
+
+    load();
+    const t = window.setInterval(load, 30_000);
+    return () => {
+      stopped = true;
+      window.clearInterval(t);
+    };
+  }, []);
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] shadow-[0_26px_80px_rgba(0,0,0,0.22)] backdrop-blur-md">
+      {/* top sheen */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_circle_at_20%_10%,rgba(255,255,255,0.16),transparent_55%),radial-gradient(600px_circle_at_85%_30%,rgba(255,255,255,0.08),transparent_60%)]" />
+
+      {/* subtle grid */}
+      <div className="pointer-events-none absolute inset-0 opacity-[0.24] bg-[linear-gradient(to_right,rgba(255,255,255,0.18)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.18)_1px,transparent_1px)] bg-[size:42px_42px] noor-grid-stream" />
+
+      <div className="relative p-4">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-white/70">
+              Proof-of-Liveness
+            </p>
+            <h3 className="text-sm font-semibold text-white mt-1">
+              Minimal public signal
+            </h3>
+          </div>
+          <div className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] text-white/80">
+            30s
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-white/15 bg-black/10 p-3">
+          <div className="space-y-2 text-[12px] text-white/80">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-white/60">chain_id</span>
+              <span className="font-mono text-white text-right truncate max-w-[180px]">
+                {live?.chain_id ? live.chain_id : "—"}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-white/60">leader_height</span>
+              <span className="font-mono text-white">
+                {typeof live?.leader_height === "number" ? live.leader_height : "—"}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-white/60">observed_at</span>
+              <span className="font-mono text-white text-right truncate max-w-[180px]">
+                {live?.observed_at ? live.observed_at : "—"}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-white/60">uptime_seconds</span>
+              <span className="font-mono text-white">
+                {typeof live?.uptime_seconds === "number"
+                  ? live.uptime_seconds
+                  : "—"}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-3 text-[11px] text-white/60">
+            Public surface: <span className="font-mono text-white/70">/liveness.json</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const heroRef = useRef<HTMLElement | null>(null);
 
@@ -261,7 +310,7 @@ export default function HomePage() {
     const onMove = (e: MouseEvent) => {
       const r = el.getBoundingClientRect();
       const x = (e.clientX - r.left) / r.width; // 0..1
-      const y = (e.clientX - r.left) / r.width; // 0..1
+      const y = (e.clientY - r.top) / r.height; // 0..1
       // map to -1..1
       const mx = (x - 0.5) * 2;
       const my = (y - 0.5) * 2;
@@ -389,9 +438,21 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* RIGHT — Signal Board (the “clack” piece) */}
+              {/* RIGHT — Signal Board + Proof-of-liveness module */}
               <div className="lg:col-span-5 noor-parallax-2">
-                <PoSSSignalBoard />
+                <div className="flex items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <PoSSSignalBoard />
+                  </div>
+                  <div className="hidden lg:block w-[240px] shrink-0">
+                    <LivenessMiniPanel />
+                  </div>
+                </div>
+
+                {/* mobile/tablet: keep layout clean */}
+                <div className="lg:hidden mt-4">
+                  <LivenessMiniPanel />
+                </div>
               </div>
             </div>
           </div>
