@@ -193,7 +193,7 @@ function PoSSSignalBoard() {
   );
 }
 
-function LivenessMiniPanel() {
+function ProofOfLivenessPanel() {
   const [live, setLive] = useState<{
     chain_id?: string;
     leader_height?: number;
@@ -238,57 +238,61 @@ function LivenessMiniPanel() {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] shadow-[0_26px_80px_rgba(0,0,0,0.22)] backdrop-blur-md">
       {/* top sheen */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_circle_at_20%_10%,rgba(255,255,255,0.16),transparent_55%),radial-gradient(600px_circle_at_85%_30%,rgba(255,255,255,0.08),transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_circle_at_20%_10%,rgba(255,255,255,0.16),transparent_55%),radial-gradient(900px_circle_at_85%_30%,rgba(255,255,255,0.08),transparent_60%)]" />
 
       {/* subtle grid */}
       <div className="pointer-events-none absolute inset-0 opacity-[0.24] bg-[linear-gradient(to_right,rgba(255,255,255,0.18)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.18)_1px,transparent_1px)] bg-[size:42px_42px] noor-grid-stream" />
 
-      <div className="relative p-4">
-        <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="relative p-6">
+        <div className="flex items-start justify-between gap-4 mb-5">
           <div>
             <p className="text-xs uppercase tracking-wide text-white/70">
               Proof-of-Liveness
             </p>
-            <h3 className="text-sm font-semibold text-white mt-1">
-              Minimal public signal
+            <h3 className="text-lg font-semibold text-white mt-1">
+              Minimal public signal (read-only)
             </h3>
           </div>
-          <div className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] text-white/80">
-            30s
+
+          <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/80">
+            30s refresh
           </div>
         </div>
 
-        <div className="rounded-xl border border-white/15 bg-black/10 p-3">
-          <div className="space-y-2 text-[12px] text-white/80">
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="text-white/60">chain_id</span>
-              <span className="font-mono text-white text-right truncate max-w-[180px]">
+        <div className="relative rounded-xl border border-white/15 bg-black/10 p-4 overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 noor-board-scan" />
+
+          <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs text-white/80">
+            <div className="rounded-lg border border-white/12 bg-white/5 px-3 py-2">
+              <div className="text-white/60">chain_id</div>
+              <div className="font-mono text-white truncate">
                 {live?.chain_id ? live.chain_id : "—"}
-              </span>
+              </div>
             </div>
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="text-white/60">leader_height</span>
-              <span className="font-mono text-white">
+
+            <div className="rounded-lg border border-white/12 bg-white/5 px-3 py-2">
+              <div className="text-white/60">leader_height</div>
+              <div className="font-mono text-white">
                 {typeof live?.leader_height === "number" ? live.leader_height : "—"}
-              </span>
+              </div>
             </div>
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="text-white/60">observed_at</span>
-              <span className="font-mono text-white text-right truncate max-w-[180px]">
+
+            <div className="rounded-lg border border-white/12 bg-white/5 px-3 py-2">
+              <div className="text-white/60">observed_at</div>
+              <div className="font-mono text-white truncate">
                 {live?.observed_at ? live.observed_at : "—"}
-              </span>
+              </div>
             </div>
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="text-white/60">uptime_seconds</span>
-              <span className="font-mono text-white">
-                {typeof live?.uptime_seconds === "number"
-                  ? live.uptime_seconds
-                  : "—"}
-              </span>
+
+            <div className="rounded-lg border border-white/12 bg-white/5 px-3 py-2">
+              <div className="text-white/60">uptime_seconds</div>
+              <div className="font-mono text-white">
+                {typeof live?.uptime_seconds === "number" ? live.uptime_seconds : "—"}
+              </div>
             </div>
           </div>
 
-          <div className="mt-3 text-[11px] text-white/60">
+          <div className="relative mt-3 text-[11px] text-white/60">
             Public surface: <span className="font-mono text-white/70">/liveness.json</span>
           </div>
         </div>
@@ -438,21 +442,9 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* RIGHT — Signal Board + Proof-of-liveness module */}
+              {/* RIGHT — Signal Board */}
               <div className="lg:col-span-5 noor-parallax-2">
-                <div className="flex items-start gap-4">
-                  <div className="flex-1 min-w-0">
-                    <PoSSSignalBoard />
-                  </div>
-                  <div className="hidden lg:block w-[240px] shrink-0">
-                    <LivenessMiniPanel />
-                  </div>
-                </div>
-
-                {/* mobile/tablet: keep layout clean */}
-                <div className="lg:hidden mt-4">
-                  <LivenessMiniPanel />
-                </div>
+                <PoSSSignalBoard />
               </div>
             </div>
           </div>
@@ -588,6 +580,11 @@ export default function HomePage() {
             100% { opacity: 0.72; transform: scale(1); }
           }
         `}</style>
+      </section>
+
+      {/* PROOF-OF-LIVENESS — under hero, full width */}
+      <section className="container -mt-10 pb-10 md:-mt-14 md:pb-14">
+        <ProofOfLivenessPanel />
       </section>
 
       {/* STATUS + INTRO + PoSS FRAMING — layout validé (1 full + 2 half) */}
