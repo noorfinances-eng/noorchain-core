@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Reveal from "../components/ui/Reveal";
 
 /**
@@ -26,6 +26,47 @@ const SIGNAL_PARTICLES = [
 ];
 
 function PoSSSignalBoard() {
+  const [live, setLive] = useState<{
+    chain_id?: string;
+    leader_height?: number;
+    observed_at?: string;
+    uptime_seconds?: number;
+  } | null>(null);
+
+  useEffect(() => {
+    let stopped = false;
+
+    const load = async () => {
+      try {
+        const res = await fetch("/liveness.json", { cache: "no-store" });
+        if (!res.ok) return;
+        const j = await res.json();
+
+        // Strict allowlist: only keep the four authorized fields.
+        const next = {
+          chain_id: typeof j?.chain_id === "string" ? j.chain_id : undefined,
+          leader_height:
+            typeof j?.leader_height === "number" ? j.leader_height : undefined,
+          observed_at:
+            typeof j?.observed_at === "string" ? j.observed_at : undefined,
+          uptime_seconds:
+            typeof j?.uptime_seconds === "number" ? j.uptime_seconds : undefined,
+        };
+
+        if (!stopped) setLive(next);
+      } catch {
+        // silent by design (no extra exposure)
+      }
+    };
+
+    load();
+    const t = window.setInterval(load, 30_000);
+    return () => {
+      stopped = true;
+      window.clearInterval(t);
+    };
+  }, []);
+
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] shadow-[0_26px_80px_rgba(0,0,0,0.28)] backdrop-blur-md">
       {/* top sheen */}
@@ -46,8 +87,41 @@ function PoSSSignalBoard() {
             </h3>
           </div>
 
-          <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/80">
-            Controlled
+          <div className="flex flex-col items-end gap-2">
+            <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/80">
+              Controlled
+            </div>
+
+            {/* proof-of-liveness (strict fields only) */}
+            <div className="rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-[11px] leading-tight text-white/80 text-right">
+              <div className="font-mono">
+                {live?.chain_id ? live.chain_id : "liveness: pending"}
+              </div>
+              <div className="mt-0.5 flex flex-col gap-0.5">
+                <div>
+                  <span className="text-white/60">height</span>{" "}
+                  <span className="font-mono">
+                    {typeof live?.leader_height === "number"
+                      ? live.leader_height
+                      : "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-white/60">observed</span>{" "}
+                  <span className="font-mono">
+                    {live?.observed_at ? live.observed_at : "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-white/60">uptime</span>{" "}
+                  <span className="font-mono">
+                    {typeof live?.uptime_seconds === "number"
+                      ? `${live.uptime_seconds}s`
+                      : "—"}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -187,7 +261,7 @@ export default function HomePage() {
     const onMove = (e: MouseEvent) => {
       const r = el.getBoundingClientRect();
       const x = (e.clientX - r.left) / r.width; // 0..1
-      const y = (e.clientY - r.top) / r.height; // 0..1
+      const y = (e.clientX - r.left) / r.width; // 0..1
       // map to -1..1
       const mx = (x - 0.5) * 2;
       const my = (y - 0.5) * 2;
