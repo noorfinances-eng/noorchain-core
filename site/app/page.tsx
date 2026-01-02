@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import Reveal from "../components/ui/Reveal";
 
 /**
@@ -492,6 +492,14 @@ export default function HomePage() {
                 <li>
                   <span className="font-semibold text-gray-900">Public access:</span>{" "}
                   Limited by design until feature completeness and security review
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Proof-of-liveness:</span>{" "}
+                  Public status endpoint <span className="font-mono">/liveness.json</span> (minimal signal only)
+                </li>
+                <li>
+                  <span className="font-semibold text-gray-900">Phase 7 baseline:</span>{" "}
+                  Frozen (controlled operation; no additional public surfaces)
                 </li>
                 <li>
                   <span className="font-semibold text-gray-900">Reference build:</span>{" "}
