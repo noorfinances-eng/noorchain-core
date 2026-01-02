@@ -52,6 +52,11 @@ export default function RoadmapPage() {
                   (StateDB-backed reads: nonce/balance) —{" "}
                   <span className="font-mono text-sm">M12.2-WORLDSTATE-RPC-NONCE-BALANCE</span>
                 </li>
+                <li>
+                  <span className="font-semibold text-navy">PHASE 7 — Proof-of-liveness baseline</span>{" "}
+                  (single public endpoint <span className="font-mono text-sm">/liveness.json</span>; controlled operation) —{" "}
+                  <span className="font-mono text-sm">Frozen</span>
+                </li>
               </ul>
             </div>
 
