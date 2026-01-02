@@ -293,7 +293,8 @@ function ProofOfLivenessPanel() {
           </div>
 
           <div className="relative mt-3 text-[11px] text-white/60">
-            Public surface: <span className="font-mono text-white/70">/liveness.json</span>
+            Public surface:{" "}
+            <span className="font-mono text-white/70">/liveness.json</span>
           </div>
         </div>
       </div>
@@ -450,6 +451,13 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* PROOF-OF-LIVENESS — included in hero background */}
+        <div className="relative">
+          <div className="container -mt-10 pb-10 md:-mt-14 md:pb-14">
+            <ProofOfLivenessPanel />
+          </div>
+        </div>
+
         {/* Global CSS, scoped by noor-* classnames */}
         <style jsx global>{`
           @media (prefers-reduced-motion: reduce) {
@@ -580,11 +588,6 @@ export default function HomePage() {
             100% { opacity: 0.72; transform: scale(1); }
           }
         `}</style>
-      </section>
-
-      {/* PROOF-OF-LIVENESS — under hero, full width */}
-      <section className="container -mt-10 pb-10 md:-mt-14 md:pb-14">
-        <ProofOfLivenessPanel />
       </section>
 
       {/* STATUS + INTRO + PoSS FRAMING — layout validé (1 full + 2 half) */}
