@@ -7,23 +7,23 @@ import { useState } from "react";
 export default function NavBar() {
   const [open, setOpen] = useState(false);
 
-  const navItems = [
-    { href: "/", label: "Home" },
-    { href: "/technology", label: "Technology" },
-    { href: "/poss", label: "PoSS" },
-    { href: "/curators", label: "Curators" },
-    { href: "/genesis", label: "Genesis" },
-    { href: "/roadmap", label: "Roadmap" },
-    { href: "/docs", label: "Docs" },
-    { href: "/legal", label: "Legal" },
+    const navItems = [
+    { href: "/#top", label: "Home" },
+    { href: "/#technology", label: "Technology" },
+    { href: "/#poss", label: "PoSS" },
+    { href: "/#curators", label: "Curators" },
+    { href: "/#genesis", label: "Genesis" },
+    { href: "/#roadmap", label: "Roadmap" },
+    { href: "/#docs", label: "Docs" },
+    { href: "/#legal", label: "Legal" },
   ];
 
   return (
-    <header className="w-full bg-white border-b border-gray-soft shadow-sm">
+    <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-soft shadow-sm">
       <div className="container flex items-center justify-between py-4">
         
         {/* LEFT: LOGO + NAME */}
-        <Link href="/" className="flex items-center gap-3">
+        <Link href="/#top" className="flex items-center gap-3">
           <Image
             src="/logo.svg"
             alt="NOORCHAIN Logo"

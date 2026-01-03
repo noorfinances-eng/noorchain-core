@@ -44,11 +44,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.className} flex flex-col min-h-screen bg-white text-gray-900`}
+        className={`${inter.className} flex flex-col min-h-screen bg-transparent text-gray-900`}
       >
         <NavBar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <main className="flex-1 relative z-10">{children}</main>
+        <div className="relative z-10 bg-gradient-to-br from-[#0B1B3A]/80 via-[#0A2D5A]/75 to-[#08324F]/80 border-t border-white/15 backdrop-blur-md text-white">
+          <Footer />
+        </div>
       </body>
     </html>
   );
