@@ -13,3 +13,8 @@ data-testnet/
 
 # Logs
 *.log
+
+# --- Site (Next.js) ---
+site/.next/
+site/node_modules/
+site/package-lock.json
