@@ -185,10 +185,10 @@ var ethRouting = map[string]routeClass{
 	"eth_chainId":               routeLocal,
 	"eth_blockNumber":           routeLocal,
 	"eth_accounts":              routeLocal,
-	"eth_getTransactionCount":   routeLocal,
+	"eth_getTransactionCount":   routeLeaderOnly,
 	"eth_gasPrice":              routeLocal,
 	"eth_estimateGas":           routeLocal,
-	"eth_getBalance":            routeLocal,
+	"eth_getBalance":            routeLeaderOnly,
 	"eth_call":                  routeLocal,
 	"eth_getBlockByNumber":      routeLeaderOnly,
 }
@@ -213,10 +213,9 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 	if cls, ok := ethRouting[req.Method]; ok {
 		if cls == routeLeaderOnly && s.n != nil {
 			cfg := s.n.Config()
-			if strings.EqualFold(strings.TrimSpace(cfg.Role), "follower") &&
-				strings.TrimSpace(cfg.FollowRPC) != "" {
-				return s.proxyToLeader(req)
-			}
+			if strings.TrimSpace(cfg.FollowRPC) != "" {
+                                        return s.proxyToLeader(req)
+                                }
 		}
 	}
 
@@ -530,7 +529,7 @@ return resp
 		// M10: follower mode proxy — if receipt not found locally, ask leader RPC
 		if s.n != nil {
 			cfg := s.n.Config()
-			if strings.EqualFold(strings.TrimSpace(cfg.Role), "follower") && strings.TrimSpace(cfg.FollowRPC) != "" {
+			if strings.TrimSpace(cfg.FollowRPC) != "" {
 				// best-effort proxy to leader
 				body := []byte(fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionReceipt","params":["%s"]}`, hashStr))
 				resp2, err := http.Post(strings.TrimRight(cfg.FollowRPC, "/"), "application/json", bytes.NewReader(body))
@@ -563,49 +562,74 @@ return resp
 		return resp
 
 	case "eth_getTransactionByHash":
-		// Needed by ethers.js polling (waitForTransaction)
-		var params []string
-		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
-			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
-			return resp
+		                // Needed by ethers.js polling (waitForTransaction)
+                var params []string
+                if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
+                        resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+                        return resp
+                }
 
-		}
-		hashStr := params[0]
-		if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
-			resp.Result = nil
-			return resp
-
-		}
-
-		// M8.A: check node txpool first (pending / minimal mined)
-		if s.n != nil {
-			if ptx, ok := s.n.TxPool().Get(hashStr); ok {
-				var blockNumber any = nil
-				var txIndex any = nil
-				if bn, ok := s.n.TxIndex().Get(hashStr); ok {
-					blockNumber = toHexUint(bn)
-					txIndex = "0x0"
+                hashStr := strings.TrimSpace(params[0])
+                if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
+                        resp.Result = nil
+                        return resp
+                }
+				// M12.3: fast-path — read persisted raw tx (tx/v1/<hash>) and return real fields.
+				if s.n != nil {
+					cfg := s.n.Config()
+					if strings.TrimSpace(cfg.FollowRPC) != "" {
+						return s.proxyToLeader(req)
+					}
 				}
-				resp.Result = map[string]any{
-					"hash":             ptx.Hash,
-					"blockHash":        nil,
-					"blockNumber":      blockNumber,
-					"transactionIndex": txIndex,
-					"from":             "0x" + strings.Repeat("0", 40),
-					"to":               nil,
-					"nonce":            "0x0",
-					"value":            "0x0",
-					"gas":              "0x0",
-					"gasPrice":         "0x0",
-					"input":            "0x",
-					"type":             "0x0",
-					"chainId":          toHexUint(evmChainID),
+				if s.n != nil && s.n.DB() != nil {
+					raw, err := s.n.DB().Get([]byte("tx/v1/"+hashStr), nil)
+					if err == nil && len(raw) > 0 {
+						var tx types.Transaction
+						if err := tx.UnmarshalBinary(raw); err == nil {
+							chainBig := new(big.Int).SetUint64(evmChainID)
+							signer := types.LatestSignerForChainID(chainBig)
+							from, _ := types.Sender(signer, &tx)
+
+							var blockNumber any = nil
+							var blockHash any = nil
+							var txIndex any = nil
+							if bn, ok := s.n.TxIndex().Get(hashStr); ok {
+								blockNumber = toHexUint(bn)
+								blockHash = pseudoBlockHash(bn).Hex()
+								txIndex = "0x0"
+							}
+
+							toAny := any(nil)
+							if tx.To() != nil {
+								toAny = tx.To().Hex()
+							}
+
+							gasPrice := "0x0"
+							if tx.GasPrice() != nil {
+								gasPrice = "0x" + tx.GasPrice().Text(16)
+							}
+
+							resp.Result = map[string]any{
+								"hash":             hashStr,
+								"blockHash":        blockHash,
+								"blockNumber":      blockNumber,
+								"transactionIndex": txIndex,
+								"from":             from.Hex(),
+								"to":               toAny,
+								"nonce":            toHexUint(tx.Nonce()),
+								"value":            "0x" + tx.Value().Text(16),
+								"gas":              toHexUint(tx.Gas()),
+								"gasPrice":         gasPrice,
+								"input":            "0x" + common.Bytes2Hex(tx.Data()),
+								"type":             toHexUint(uint64(tx.Type())),
+								"chainId":          "0x" + chainBig.Text(16),
+							}
+							return resp
+						}
+					}
 				}
-				return resp
-
-			}
-		}
-
+		
+		
 		// Fallback: legacy dev mock store (pre-M8.A)
 		if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
 			resp.Result = nil
