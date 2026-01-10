@@ -17,4 +17,5 @@ export default defineConfig({
       accounts: process.env.NOOR_PRIVATE_KEY ? [process.env.NOOR_PRIVATE_KEY] : [],
     },
   },
+  paths: { sources: "contracts/poss" }
 });

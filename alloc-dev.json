@@ -1,6 +1,7 @@
 {
   "chainId": 2121,
   "alloc": [
-    { "address": "0xA9547d9c138c414c7a1f5269457041f72528d044", "balanceWei": "100000000000000000000" }
+    { "address": "0xA9547d9c138c414c7a1f5269457041f72528d044", "balanceWei": "100000000000000000000" },
+    { "address": "0x4aA5DA75AFb6e81F433D4720cb7Cb2C6B1BA323c", "balanceWei": "100000000000000000000" }
   ]
 }
