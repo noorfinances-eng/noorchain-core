@@ -189,7 +189,9 @@ var ethRouting = map[string]routeClass{
 	"eth_gasPrice":              routeLocal,
 	"eth_estimateGas":           routeLocal,
 	"eth_getBalance":            routeLeaderOnly,
-	"eth_call":                  routeLocal,
+        "eth_getCode":               routeLeaderOnly,
+        "eth_getStorageAt":           routeLeaderOnly,
+        "eth_call":                  routeLocal,
 	"eth_getBlockByNumber":      routeLeaderOnly,
 }
 
@@ -386,6 +388,81 @@ if s.n != nil && s.n.EVMStore() != nil && s.n.EVMStore().DB() != nil {
 resp.Result = "0x" + bal.ToBig().Text(16)
 return resp
 
+
+
+		case "eth_getCode":
+			var params []any
+			if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
+				resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+				return resp
+			}
+			addrStr, _ := params[0].(string)
+			if !common.IsHexAddress(addrStr) {
+				resp.Error = &rpcError{Code: -32602, Message: "invalid address"}
+				return resp
+			}
+			addr := common.HexToAddress(addrStr)
+			code := []byte{}
+			if s.n != nil && s.n.EVMStore() != nil && s.n.EVMStore().DB() != nil {
+				root := s.n.StateRootHead()
+				diskdb := rawdb.NewDatabase(s.n.EVMStore().DB())
+				tdb := triedb.NewDatabase(diskdb, nil)
+				sdbCache := state.NewDatabase(tdb, nil)
+				if st, err := state.New(root, sdbCache); err == nil {
+					code = st.GetCode(addr)
+				} else {
+					s.log.Println("rpc: state.New failed (getCode) | err:", err)
+				}
+			}
+			if len(code) == 0 {
+				resp.Result = "0x"
+				return resp
+			}
+			resp.Result = "0x" + hex.EncodeToString(code)
+			return resp
+
+		case "eth_getStorageAt":
+			var params []any
+			if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 2 {
+				resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+				return resp
+			}
+			addrStr, _ := params[0].(string)
+			slotStr, _ := params[1].(string)
+			if !common.IsHexAddress(addrStr) {
+				resp.Error = &rpcError{Code: -32602, Message: "invalid address"}
+				return resp
+			}
+			addr := common.HexToAddress(addrStr)
+			slotHex := strings.TrimPrefix(strings.TrimSpace(slotStr), "0x")
+			if len(slotHex) > 64 {
+				resp.Error = &rpcError{Code: -32602, Message: "invalid slot"}
+				return resp
+			}
+			if len(slotHex)%2 == 1 {
+				slotHex = "0" + slotHex
+			}
+			b, err := hex.DecodeString(slotHex)
+			if err != nil {
+				resp.Error = &rpcError{Code: -32602, Message: "invalid slot"}
+				return resp
+			}
+			var slot common.Hash
+			copy(slot[32-len(b):], b)
+			val := common.Hash{}
+			if s.n != nil && s.n.EVMStore() != nil && s.n.EVMStore().DB() != nil {
+				root := s.n.StateRootHead()
+				diskdb := rawdb.NewDatabase(s.n.EVMStore().DB())
+				tdb := triedb.NewDatabase(diskdb, nil)
+				sdbCache := state.NewDatabase(tdb, nil)
+				if st, err := state.New(root, sdbCache); err == nil {
+					val = st.GetState(addr, slot)
+				} else {
+					s.log.Println("rpc: state.New failed (getStorageAt) | err:", err)
+				}
+			}
+			resp.Result = val.Hex()
+			return resp
 
 	case "eth_gasPrice":
 		resp.Result = "0x1"
@@ -954,7 +1031,9 @@ func assertRoutingTableStatic() {
 		"eth_gasPrice":              {},
 		"eth_estimateGas":           {},
 		"eth_getBalance":            {},
-		"eth_call":                  {},
+                "eth_getCode":               {},
+                "eth_getStorageAt":           {},
+                "eth_call":                  {},
 		"eth_sendRawTransaction":    {},
 		"eth_getTransactionReceipt": {},
 		"eth_getTransactionByHash":  {},
