@@ -262,6 +262,40 @@ func (n *Node) loop() {
 		n.logger.Println("evmstate: missing evmStore DB; stateRoot will remain placeholder")
 	}
 
+        // M12.5.1: optional alloc bootstrap (dev/mainnet genesis allocations)
+        // Applied once per data-dir (guarded by alloc/v1/applied in NOOR LevelDB).
+        if statedb != nil && n.db != nil {
+                if strings.TrimSpace(n.cfg.AllocFile) != "" {
+                        if _, err := n.db.Get([]byte(allocAppliedKVKey), nil); err != nil {
+                                af, err := readAllocFile(n.cfg.AllocFile)
+                                if err != nil {
+                                        n.logger.Println("alloc: read failed:", err)
+                                } else if af.ChainID != evmChainID {
+                                        n.logger.Println("alloc: chainId mismatch | file:", af.ChainID, "expected:", evmChainID)
+                                } else if allocs, err := parseAllocEntries(af); err != nil {
+                                        n.logger.Println("alloc: parse failed:", err)
+                                } else {
+                                        n.logger.Println("alloc: applying", len(allocs), "entries from", n.cfg.AllocFile)
+                                        for addr, bal := range allocs {
+                                                statedb.SetBalance(addr, bal, tracing.BalanceChangeUnspecified)
+                                        }
+                                        // Commit allocation and persist head root
+                                        if root, err := statedb.Commit(0, false); err == nil {
+                                                _ = tdb.Commit(root, false)
+                                                _ = n.db.Put([]byte(stateHeadKVKey), root.Bytes(), nil)
+                                                _ = n.db.Put([]byte(allocAppliedKVKey), []byte{1}, nil)
+                                                if st2, err := state.New(root, sdbCache); err == nil {
+                                                        statedb = st2
+                                                }
+                                                n.logger.Println("alloc: applied | new head root:", root.Hex())
+                                        } else {
+                                                n.logger.Println("alloc: commit failed:", err)
+                                        }
+                                }
+                        }
+                }
+        }
+
 	// M9: execution hook (minimal, step 1)
 	// For now: decode raw tx bytes and log decoded shape.
 	// Next steps will route contract calls + build receipts + persist.

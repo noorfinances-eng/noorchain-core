@@ -21,6 +21,9 @@ import (
 	"github.com/ethereum/go-ethereum/triedb"
 	"github.com/holiman/uint256"
 
+        "github.com/ethereum/go-ethereum/core/vm"
+        "github.com/ethereum/go-ethereum/params"
+
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -191,7 +194,7 @@ var ethRouting = map[string]routeClass{
 	"eth_getBalance":            routeLeaderOnly,
         "eth_getCode":               routeLeaderOnly,
         "eth_getStorageAt":           routeLeaderOnly,
-        "eth_call":                  routeLocal,
+        "eth_call":                  routeLeaderOnly,
 	"eth_getBlockByNumber":      routeLeaderOnly,
 }
 
@@ -494,34 +497,132 @@ return resp
 		resp.Result = true
 		return resp
 
-	case "eth_call":
-		// Minimal eth_call support for PoSS view methods (dev-only).
-		// params: [ {to: "0x..", data: "0x.."}, "latest" ]
-		var params []any
-		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
-			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
-			return resp
-		}
-		callObj, ok := params[0].(map[string]any)
-		if !ok {
-			resp.Error = &rpcError{Code: -32602, Message: "invalid call object"}
-			return resp
-		}
-		toStr, _ := callObj["to"].(string)
-		dataStr, _ := callObj["data"].(string)
-		to := common.HexToAddress(toStr)
-		dataStr = strings.TrimPrefix(strings.TrimSpace(dataStr), "0x")
-		data, err := hex.DecodeString(dataStr)
-		if err != nil {
-			resp.Error = &rpcError{Code: -32602, Message: "invalid data hex"}
-			return resp
-		}
-		if out, ok := s.evm.Call(to, data); ok {
-			resp.Result = "0x" + hex.EncodeToString(out)
-			return resp
-		}
-		resp.Result = "0x"
-		return resp
+        case "eth_call":
+                // M12.5: real eth_call against geth world-state (read-only).
+                // params: [ {to:"0x..", data:"0x..", from?:"0x.."}, "latest"|blockTag ]
+                var paramsAny []any
+                if err := json.Unmarshal(req.Params, &paramsAny); err != nil || len(paramsAny) < 1 {
+                        resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+                        return resp
+                }
+                callObj, ok := paramsAny[0].(map[string]any)
+                if !ok {
+                        resp.Error = &rpcError{Code: -32602, Message: "invalid call object"}
+                        return resp
+                }
+
+                toStr, _ := callObj["to"].(string)
+                dataStr, _ := callObj["data"].(string)
+                fromStr, _ := callObj["from"].(string)
+                to := common.HexToAddress(toStr)
+                from := common.HexToAddress(fromStr)
+
+                dataStr = strings.TrimPrefix(strings.TrimSpace(dataStr), "0x")
+                data, err := hex.DecodeString(dataStr)
+                if err != nil {
+                        resp.Error = &rpcError{Code: -32602, Message: "invalid data hex"}
+                        return resp
+                }
+
+                if s.n == nil || s.n.EVMStore() == nil {
+                        resp.Error = &rpcError{Code: -32000, Message: "evm store not available"}
+                        return resp
+                }
+
+                // Resolve root from optional blockTag (params[1]) using persisted blkmeta when possible.
+reqN := uint64(0)
+if s.n != nil {
+        reqN = s.n.Height()
+}
+
+// default: latest
+callN := reqN
+if len(paramsAny) >= 2 {
+        if tag, ok := paramsAny[1].(string); ok {
+                t := strings.TrimSpace(strings.ToLower(tag))
+                switch t {
+                case "latest", "pending":
+                        callN = reqN
+                case "earliest":
+                        callN = 0
+                default:
+                        if strings.HasPrefix(t, "0x") {
+                                tt := strings.TrimPrefix(t, "0x")
+                                if tt != "" {
+                                        if v, err := strconv.ParseUint(tt, 16, 64); err == nil {
+                                                callN = v
+                                        }
+                                }
+                        } else {
+                                if v, err := strconv.ParseUint(t, 10, 64); err == nil {
+                                        callN = v
+                                }
+                        }
+                }
+        }
+}
+
+// If asked height is above current, fail (header not found style).
+if s.n != nil && callN > reqN {
+        resp.Error = &rpcError{Code: -32000, Message: "state unavailable"}
+        return resp
+}
+
+// Prefer blkmeta stateRoot for the requested height when available; else fallback to head.
+root := s.n.StateRootHead()
+if s.n != nil && s.n.DB() != nil {
+        key := []byte("blkmeta/v1/" + strings.TrimPrefix(toHexUint(callN), "0x"))
+        if b, err := s.n.DB().Get(key, nil); err == nil && len(b) > 0 {
+                var bm struct {
+                        StateRoot string `json:"stateRoot"`
+                }
+                if err := json.Unmarshal(b, &bm); err == nil {
+                        if strings.HasPrefix(bm.StateRoot, "0x") && len(bm.StateRoot) == 66 {
+                                root = common.HexToHash(bm.StateRoot)
+                        }
+                }
+        }
+}
+
+// Build StateDB at selected root (latest or historical).
+evmdb := s.n.EVMStore().DB()
+ethdb := rawdb.NewDatabase(evmdb)
+tdb := triedb.NewDatabase(ethdb, nil)
+statedb, err := state.New(root, state.NewDatabase(tdb, nil))
+if err != nil {
+        resp.Error = &rpcError{Code: -32000, Message: "state unavailable"}
+        return resp
+}
+
+// Read-only copy for eth_call safety.
+statedbRO := statedb.Copy()
+
+                // Minimal EVM context for STATICCALL.
+                blockCtx := vm.BlockContext{
+                        CanTransfer: coreCanTransfer,
+                        Transfer:    coreTransfer,
+                        GetHash:     func(uint64) common.Hash { return common.Hash{} },
+                        Coinbase:    common.Address{},
+                        GasLimit:    30_000_000,
+                        BlockNumber: new(big.Int).SetUint64(callN),
+                        Time:        uint64(time.Now().Unix()),
+                        Difficulty:  big.NewInt(0),
+                        BaseFee:     big.NewInt(1),
+                }
+                txCtx := vm.TxContext{Origin: from, GasPrice: big.NewInt(1)}
+
+                cfg := params.MainnetChainConfig
+                evm := vm.NewEVM(blockCtx, txCtx, statedbRO, cfg, vm.Config{})
+
+                // Execute as STATICCALL (no state mutation).
+                gas := uint64(3_000_000)
+                ret, _, err := evm.StaticCall(vm.AccountRef(from), to, data, gas)
+                if err != nil {
+                        resp.Error = &rpcError{Code: -32000, Message: err.Error()}
+                        return resp
+                }
+                resp.Result = "0x" + hex.EncodeToString(ret)
+                return resp
 
 	case "debug_traceTransaction":
 		resp.Error = &rpcError{Code: -32601, Message: "not supported"}
@@ -1050,3 +1151,25 @@ func assertRoutingTableStatic() {
 type ioDiscard struct{}
 
 func (ioDiscard) Write(p []byte) (int, error) { return len(p), nil }
+
+// ---- geth vm helpers (M12.5) ----
+
+// coreCanTransfer reports whether the account has enough balance for the transfer.
+// Minimal implementation for read-only eth_call context.
+func coreCanTransfer(db vm.StateDB, addr common.Address, amount *uint256.Int) bool {
+        if amount == nil || amount.Sign() == 0 {
+                return true
+        }
+        bal := db.GetBalance(addr)
+        return bal.Cmp(amount) >= 0
+}
+
+// coreTransfer performs a balance transfer in the StateDB.
+// Note: eth_call uses STATICCALL, so mutations should not persist; this is still required by vm.BlockContext.
+func coreTransfer(db vm.StateDB, sender, recipient common.Address, amount *uint256.Int) {
+        if amount == nil || amount.Sign() == 0 {
+                return
+        }
+        db.SubBalance(sender, amount, 0)
+        db.AddBalance(recipient, amount, 0)
+}

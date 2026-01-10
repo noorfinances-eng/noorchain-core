@@ -1,6 +1,7 @@
 package config
 
 type Config struct {
+        AllocFile  string
         ChainID     string
         DataDir     string
         P2PAddr     string
@@ -17,6 +18,7 @@ func Default() Config {
                 P2PAddr:     "127.0.0.1:30303",
                 Role:        "leader",
                 FollowRPC:   "",
+                AllocFile:  "",
                 HealthAddr:  "127.0.0.1:8080",
         }
 }

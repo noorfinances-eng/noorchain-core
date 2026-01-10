@@ -27,6 +27,7 @@ func main() {
         healthAddr := flag.String("health-addr", "", "health listen address (e.g. 127.0.0.1:8080)")
 	role := flag.String("role", "", "node role: leader or follower")
 	followRPC := flag.String("follow-rpc", "", "leader RPC endpoint for follower mode (e.g. http://127.0.0.1:8545)")
+        allocFile := flag.String("alloc-file", "", "path to alloc json (dev/mainnet genesis allocations)")
 	flag.Parse()
 
 	cfg := config.Default()
@@ -43,6 +44,9 @@ func main() {
         if strings.TrimSpace(*followRPC) != "" {
                 cfg.FollowRPC = strings.TrimSpace(*followRPC)
         }
+          if strings.TrimSpace(*allocFile) != "" {
+                  cfg.AllocFile = strings.TrimSpace(*allocFile)
+          }
 	if *dataDir != "" {
 		cfg.DataDir = *dataDir
 	}
