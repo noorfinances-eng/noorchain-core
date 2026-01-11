@@ -1,13 +1,19 @@
 import { JsonRpcProvider, Wallet, Contract, keccak256, toUtf8Bytes, getBytes, Signature } from "ethers";
 import { readFileSync } from "node:fs";
 
-const RPC_URL = "http://127.0.0.1:8545";
+const RPC_URL = process.env.NOOR_RPC_URL ?? "http://127.0.0.1:8545";
 
 // DEV ONLY private key (Hardhat default #0)
-const DEV_PRIVKEY = "0x59c6995e998f97a5a0044966f094538f2f0f9b8677183762b2f279b9da3c8e8b";
+// Override via env: NOOR_PRIVATE_KEY (preferred) or NOOR_PRIVKEY
+const DEV_PRIVKEY = process.env.NOOR_PRIVATE_KEY ?? process.env.NOOR_PRIVKEY ?? "0x59c6995e998f97a5a0044966f094538f2f0f9b8677183762b2f279b9da3c8e8b";
 
 // IMPORTANT: update this if you redeployed
-const REGISTRY = "0xC9F398646E19778F2C3D9fF32bb75E5a99FD4E56";
+// Override via env: NOOR_POSS_REGISTRY (preferred) or NOOR_REGISTRY
+const REGISTRY = process.env.NOOR_POSS_REGISTRY ?? process.env.NOOR_REGISTRY ?? "0xC9F398646E19778F2C3D9fF32bb75E5a99FD4E56";
+
+// Optional overrides
+const GAS_LIMIT = process.env.NOOR_GAS_LIMIT ? BigInt(process.env.NOOR_GAS_LIMIT) : 3_000_000n;
+const GAS_PRICE = process.env.NOOR_GAS_PRICE ? BigInt(process.env.NOOR_GAS_PRICE) : 1n;
 
 function loadABI(relPath) {
   const raw = readFileSync(relPath, "utf8");
@@ -25,7 +31,7 @@ async function main() {
   const registry = new Contract(REGISTRY, abi, wallet);
 
   // ---- meta (V0 minimal) ----
-  const uri = "ipfs://example-epoch-1";
+  const uri = process.env.NOOR_SNAPSHOT_URI ?? "ipfs://example-epoch-1";
   const periodStart = BigInt(Math.floor(Date.now() / 1000));   // uint64
   const periodEnd = periodStart + 3600n;                       // +1h (uint64)
   const version = 1;                                           // uint32
@@ -68,8 +74,8 @@ async function main() {
 
   const tx = await registry.submitSnapshot(meta, sigs, {
     nonce,
-    gasLimit: 3_000_000n,
-    gasPrice: 1n,
+    gasLimit: GAS_LIMIT,
+    gasPrice: GAS_PRICE,
   });
   console.log("submitSnapshot tx:", tx.hash);
 
