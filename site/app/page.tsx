@@ -329,7 +329,7 @@ export default function HomePage() {
                     </a>
                   </div>
                   <div className="mt-8 flex flex-wrap gap-2 text-xs text-white/75">
-                    <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">Tagged builds: M10 / M11 / M12.2</span>
+                    <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">Tagged builds: M10 / M11 / M12/ M13.1</span>
                     <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">PoSS: application-layer (not consensus)</span>
                     <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">Legal-Light posture (no yield, no custody)</span>
                   </div>
