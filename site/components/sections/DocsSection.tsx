@@ -126,36 +126,6 @@ export default function DocsSection() {
             </ul>
           </section>
 
-          {/* RESEARCH & POSITION PAPERS */}
-          <section className="mb-8 p-6 border border-white/20 rounded-xl bg-white/10 backdrop-blur-md shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
-            <h2 className="text-2xl font-semibold text-navy mb-3">
-              Research &amp; Position Papers
-            </h2>
-
-            <p className="text-gray-700 leading-relaxed mb-3">
-              Selected research preprints and position papers. These documents are
-              conceptual in scope and may be revised.
-            </p>
-
-            <ul className="list-disc pl-6 text-gray-700 leading-relaxed space-y-2">
-              <li>
-                <a
-                  href="/docs/Beyond_State_Process_Time_Legitimacy_Preprint_v0.1.pdf"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  Beyond State: Process, Time, and Legitimacy in Blockchain Systems (Preprint v0.1 — PDF)
-                </a>
-                <div className="text-sm text-gray-700 mt-2">
-                  <span className="italic">
-                    Note: This preprint does not constitute a technical specification, roadmap, or investment proposal.
-                  </span>
-                </div>
-              </li>
-            </ul>
-          </section>
-
           {/* DOWNLOAD */}
           <section className="p-6 border border-white/20 rounded-xl bg-white/10 backdrop-blur-md shadow-sm mb-10 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">Downloads</h2>
@@ -168,6 +138,88 @@ export default function DocsSection() {
               className="inline-block px-6 py-3 border border-primary text-primary rounded-md text-sm md:text-base font-medium hover:bg-primary hover:text-white transition"
             >
               Download All Docs (coming soon)
+            </a>
+          </section>
+
+          {/* LEGAL & COMPLIANCE */}
+          <section className="mb-8 p-6 border border-white/20 rounded-xl bg-white/10 backdrop-blur-md shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+            <h2 className="text-2xl font-semibold text-navy mb-3">
+              Legal &amp; Compliance
+            </h2>
+            <p className="text-gray-700 leading-relaxed mb-3">
+              This section summarizes the legal foundations, compliance rules,
+              and risk disclosures governing the NOORCHAIN project. The framework
+              follows a non-financial, transparency-first approach aligned with
+              Legal Light CH.
+            </p>
+
+            <h3 className="text-lg font-semibold text-navy mb-2">
+              Legal Framework
+            </h3>
+            <p className="text-gray-700 leading-relaxed mb-3">
+              NOORCHAIN operates under a compliance model that avoids investment
+              solicitation, price promotion, or financial return promises.
+              Protocol rules are transparent, auditable, and aligned with
+              long-term public-interest use cases.
+            </p>
+
+            <h3 className="text-lg font-semibold text-navy mb-2">
+              Governance &amp; Structure (Early Stage)
+            </h3>
+            <ul className="list-disc pl-6 text-gray-700 leading-relaxed space-y-2">
+              <li>Protocol vs applications: infrastructure first.</li>
+              <li>Foundation (planned): Swiss non-profit stewardship.</li>
+              <li>Operational controls: auditable governance.</li>
+              <li>No financial services: no custody, no yield.</li>
+            </ul>
+          </section>
+
+          {/* RISK DISCLOSURE */}
+          <section className="mb-8 p-6 border border-white/20 rounded-xl bg-white/10 backdrop-blur-md shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+            <h2 className="text-2xl font-semibold text-navy mb-3">
+              Risk Disclosure
+            </h2>
+            <ul className="list-disc pl-6 text-gray-700 leading-relaxed space-y-2">
+              <li>Blockchain systems involve technical risks.</li>
+              <li>Crypto-assets may be volatile.</li>
+              <li>Regulatory frameworks may evolve.</li>
+              <li>Users remain fully responsible for their actions.</li>
+            </ul>
+          </section>
+
+          {/* NO INVESTMENT ADVICE */}
+          <section className="mb-8 p-6 border border-white/20 rounded-xl bg-white/10 backdrop-blur-md shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+            <h2 className="text-2xl font-semibold text-navy mb-3">
+              No Investment Advice
+            </h2>
+            <p className="text-gray-700 leading-relaxed">
+              All content is informational only and does not constitute
+              financial, legal, or investment advice.
+            </p>
+          </section>
+
+          {/* LEGAL NOTICES */}
+          <section className="mb-8 p-6 border border-white/20 rounded-xl bg-white/10 backdrop-blur-md shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+            <h2 className="text-2xl font-semibold text-navy mb-3">
+              Legal Notices
+            </h2>
+            <p className="text-gray-700 leading-relaxed">
+              Official terms, privacy rules, and intellectual property notices
+              will be published here once finalized.
+            </p>
+          </section>
+
+          {/* CONTACT */}
+          <section className="mb-2 p-6 border border-white/20 rounded-xl bg-white/10 backdrop-blur-md shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+            <h2 className="text-2xl font-semibold text-navy mb-3">Contact</h2>
+            <p className="text-gray-700 leading-relaxed mb-3">
+              For governance or compliance matters:
+            </p>
+            <a
+              href="mailto:contact@noorchain.io"
+              className="text-primary hover:underline"
+            >
+              contact@noorchain.io
             </a>
           </section>
         </div>
