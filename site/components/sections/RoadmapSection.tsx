@@ -34,7 +34,7 @@ export default function RoadmapSection() {
             <ul className="list-disc pl-6 text-gray-700 space-y-2">
               <li>M10 — Mainnet-like multi-node pack</li>
               <li>M11 — dApps v0 tooling</li>
-              <li>M12.2 — World State + RPC Parity Foundations</li>
+              <li>M12 — World State + RPC Parity Foundations</li>
               <li>PHASE 7 — Proof-of-liveness (frozen)</li>
             </ul>
           </div>
