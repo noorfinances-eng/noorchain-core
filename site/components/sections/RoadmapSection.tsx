@@ -34,7 +34,7 @@ export default function RoadmapSection() {
             <ul className="list-disc pl-6 text-gray-700 space-y-2">
               <li>M10 — Mainnet-like multi-node pack</li>
               <li>M11 — dApps v0 tooling</li>
-              <li>M12.2 — World state groundwork</li>
+              <li>M12.2 — World State + RPC Parity Foundations</li>
               <li>PHASE 7 — Proof-of-liveness (frozen)</li>
             </ul>
           </div>
@@ -43,7 +43,7 @@ export default function RoadmapSection() {
           <div className="mb-6 p-5 border border-white/20 bg-white/10 backdrop-blur-md rounded-xl shadow-sm">
             <h2 className="text-xl font-semibold text-navy mb-2">🔧 In progress</h2>
             <ul className="list-disc pl-6 text-gray-700 space-y-2">
-              <li>Ethereum-compatible world state</li>
+              <li>M13 - Ethereum-compatible world state</li>
               <li>EVM execution hardening</li>
               <li>Operational stability</li>
             </ul>
