@@ -8,6 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/triedb"
+	"github.com/holiman/uint256"
 	"io"
 	"log"
 	"math/big"
@@ -16,14 +20,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/triedb"
-	"github.com/holiman/uint256"
 
-        "github.com/ethereum/go-ethereum/core/vm"
-        "github.com/ethereum/go-ethereum/params"
-
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/params"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -192,9 +191,9 @@ var ethRouting = map[string]routeClass{
 	"eth_gasPrice":              routeLocal,
 	"eth_estimateGas":           routeLocal,
 	"eth_getBalance":            routeLeaderOnly,
-        "eth_getCode":               routeLeaderOnly,
-        "eth_getStorageAt":           routeLeaderOnly,
-        "eth_call":                  routeLeaderOnly,
+	"eth_getCode":               routeLeaderOnly,
+	"eth_getStorageAt":          routeLeaderOnly,
+	"eth_call":                  routeLeaderOnly,
 	"eth_getBlockByNumber":      routeLeaderOnly,
 }
 
@@ -219,8 +218,8 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		if cls == routeLeaderOnly && s.n != nil {
 			cfg := s.n.Config()
 			if strings.TrimSpace(cfg.FollowRPC) != "" {
-                                        return s.proxyToLeader(req)
-                                }
+				return s.proxyToLeader(req)
+			}
 		}
 	}
 
@@ -333,29 +332,28 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		}
 		addr := common.HexToAddress(addrStr)
 
-nonce := uint64(0)
+		nonce := uint64(0)
 
-// Prefer geth StateDB (world-state) if available
-if s.n != nil && s.n.EVMStore() != nil && s.n.EVMStore().DB() != nil {
-	root := s.n.StateRootHead()
+		// Prefer geth StateDB (world-state) if available
+		if s.n != nil && s.n.EVMStore() != nil && s.n.EVMStore().DB() != nil {
+			root := s.n.StateRootHead()
 
-	diskdb := rawdb.NewDatabase(s.n.EVMStore().DB())
-	tdb := triedb.NewDatabase(diskdb, nil)
-	sdbCache := state.NewDatabase(tdb, nil)
+			diskdb := rawdb.NewDatabase(s.n.EVMStore().DB())
+			tdb := triedb.NewDatabase(diskdb, nil)
+			sdbCache := state.NewDatabase(tdb, nil)
 
-	if st, err := state.New(root, sdbCache); err == nil {
-		nonce = st.GetNonce(addr)
-	} else {
-		s.log.Println("rpc: state.New failed (txCount) | err:", err)
-	}
-} else if s.evm != nil {
-	// Fallback to legacy mock
-	nonce = s.evm.GetTransactionCount(addr)
-}
+			if st, err := state.New(root, sdbCache); err == nil {
+				nonce = st.GetNonce(addr)
+			} else {
+				s.log.Println("rpc: state.New failed (txCount) | err:", err)
+			}
+		} else if s.evm != nil {
+			// Fallback to legacy mock
+			nonce = s.evm.GetTransactionCount(addr)
+		}
 
-resp.Result = toHexUint(nonce)
-return resp
-
+		resp.Result = toHexUint(nonce)
+		return resp
 
 	case "eth_getBalance":
 		// Minimal wallet/tooling compatibility (dev-only).
@@ -372,100 +370,98 @@ return resp
 		}
 		addr := common.HexToAddress(addrStr)
 
-bal := uint256.NewInt(0) // default 0
+		bal := uint256.NewInt(0) // default 0
 
-if s.n != nil && s.n.EVMStore() != nil && s.n.EVMStore().DB() != nil {
-	root := s.n.StateRootHead()
+		if s.n != nil && s.n.EVMStore() != nil && s.n.EVMStore().DB() != nil {
+			root := s.n.StateRootHead()
 
-	diskdb := rawdb.NewDatabase(s.n.EVMStore().DB())
-	tdb := triedb.NewDatabase(diskdb, nil)
-	sdbCache := state.NewDatabase(tdb, nil)
+			diskdb := rawdb.NewDatabase(s.n.EVMStore().DB())
+			tdb := triedb.NewDatabase(diskdb, nil)
+			sdbCache := state.NewDatabase(tdb, nil)
 
-	if st, err := state.New(root, sdbCache); err == nil {
-		bal = st.GetBalance(addr)
-	} else {
-		s.log.Println("rpc: state.New failed (balance) | err:", err)
-	}
-}
-
-resp.Result = "0x" + bal.ToBig().Text(16)
-return resp
-
-
-
-		case "eth_getCode":
-			var params []any
-			if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
-				resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
-				return resp
+			if st, err := state.New(root, sdbCache); err == nil {
+				bal = st.GetBalance(addr)
+			} else {
+				s.log.Println("rpc: state.New failed (balance) | err:", err)
 			}
-			addrStr, _ := params[0].(string)
-			if !common.IsHexAddress(addrStr) {
-				resp.Error = &rpcError{Code: -32602, Message: "invalid address"}
-				return resp
-			}
-			addr := common.HexToAddress(addrStr)
-			code := []byte{}
-			if s.n != nil && s.n.EVMStore() != nil && s.n.EVMStore().DB() != nil {
-				root := s.n.StateRootHead()
-				diskdb := rawdb.NewDatabase(s.n.EVMStore().DB())
-				tdb := triedb.NewDatabase(diskdb, nil)
-				sdbCache := state.NewDatabase(tdb, nil)
-				if st, err := state.New(root, sdbCache); err == nil {
-					code = st.GetCode(addr)
-				} else {
-					s.log.Println("rpc: state.New failed (getCode) | err:", err)
-				}
-			}
-			if len(code) == 0 {
-				resp.Result = "0x"
-				return resp
-			}
-			resp.Result = "0x" + hex.EncodeToString(code)
+		}
+
+		resp.Result = "0x" + bal.ToBig().Text(16)
+		return resp
+
+	case "eth_getCode":
+		var params []any
+		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
 			return resp
-
-		case "eth_getStorageAt":
-			var params []any
-			if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 2 {
-				resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
-				return resp
-			}
-			addrStr, _ := params[0].(string)
-			slotStr, _ := params[1].(string)
-			if !common.IsHexAddress(addrStr) {
-				resp.Error = &rpcError{Code: -32602, Message: "invalid address"}
-				return resp
-			}
-			addr := common.HexToAddress(addrStr)
-			slotHex := strings.TrimPrefix(strings.TrimSpace(slotStr), "0x")
-			if len(slotHex) > 64 {
-				resp.Error = &rpcError{Code: -32602, Message: "invalid slot"}
-				return resp
-			}
-			if len(slotHex)%2 == 1 {
-				slotHex = "0" + slotHex
-			}
-			b, err := hex.DecodeString(slotHex)
-			if err != nil {
-				resp.Error = &rpcError{Code: -32602, Message: "invalid slot"}
-				return resp
-			}
-			var slot common.Hash
-			copy(slot[32-len(b):], b)
-			val := common.Hash{}
-			if s.n != nil && s.n.EVMStore() != nil && s.n.EVMStore().DB() != nil {
-				root := s.n.StateRootHead()
-				diskdb := rawdb.NewDatabase(s.n.EVMStore().DB())
-				tdb := triedb.NewDatabase(diskdb, nil)
-				sdbCache := state.NewDatabase(tdb, nil)
-				if st, err := state.New(root, sdbCache); err == nil {
-					val = st.GetState(addr, slot)
-				} else {
-					s.log.Println("rpc: state.New failed (getStorageAt) | err:", err)
-				}
-			}
-			resp.Result = val.Hex()
+		}
+		addrStr, _ := params[0].(string)
+		if !common.IsHexAddress(addrStr) {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid address"}
 			return resp
+		}
+		addr := common.HexToAddress(addrStr)
+		code := []byte{}
+		if s.n != nil && s.n.EVMStore() != nil && s.n.EVMStore().DB() != nil {
+			root := s.n.StateRootHead()
+			diskdb := rawdb.NewDatabase(s.n.EVMStore().DB())
+			tdb := triedb.NewDatabase(diskdb, nil)
+			sdbCache := state.NewDatabase(tdb, nil)
+			if st, err := state.New(root, sdbCache); err == nil {
+				code = st.GetCode(addr)
+			} else {
+				s.log.Println("rpc: state.New failed (getCode) | err:", err)
+			}
+		}
+		if len(code) == 0 {
+			resp.Result = "0x"
+			return resp
+		}
+		resp.Result = "0x" + hex.EncodeToString(code)
+		return resp
+
+	case "eth_getStorageAt":
+		var params []any
+		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 2 {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+			return resp
+		}
+		addrStr, _ := params[0].(string)
+		slotStr, _ := params[1].(string)
+		if !common.IsHexAddress(addrStr) {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid address"}
+			return resp
+		}
+		addr := common.HexToAddress(addrStr)
+		slotHex := strings.TrimPrefix(strings.TrimSpace(slotStr), "0x")
+		if len(slotHex) > 64 {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid slot"}
+			return resp
+		}
+		if len(slotHex)%2 == 1 {
+			slotHex = "0" + slotHex
+		}
+		b, err := hex.DecodeString(slotHex)
+		if err != nil {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid slot"}
+			return resp
+		}
+		var slot common.Hash
+		copy(slot[32-len(b):], b)
+		val := common.Hash{}
+		if s.n != nil && s.n.EVMStore() != nil && s.n.EVMStore().DB() != nil {
+			root := s.n.StateRootHead()
+			diskdb := rawdb.NewDatabase(s.n.EVMStore().DB())
+			tdb := triedb.NewDatabase(diskdb, nil)
+			sdbCache := state.NewDatabase(tdb, nil)
+			if st, err := state.New(root, sdbCache); err == nil {
+				val = st.GetState(addr, slot)
+			} else {
+				s.log.Println("rpc: state.New failed (getStorageAt) | err:", err)
+			}
+		}
+		resp.Result = val.Hex()
+		return resp
 
 	case "eth_gasPrice":
 		resp.Result = "0x1"
@@ -497,132 +493,132 @@ return resp
 		resp.Result = true
 		return resp
 
-        case "eth_call":
-                // M12.5: real eth_call against geth world-state (read-only).
-                // params: [ {to:"0x..", data:"0x..", from?:"0x.."}, "latest"|blockTag ]
-                var paramsAny []any
-                if err := json.Unmarshal(req.Params, &paramsAny); err != nil || len(paramsAny) < 1 {
-                        resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
-                        return resp
-                }
-                callObj, ok := paramsAny[0].(map[string]any)
-                if !ok {
-                        resp.Error = &rpcError{Code: -32602, Message: "invalid call object"}
-                        return resp
-                }
+	case "eth_call":
+		// M12.5: real eth_call against geth world-state (read-only).
+		// params: [ {to:"0x..", data:"0x..", from?:"0x.."}, "latest"|blockTag ]
+		var paramsAny []any
+		if err := json.Unmarshal(req.Params, &paramsAny); err != nil || len(paramsAny) < 1 {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+			return resp
+		}
+		callObj, ok := paramsAny[0].(map[string]any)
+		if !ok {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid call object"}
+			return resp
+		}
 
-                toStr, _ := callObj["to"].(string)
-                dataStr, _ := callObj["data"].(string)
-                fromStr, _ := callObj["from"].(string)
-                to := common.HexToAddress(toStr)
-                from := common.HexToAddress(fromStr)
+		toStr, _ := callObj["to"].(string)
+		dataStr, _ := callObj["data"].(string)
+		fromStr, _ := callObj["from"].(string)
+		to := common.HexToAddress(toStr)
+		from := common.HexToAddress(fromStr)
 
-                dataStr = strings.TrimPrefix(strings.TrimSpace(dataStr), "0x")
-                data, err := hex.DecodeString(dataStr)
-                if err != nil {
-                        resp.Error = &rpcError{Code: -32602, Message: "invalid data hex"}
-                        return resp
-                }
+		dataStr = strings.TrimPrefix(strings.TrimSpace(dataStr), "0x")
+		data, err := hex.DecodeString(dataStr)
+		if err != nil {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid data hex"}
+			return resp
+		}
 
-                if s.n == nil || s.n.EVMStore() == nil {
-                        resp.Error = &rpcError{Code: -32000, Message: "evm store not available"}
-                        return resp
-                }
+		if s.n == nil || s.n.EVMStore() == nil {
+			resp.Error = &rpcError{Code: -32000, Message: "evm store not available"}
+			return resp
+		}
 
-                // Resolve root from optional blockTag (params[1]) using persisted blkmeta when possible.
-reqN := uint64(0)
-if s.n != nil {
-        reqN = s.n.Height()
-}
+		// Resolve root from optional blockTag (params[1]) using persisted blkmeta when possible.
+		reqN := uint64(0)
+		if s.n != nil {
+			reqN = s.n.Height()
+		}
 
-// default: latest
-callN := reqN
-if len(paramsAny) >= 2 {
-        if tag, ok := paramsAny[1].(string); ok {
-                t := strings.TrimSpace(strings.ToLower(tag))
-                switch t {
-                case "latest", "pending":
-                        callN = reqN
-                case "earliest":
-                        callN = 0
-                default:
-                        if strings.HasPrefix(t, "0x") {
-                                tt := strings.TrimPrefix(t, "0x")
-                                if tt != "" {
-                                        if v, err := strconv.ParseUint(tt, 16, 64); err == nil {
-                                                callN = v
-                                        }
-                                }
-                        } else {
-                                if v, err := strconv.ParseUint(t, 10, 64); err == nil {
-                                        callN = v
-                                }
-                        }
-                }
-        }
-}
+		// default: latest
+		callN := reqN
+		if len(paramsAny) >= 2 {
+			if tag, ok := paramsAny[1].(string); ok {
+				t := strings.TrimSpace(strings.ToLower(tag))
+				switch t {
+				case "latest", "pending":
+					callN = reqN
+				case "earliest":
+					callN = 0
+				default:
+					if strings.HasPrefix(t, "0x") {
+						tt := strings.TrimPrefix(t, "0x")
+						if tt != "" {
+							if v, err := strconv.ParseUint(tt, 16, 64); err == nil {
+								callN = v
+							}
+						}
+					} else {
+						if v, err := strconv.ParseUint(t, 10, 64); err == nil {
+							callN = v
+						}
+					}
+				}
+			}
+		}
 
-// If asked height is above current, fail (header not found style).
-if s.n != nil && callN > reqN {
-        resp.Error = &rpcError{Code: -32000, Message: "state unavailable"}
-        return resp
-}
+		// If asked height is above current, fail (header not found style).
+		if s.n != nil && callN > reqN {
+			resp.Error = &rpcError{Code: -32000, Message: "state unavailable"}
+			return resp
+		}
 
-// Prefer blkmeta stateRoot for the requested height when available; else fallback to head.
-root := s.n.StateRootHead()
-if s.n != nil && s.n.DB() != nil {
-        key := []byte("blkmeta/v1/" + strings.TrimPrefix(toHexUint(callN), "0x"))
-        if b, err := s.n.DB().Get(key, nil); err == nil && len(b) > 0 {
-                var bm struct {
-                        StateRoot string `json:"stateRoot"`
-                }
-                if err := json.Unmarshal(b, &bm); err == nil {
-                        if strings.HasPrefix(bm.StateRoot, "0x") && len(bm.StateRoot) == 66 {
-                                root = common.HexToHash(bm.StateRoot)
-                        }
-                }
-        }
-}
+		// Prefer blkmeta stateRoot for the requested height when available; else fallback to head.
+		root := s.n.StateRootHead()
+		if s.n != nil && s.n.DB() != nil {
+			key := []byte("blkmeta/v1/" + strings.TrimPrefix(toHexUint(callN), "0x"))
+			if b, err := s.n.DB().Get(key, nil); err == nil && len(b) > 0 {
+				var bm struct {
+					StateRoot string `json:"stateRoot"`
+				}
+				if err := json.Unmarshal(b, &bm); err == nil {
+					if strings.HasPrefix(bm.StateRoot, "0x") && len(bm.StateRoot) == 66 {
+						root = common.HexToHash(bm.StateRoot)
+					}
+				}
+			}
+		}
 
-// Build StateDB at selected root (latest or historical).
-evmdb := s.n.EVMStore().DB()
-ethdb := rawdb.NewDatabase(evmdb)
-tdb := triedb.NewDatabase(ethdb, nil)
-statedb, err := state.New(root, state.NewDatabase(tdb, nil))
-if err != nil {
-        resp.Error = &rpcError{Code: -32000, Message: "state unavailable"}
-        return resp
-}
+		// Build StateDB at selected root (latest or historical).
+		evmdb := s.n.EVMStore().DB()
+		ethdb := rawdb.NewDatabase(evmdb)
+		tdb := triedb.NewDatabase(ethdb, nil)
+		statedb, err := state.New(root, state.NewDatabase(tdb, nil))
+		if err != nil {
+			resp.Error = &rpcError{Code: -32000, Message: "state unavailable"}
+			return resp
+		}
 
-// Read-only copy for eth_call safety.
-statedbRO := statedb.Copy()
+		// Read-only copy for eth_call safety.
+		statedbRO := statedb.Copy()
 
-                // Minimal EVM context for STATICCALL.
-                blockCtx := vm.BlockContext{
-                        CanTransfer: coreCanTransfer,
-                        Transfer:    coreTransfer,
-                        GetHash:     func(uint64) common.Hash { return common.Hash{} },
-                        Coinbase:    common.Address{},
-                        GasLimit:    30_000_000,
-                        BlockNumber: new(big.Int).SetUint64(callN),
-                        Time:        uint64(time.Now().Unix()),
-                        Difficulty:  big.NewInt(0),
-                        BaseFee:     big.NewInt(1),
-                }
-                txCtx := vm.TxContext{Origin: from, GasPrice: big.NewInt(1)}
+		// Minimal EVM context for STATICCALL.
+		blockCtx := vm.BlockContext{
+			CanTransfer: coreCanTransfer,
+			Transfer:    coreTransfer,
+			GetHash:     func(uint64) common.Hash { return common.Hash{} },
+			Coinbase:    common.Address{},
+			GasLimit:    30_000_000,
+			BlockNumber: new(big.Int).SetUint64(callN),
+			Time:        uint64(time.Now().Unix()),
+			Difficulty:  big.NewInt(0),
+			BaseFee:     big.NewInt(1),
+		}
+		txCtx := vm.TxContext{Origin: from, GasPrice: big.NewInt(1)}
 
-                cfg := params.MainnetChainConfig
-                evm := vm.NewEVM(blockCtx, txCtx, statedbRO, cfg, vm.Config{})
+		cfg := params.MainnetChainConfig
+		evm := vm.NewEVM(blockCtx, txCtx, statedbRO, cfg, vm.Config{})
 
-                // Execute as STATICCALL (no state mutation).
-                gas := uint64(3_000_000)
-                ret, _, err := evm.StaticCall(vm.AccountRef(from), to, data, gas)
-                if err != nil {
-                        resp.Error = &rpcError{Code: -32000, Message: err.Error()}
-                        return resp
-                }
-                resp.Result = "0x" + hex.EncodeToString(ret)
-                return resp
+		// Execute as STATICCALL (no state mutation).
+		gas := uint64(3_000_000)
+		ret, _, err := evm.StaticCall(vm.AccountRef(from), to, data, gas)
+		if err != nil {
+			resp.Error = &rpcError{Code: -32000, Message: err.Error()}
+			return resp
+		}
+		resp.Result = "0x" + hex.EncodeToString(ret)
+		return resp
 
 	case "debug_traceTransaction":
 		resp.Error = &rpcError{Code: -32601, Message: "not supported"}
@@ -663,6 +659,12 @@ statedbRO := statedb.Copy()
 
 		h := crypto.Keccak256Hash(rawBytes)
 
+		// Persist raw tx for eth_getTransactionByHash (wallet+tooling compatibility)
+		if s.evm != nil && s.evm.db != nil {
+			k := "tx/v1/" + strings.ToLower(strings.TrimPrefix(h.Hex(), "0x"))
+			_ = s.evm.db.Put([]byte(k), rawBytes, nil)
+		}
+
 		if s.evm != nil {
 			chainBig := new(big.Int).SetUint64(evmChainID)
 			signer := types.LatestSignerForChainID(chainBig)
@@ -695,9 +697,14 @@ statedbRO := statedb.Copy()
 			if b, err := s.evm.db.Get(key, nil); err == nil && len(b) > 0 {
 				var anyRcpt any
 				if err := json.Unmarshal(b, &anyRcpt); err == nil {
+					if m, ok := anyRcpt.(map[string]any); ok {
+						if _, has := m["effectiveGasPrice"]; !has {
+							m["effectiveGasPrice"] = "0x1"
+						}
+						anyRcpt = m
+					}
 					resp.Result = anyRcpt
 					return resp
-
 				}
 			}
 		}
@@ -740,74 +747,74 @@ statedbRO := statedb.Copy()
 		return resp
 
 	case "eth_getTransactionByHash":
-		                // Needed by ethers.js polling (waitForTransaction)
-                var params []string
-                if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
-                        resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
-                        return resp
-                }
+		// Needed by ethers.js polling (waitForTransaction)
+		var params []string
+		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+			return resp
+		}
 
-                hashStr := strings.TrimSpace(params[0])
-                if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
-                        resp.Result = nil
-                        return resp
-                }
-				// M12.3: fast-path — read persisted raw tx (tx/v1/<hash>) and return real fields.
-				if s.n != nil {
-					cfg := s.n.Config()
-					if strings.TrimSpace(cfg.FollowRPC) != "" {
-						return s.proxyToLeader(req)
+		hashStr := strings.TrimSpace(params[0])
+		if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
+			resp.Result = nil
+			return resp
+		}
+		// M12.3: fast-path — read persisted raw tx (tx/v1/<hash>) and return real fields.
+		if s.n != nil {
+			cfg := s.n.Config()
+			if strings.TrimSpace(cfg.FollowRPC) != "" {
+				return s.proxyToLeader(req)
+			}
+		}
+		if s.evm != nil && s.evm.db != nil {
+			k := "tx/v1/" + strings.ToLower(strings.TrimPrefix(hashStr, "0x"))
+			raw, err := s.evm.db.Get([]byte(k), nil)
+			if err == nil && len(raw) > 0 {
+				var tx types.Transaction
+				if err := tx.UnmarshalBinary(raw); err == nil {
+					chainBig := new(big.Int).SetUint64(evmChainID)
+					signer := types.LatestSignerForChainID(chainBig)
+					from, _ := types.Sender(signer, &tx)
+
+					var blockNumber any = nil
+					var blockHash any = nil
+					var txIndex any = nil
+					if bn, ok := s.n.TxIndex().Get(hashStr); ok {
+						blockNumber = toHexUint(bn)
+						blockHash = pseudoBlockHash(bn).Hex()
+						txIndex = "0x0"
 					}
-				}
-				if s.n != nil && s.n.DB() != nil {
-					raw, err := s.n.DB().Get([]byte("tx/v1/"+hashStr), nil)
-					if err == nil && len(raw) > 0 {
-						var tx types.Transaction
-						if err := tx.UnmarshalBinary(raw); err == nil {
-							chainBig := new(big.Int).SetUint64(evmChainID)
-							signer := types.LatestSignerForChainID(chainBig)
-							from, _ := types.Sender(signer, &tx)
 
-							var blockNumber any = nil
-							var blockHash any = nil
-							var txIndex any = nil
-							if bn, ok := s.n.TxIndex().Get(hashStr); ok {
-								blockNumber = toHexUint(bn)
-								blockHash = pseudoBlockHash(bn).Hex()
-								txIndex = "0x0"
-							}
-
-							toAny := any(nil)
-							if tx.To() != nil {
-								toAny = tx.To().Hex()
-							}
-
-							gasPrice := "0x0"
-							if tx.GasPrice() != nil {
-								gasPrice = "0x" + tx.GasPrice().Text(16)
-							}
-
-							resp.Result = map[string]any{
-								"hash":             hashStr,
-								"blockHash":        blockHash,
-								"blockNumber":      blockNumber,
-								"transactionIndex": txIndex,
-								"from":             from.Hex(),
-								"to":               toAny,
-								"nonce":            toHexUint(tx.Nonce()),
-								"value":            "0x" + tx.Value().Text(16),
-								"gas":              toHexUint(tx.Gas()),
-								"gasPrice":         gasPrice,
-								"input":            "0x" + common.Bytes2Hex(tx.Data()),
-								"type":             toHexUint(uint64(tx.Type())),
-								"chainId":          "0x" + chainBig.Text(16),
-							}
-							return resp
-						}
+					toAny := any(nil)
+					if tx.To() != nil {
+						toAny = tx.To().Hex()
 					}
+
+					gasPrice := "0x0"
+					if tx.GasPrice() != nil {
+						gasPrice = "0x" + tx.GasPrice().Text(16)
+					}
+
+					resp.Result = map[string]any{
+						"hash":             hashStr,
+						"blockHash":        blockHash,
+						"blockNumber":      blockNumber,
+						"transactionIndex": txIndex,
+						"from":             from.Hex(),
+						"to":               toAny,
+						"nonce":            toHexUint(tx.Nonce()),
+						"value":            "0x" + tx.Value().Text(16),
+						"gas":              toHexUint(tx.Gas()),
+						"gasPrice":         gasPrice,
+						"input":            "0x" + common.Bytes2Hex(tx.Data()),
+						"type":             toHexUint(uint64(tx.Type())),
+						"chainId":          "0x" + chainBig.Text(16),
+					}
+					return resp
 				}
-		
-		
+			}
+		}
+
 		// Fallback: legacy dev mock store (pre-M8.A)
 		if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
 			resp.Result = nil
@@ -1132,9 +1139,9 @@ func assertRoutingTableStatic() {
 		"eth_gasPrice":              {},
 		"eth_estimateGas":           {},
 		"eth_getBalance":            {},
-                "eth_getCode":               {},
-                "eth_getStorageAt":           {},
-                "eth_call":                  {},
+		"eth_getCode":               {},
+		"eth_getStorageAt":          {},
+		"eth_call":                  {},
 		"eth_sendRawTransaction":    {},
 		"eth_getTransactionReceipt": {},
 		"eth_getTransactionByHash":  {},
@@ -1157,19 +1164,19 @@ func (ioDiscard) Write(p []byte) (int, error) { return len(p), nil }
 // coreCanTransfer reports whether the account has enough balance for the transfer.
 // Minimal implementation for read-only eth_call context.
 func coreCanTransfer(db vm.StateDB, addr common.Address, amount *uint256.Int) bool {
-        if amount == nil || amount.Sign() == 0 {
-                return true
-        }
-        bal := db.GetBalance(addr)
-        return bal.Cmp(amount) >= 0
+	if amount == nil || amount.Sign() == 0 {
+		return true
+	}
+	bal := db.GetBalance(addr)
+	return bal.Cmp(amount) >= 0
 }
 
 // coreTransfer performs a balance transfer in the StateDB.
 // Note: eth_call uses STATICCALL, so mutations should not persist; this is still required by vm.BlockContext.
 func coreTransfer(db vm.StateDB, sender, recipient common.Address, amount *uint256.Int) {
-        if amount == nil || amount.Sign() == 0 {
-                return
-        }
-        db.SubBalance(sender, amount, 0)
-        db.AddBalance(recipient, amount, 0)
+	if amount == nil || amount.Sign() == 0 {
+		return
+	}
+	db.SubBalance(sender, amount, 0)
+	db.AddBalance(recipient, amount, 0)
 }
