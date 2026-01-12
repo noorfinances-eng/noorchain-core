@@ -186,7 +186,7 @@ var ethRouting = map[string]routeClass{
 	"eth_getTransactionReceipt": routeLocalThenProxy,
 	"eth_getTransactionByHash":  routeLocalThenProxy,
 	"eth_chainId":               routeLocal,
-	"eth_blockNumber":           routeLocal,
+	"eth_blockNumber":           routeLeaderOnly,
 	"eth_accounts":              routeLocal,
 	"eth_getTransactionCount":   routeLeaderOnly,
 	"eth_gasPrice":              routeLocal,
