@@ -35,12 +35,22 @@ export default function DocsSection() {
             </p>
             <ul className="list-disc pl-6 text-gray-700 leading-relaxed space-y-2">
               <li>
-                <a href="/docs/NOORCHAIN_Brandbook_1.1.pdf" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                <a
+                  href="/docs/NOORCHAIN_Brandbook_1.1.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
                   NOORCHAIN Brandbook 1.1 (PDF)
                 </a>
               </li>
               <li>
-                <a href="/docs/NOORCHAIN_Press_Kit_1.1.pdf" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                <a
+                  href="/docs/NOORCHAIN_Press_Kit_1.1.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
                   NOORCHAIN Press Kit 1.1 (PDF)
                 </a>
               </li>
@@ -49,14 +59,100 @@ export default function DocsSection() {
 
           {/* WHITE PAPERS */}
           <section className="mb-8 p-6 border border-white/20 rounded-xl bg-white/10 backdrop-blur-md shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
-            <h2 className="text-2xl font-semibold text-navy mb-3">White Papers</h2>
+            <h2 className="text-2xl font-semibold text-navy mb-3">
+              White Papers
+            </h2>
             <ul className="list-disc pl-6 text-gray-700 leading-relaxed space-y-2">
-              <li><a href="/docs/NOORCHAIN_Whitepaper_Investor_1.1.pdf" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Investor Whitepaper 1.1 (PDF)</a></li>
-              <li><a href="/docs/NOORCHAIN_Whitepaper_Storytelling_EN_1.1.pdf" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Storytelling Whitepaper EN 1.1 (PDF)</a></li>
-              <li><a href="/docs/NOORCHAIN_Whitepaper_Storytelling_FR_1.1.pdf" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Storytelling Whitepaper FR 1.1 (PDF)</a></li>
-              <li><a href="/docs/NOORCHAIN_Public_Whitepaper_1.1.pdf" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Public Whitepaper 1.1 (PDF)</a></li>
-              <li><a href="/docs/NOORCHAIN_Whitepaper_Long_1.1.pdf" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Long Whitepaper 1.1 (PDF)</a></li>
-              <li><a href="/docs/Tokenomics_Public_1.1.pdf" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Tokenomics Public 1.1 (PDF)</a></li>
+              <li>
+                <a
+                  href="/docs/NOORCHAIN_Whitepaper_Investor_1.1.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Investor Whitepaper 1.1 (PDF)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/docs/NOORCHAIN_Whitepaper_Storytelling_EN_1.1.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Storytelling Whitepaper EN 1.1 (PDF)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/docs/NOORCHAIN_Whitepaper_Storytelling_FR_1.1.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Storytelling Whitepaper FR 1.1 (PDF)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/docs/NOORCHAIN_Public_Whitepaper_1.1.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Public Whitepaper 1.1 (PDF)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/docs/NOORCHAIN_Whitepaper_Long_1.1.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Long Whitepaper 1.1 (PDF)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/docs/Tokenomics_Public_1.1.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Tokenomics Public 1.1 (PDF)
+                </a>
+              </li>
+            </ul>
+          </section>
+
+          {/* RESEARCH & POSITION PAPERS */}
+          <section className="mb-8 p-6 border border-white/20 rounded-xl bg-white/10 backdrop-blur-md shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+            <h2 className="text-2xl font-semibold text-navy mb-3">
+              Research &amp; Position Papers
+            </h2>
+
+            <p className="text-gray-700 leading-relaxed mb-3">
+              Selected research preprints and position papers. These documents are
+              conceptual in scope and may be revised.
+            </p>
+
+            <ul className="list-disc pl-6 text-gray-700 leading-relaxed space-y-2">
+              <li>
+                <a
+                  href="/docs/Beyond_State_Process_Time_Legitimacy_Preprint_v0.1.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Beyond State: Process, Time, and Legitimacy in Blockchain Systems (Preprint v0.1 — PDF)
+                </a>
+                <div className="text-sm text-gray-700 mt-2">
+                  <span className="italic">
+                    Note: This preprint does not constitute a technical specification, roadmap, or investment proposal.
+                  </span>
+                </div>
+              </li>
             </ul>
           </section>
 
@@ -67,11 +163,13 @@ export default function DocsSection() {
               Final documents and archives will be available in downloadable
               format (PDF or ZIP) from this section.
             </p>
-            <a href="#" className="inline-block px-6 py-3 border border-primary text-primary rounded-md text-sm md:text-base font-medium hover:bg-primary hover:text-white transition">
+            <a
+              href="#"
+              className="inline-block px-6 py-3 border border-primary text-primary rounded-md text-sm md:text-base font-medium hover:bg-primary hover:text-white transition"
+            >
               Download All Docs (coming soon)
             </a>
           </section>
-
         </div>
       </div>
     </section>
