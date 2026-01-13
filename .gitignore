@@ -13,3 +13,6 @@ docs/RUNBOOK-M10.5-MAINNET-LIKE.md
 
 # local dev scripts
 scripts/m12_transfer.mjs
+
+# local runtime logs
+logs/
