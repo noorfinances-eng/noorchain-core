@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"noorchain-evm-l1/core/config"
 	"noorchain-evm-l1/core/evmstate"
-	"noorchain-evm-l1/core/exec"
 	"noorchain-evm-l1/core/health"
 	"noorchain-evm-l1/core/network"
 	"noorchain-evm-l1/core/txindex"
@@ -25,15 +24,17 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/tracing"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/trie"
 	"github.com/ethereum/go-ethereum/triedb"
 	"github.com/holiman/uint256"
-	"github.com/ethereum/go-ethereum/core/tracing"
-
 )
 
 type Logger interface {
@@ -249,7 +250,7 @@ func (n *Node) loop() {
 
 	if n.evmStore != nil && n.evmStore.DB() != nil {
 		diskdb := rawdb.NewDatabase(n.evmStore.DB())
-			tdb = triedb.NewDatabase(diskdb, nil)
+		tdb = triedb.NewDatabase(diskdb, nil)
 		sdbCache = state.NewDatabase(tdb, nil)
 		if st, err := state.New(headRoot, sdbCache); err == nil {
 			statedb = st
@@ -262,44 +263,44 @@ func (n *Node) loop() {
 		n.logger.Println("evmstate: missing evmStore DB; stateRoot will remain placeholder")
 	}
 
-        // M12.5.1: optional alloc bootstrap (dev/mainnet genesis allocations)
-        // Applied once per data-dir (guarded by alloc/v1/applied in NOOR LevelDB).
-        if statedb != nil && n.db != nil {
-                if strings.TrimSpace(n.cfg.AllocFile) != "" {
-                        if _, err := n.db.Get([]byte(allocAppliedKVKey), nil); err != nil {
-                                af, err := readAllocFile(n.cfg.AllocFile)
-                                if err != nil {
-                                        n.logger.Println("alloc: read failed:", err)
-                                } else if af.ChainID != evmChainID {
-                                        n.logger.Println("alloc: chainId mismatch | file:", af.ChainID, "expected:", evmChainID)
-                                } else if allocs, err := parseAllocEntries(af); err != nil {
-                                        n.logger.Println("alloc: parse failed:", err)
-                                } else {
-                                        n.logger.Println("alloc: applying", len(allocs), "entries from", n.cfg.AllocFile)
-                                        for addr, bal := range allocs {
-                                                statedb.SetBalance(addr, bal, tracing.BalanceChangeUnspecified)
-                                        }
-                                        // Commit allocation and persist head root
-                                        if root, err := statedb.Commit(0, false); err == nil {
-                                                _ = tdb.Commit(root, false)
-                                                _ = n.db.Put([]byte(stateHeadKVKey), root.Bytes(), nil)
-                                                _ = n.db.Put([]byte(allocAppliedKVKey), []byte{1}, nil)
-                                                if st2, err := state.New(root, sdbCache); err == nil {
-                                                        statedb = st2
-                                                }
-                                                n.logger.Println("alloc: applied | new head root:", root.Hex())
-                                        } else {
-                                                n.logger.Println("alloc: commit failed:", err)
-                                        }
-                                }
-                        }
-                }
-        }
+	// M12.5.1: optional alloc bootstrap (dev/mainnet genesis allocations)
+	// Applied once per data-dir (guarded by alloc/v1/applied in NOOR LevelDB).
+	if statedb != nil && n.db != nil {
+		if strings.TrimSpace(n.cfg.AllocFile) != "" {
+			if _, err := n.db.Get([]byte(allocAppliedKVKey), nil); err != nil {
+				af, err := readAllocFile(n.cfg.AllocFile)
+				if err != nil {
+					n.logger.Println("alloc: read failed:", err)
+				} else if af.ChainID != evmChainID {
+					n.logger.Println("alloc: chainId mismatch | file:", af.ChainID, "expected:", evmChainID)
+				} else if allocs, err := parseAllocEntries(af); err != nil {
+					n.logger.Println("alloc: parse failed:", err)
+				} else {
+					n.logger.Println("alloc: applying", len(allocs), "entries from", n.cfg.AllocFile)
+					for addr, bal := range allocs {
+						statedb.SetBalance(addr, bal, tracing.BalanceChangeUnspecified)
+					}
+					// Commit allocation and persist head root
+					if root, err := statedb.Commit(0, false); err == nil {
+						_ = tdb.Commit(root, false)
+						_ = n.db.Put([]byte(stateHeadKVKey), root.Bytes(), nil)
+						_ = n.db.Put([]byte(allocAppliedKVKey), []byte{1}, nil)
+						if st2, err := state.New(root, sdbCache); err == nil {
+							statedb = st2
+						}
+						n.logger.Println("alloc: applied | new head root:", root.Hex())
+					} else {
+						n.logger.Println("alloc: commit failed:", err)
+					}
+				}
+			}
+		}
+	}
 
 	// M9: execution hook (minimal, step 1)
 	// For now: decode raw tx bytes and log decoded shape.
 	// Next steps will route contract calls + build receipts + persist.
-	applyTx := func(t txpool.Tx, height uint64) *types.Receipt {
+	applyTx := func(t txpool.Tx, height uint64, txIndex int) *types.Receipt {
 		if len(t.Raw) == 0 {
 			n.logger.Println("applyTx: empty raw tx | hash:", t.Hash, "| height:", height)
 			return nil
@@ -329,51 +330,167 @@ func (n *Node) loop() {
 		} else {
 			n.logger.Println("applyTx: sender decode failed | hash:", t.Hash, "| err:", err)
 		}
-		// M12.2: minimal world-state write (nonce) so RPC can read real values.
-		// Not full EVM execution; just proves StateDB is live and persisted.
-		if statedb != nil && from != (common.Address{}) {
-		statedb.SetNonce(from, tx.Nonce()+1)
-		
-		// M12.2: minimal balance write for proof (temporary until full value-transfer/EVM).
-		statedb.AddBalance(from, uint256.NewInt(1), tracing.BalanceChangeUnspecified)
+		// ---- M13: real EVM execution via geth state transition (mainnet-like) ----
+		blockHash := pseudoBlockHash(height)
+
+		// Must have statedb for real execution
+		if statedb == nil || from == (common.Address{}) {
+			n.logger.Println("applyTx: missing statedb/from | hash:", t.Hash, "| height:", height)
+			return nil
 		}
 
-		// Contract creation => contractAddress = CreateAddress(from, nonce)
+		// Set tx context so logs are indexed correctly inside StateDB
+		statedb.SetTxContext(rawHash, txIndex)
+
+		// Chain config: enable all forks from genesis (needed for SHL, etc.), but enforce our chainId
+		cc := *params.AllDevChainProtocolChanges
+		cc.ChainID = new(big.Int).SetUint64(evmChainID)
+
+		num := new(big.Int).SetUint64(height)
+		ts := uint64(time.Now().Unix())
+
+		isAt := func(b *big.Int) bool { return b != nil && num.Cmp(b) >= 0 }
+		isAtTime := func(t *uint64) bool { return t != nil && ts >= *t }
+
+		n.logger.Println(
+			"applyTx: forks",
+			"| height:", height,
+			"| byz:", isAt(cc.ByzantiumBlock),
+			"| cpl:", isAt(cc.ConstantinopleBlock),
+			"| ist:", isAt(cc.IstanbulBlock),
+			"| ber:", isAt(cc.BerlinBlock),
+			"| lon:", isAt(cc.LondonBlock),
+			"| sha:", isAtTime(cc.ShanghaiTime),
+			"| can:", isAtTime(cc.CancunTime),
+			"| ts:", ts,
+		)
+
+		// Minimal block/tx context
+		const blockGasLimit = uint64(30_000_000)
+		baseFee := big.NewInt(1)
+
+		canTransfer := func(db vm.StateDB, addr common.Address, amount *uint256.Int) bool {
+			if amount == nil || amount.Sign() == 0 {
+				return true
+			}
+			bal := db.GetBalance(addr)
+			return bal.Cmp(amount) >= 0
+		}
+		doTransfer := func(db vm.StateDB, sender, recipient common.Address, amount *uint256.Int) {
+			if amount == nil || amount.Sign() == 0 {
+				return
+			}
+			db.SubBalance(sender, amount, tracing.BalanceChangeUnspecified)
+			db.AddBalance(recipient, amount, tracing.BalanceChangeUnspecified)
+		}
+
+		blockCtx := vm.BlockContext{
+			CanTransfer: canTransfer,
+			Transfer:    doTransfer,
+			GetHash:     func(uint64) common.Hash { return common.Hash{} },
+			Coinbase:    common.Address{},
+			GasLimit:    blockGasLimit,
+			BlockNumber: new(big.Int).SetUint64(height),
+			Time:        uint64(time.Now().Unix()),
+			Difficulty:  big.NewInt(0),
+			BaseFee:     baseFee,
+			Random:      new(common.Hash),
+		}
+		txCtx := vm.TxContext{Origin: from, GasPrice: tx.GasPrice()}
+
+		evm := vm.NewEVM(blockCtx, txCtx, statedb, &cc, vm.Config{ExtraEips: []int{3855}})
+
+		// Convert tx -> Message and apply transition
+		msg, err := core.TransactionToMessage(&tx, signer, baseFee)
+		if err != nil {
+			n.logger.Println("applyTx: tx->msg failed | hash:", t.Hash, "| err:", err)
+			return nil
+		}
+		gp := new(core.GasPool).AddGas(blockGasLimit)
+
+		res, err := core.ApplyMessage(evm, msg, gp)
+		if err != nil {
+			n.logger.Println("applyTx: ApplyMessage core-error | hash:", t.Hash, "| err:", err)
+		}
+
+		// >>> INSERTION ICI (immédiatement après le if err != nil, avant Finalise)
+		if res != nil && res.Err != nil {
+			n.logger.Println(
+				"applyTx: ApplyMessage FAILED",
+				"| hash:", t.Hash,
+				"| err:", res.Err,
+				"| usedGas:", res.UsedGas,
+				"| return:", fmt.Sprintf("0x%x", res.Return),
+			)
+		}
+
+		// Finalise per-tx to correctly materialize deletions/journal and make logs accessible.
+		statedb.Finalise(true)
+
+		// Determine status and usedGas
+		status := uint64(1)
+		usedGas := uint64(0)
+		if res != nil {
+			usedGas = res.UsedGas
+			if res.Failed() {
+				status = 0
+			}
+		} else {
+			status = 0
+		}
+
+		// Pull logs from statedb (tx-context aware)
+		logs := statedb.GetLogs(rawHash, height, blockHash)
+
+		// Contract creation: derive address for receipt when tx.To()==nil (CREATE)
+		// Note: this matches geth semantics (CreateAddress(from, tx.Nonce()))
 		var contractAddrPtr *common.Address
 		if tx.To() == nil && from != (common.Address{}) {
 			ca := crypto.CreateAddress(from, tx.Nonce())
 			contractAddrPtr = &ca
 		}
 
-		// M9: persist minimal receipt (best-effort)
+		// M9/M13: persist receipt JSON (best-effort) aligned with executed results
 		if n.db != nil {
 			toPtr := tx.To()
+
+			// Minimal log encoding (enough for tooling)
+			logsAny := make([]any, 0, len(logs))
+			for i := range logs {
+				lg := logs[i]
+				topics := make([]string, 0, len(lg.Topics))
+				for _, tp := range lg.Topics {
+					topics = append(topics, tp.Hex())
+				}
+				logsAny = append(logsAny, map[string]any{
+					"address":          lg.Address.Hex(),
+					"topics":           topics,
+					"data":             "0x" + hex.EncodeToString(lg.Data),
+					"blockNumber":      toHexUint(height),
+					"transactionHash":  rawHash.Hex(),
+					"transactionIndex": toHexUint(uint64(txIndex)),
+					"blockHash":        blockHash.Hex(),
+					"logIndex":         toHexUint(uint64(i)),
+					"removed":          false,
+				})
+			}
+
 			rcpt := receiptJSON{
 				TransactionHash:   rawHash,
-				TransactionIndex:  "0x0",
-				BlockHash:         pseudoBlockHash(height),
+				TransactionIndex:  toHexUint(uint64(txIndex)),
+				BlockHash:         blockHash,
 				BlockNumber:       toHexUint(height),
 				From:              from,
 				To:                toPtr,
-				CumulativeGasUsed: toHexBig(tx.Gas()),
-				GasUsed:           toHexBig(tx.Gas()),
+				CumulativeGasUsed: toHexBig(usedGas),
+				GasUsed:           toHexBig(usedGas),
 				ContractAddress:   contractAddrPtr,
-				Logs:              []any{},
-				Status:            "0x1",
+				Logs:              logsAny,
+				Status:            toHexUint(status),
 				Type:              toHexUint(uint64(tx.Type())),
 			}
 			if b, err := json.Marshal(rcpt); err == nil {
 				_ = n.db.Put(rcptKey(rawHash.Hex()), b, nil)
-			}
-		}
-
-		// M9: minimal contracts execution (PoSS submitSnapshot)
-		possOK := false
-		if n.db != nil {
-			if ok, err := exec.ApplyPoSSSubmitSnapshot(&tx, n.cfg.ChainID, n.db, uint64(time.Now().Unix())); err != nil {
-				n.logger.Println("applyTx: poss exec error:", err)
-			} else {
-				possOK = ok
 			}
 		}
 
@@ -382,11 +499,17 @@ func (n *Node) loop() {
 			TxHash:            rawHash,
 			BlockHash:         pseudoBlockHash(height),
 			BlockNumber:       new(big.Int).SetUint64(height),
-			TransactionIndex:  0,
-			Status:            1,
-			CumulativeGasUsed: tx.Gas(),
-			GasUsed:           tx.Gas(),
-			Logs:              []*types.Log{},
+			TransactionIndex:  uint(txIndex),
+			Status:            status,
+			CumulativeGasUsed: usedGas,
+			GasUsed:           usedGas,
+			ContractAddress: func() common.Address {
+				if contractAddrPtr != nil {
+					return *contractAddrPtr
+				}
+				return common.Address{}
+			}(),
+			Logs: logs,
 		}
 
 		n.logger.Println(
@@ -399,8 +522,11 @@ func (n *Node) loop() {
 			"| nonce:", tx.Nonce(),
 			"| to:", toStr,
 			"| dataLen:", len(tx.Data()),
-			"| possOK:", possOK,
+			"| status:", status,
+			"| usedGas:", usedGas,
+			"| logs:", len(logs),
 		)
+
 		return rcptGeth
 	}
 
@@ -427,7 +553,7 @@ func (n *Node) loop() {
 				for i := range txs {
 					n.txindex.Put(txs[i].Hash, height)
 					// M9: hook point (execution will be extended in next steps)
-					r := applyTx(txs[i], height)
+					r := applyTx(txs[i], height, i)
 					if r != nil {
 						receipts = append(receipts, r)
 					}
@@ -491,8 +617,8 @@ func (n *Node) Height() uint64 {
 	return n.height
 }
 
-func (n *Node) TxPool() *txpool.Pool    { return n.txpool }
-func (n *Node) TxIndex() *txindex.Index { return n.txindex }
+func (n *Node) TxPool() *txpool.Pool      { return n.txpool }
+func (n *Node) TxIndex() *txindex.Index   { return n.txindex }
 func (n *Node) EVMStore() *evmstate.Store { return n.evmStore }
 
 // StateRootHead returns the latest committed world-state root (or zero-hash if missing).
@@ -506,7 +632,6 @@ func (n *Node) StateRootHead() common.Hash {
 	}
 	return common.BytesToHash(b)
 }
-
 
 func (n *Node) Stop() error {
 	n.mu.Lock()

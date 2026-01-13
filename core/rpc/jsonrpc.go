@@ -403,7 +403,59 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		addr := common.HexToAddress(addrStr)
 		code := []byte{}
 		if s.n != nil && s.n.EVMStore() != nil && s.n.EVMStore().DB() != nil {
+			// params: [address, blockTag?] où blockTag = "latest"|"pending"|"earliest"| "0xHEIGHT"
 			root := s.n.StateRootHead()
+			callN := uint64(0)
+			reqN := uint64(0)
+
+			if s.n != nil {
+				reqN = s.n.Height()
+				callN = reqN
+			}
+
+			if len(params) >= 2 {
+				if t, ok := params[1].(string); ok {
+					switch t {
+					case "latest", "pending":
+						callN = reqN
+					case "earliest":
+						callN = 0
+					default:
+						if strings.HasPrefix(t, "0x") {
+							tt := strings.TrimPrefix(t, "0x")
+							if tt != "" {
+								if v, err := strconv.ParseUint(tt, 16, 64); err == nil {
+									callN = v
+								}
+							}
+						} else {
+							if v, err := strconv.ParseUint(t, 10, 64); err == nil {
+								callN = v
+							}
+						}
+					}
+				}
+			}
+
+			if s.n != nil && callN > reqN {
+				resp.Error = &rpcError{Code: -32000, Message: "state unavailable"}
+				return resp
+			}
+
+			if s.n != nil && s.n.DB() != nil {
+				key := []byte("blkmeta/v1/" + strings.TrimPrefix(toHexUint(callN), "0x"))
+				if b, err := s.n.DB().Get(key, nil); err == nil && len(b) > 0 {
+					var bm struct {
+						StateRoot string `json:"stateRoot"`
+					}
+					if err := json.Unmarshal(b, &bm); err == nil {
+						if strings.HasPrefix(bm.StateRoot, "0x") && len(bm.StateRoot) == 66 {
+							root = common.HexToHash(bm.StateRoot)
+						}
+					}
+				}
+			}
+
 			diskdb := rawdb.NewDatabase(s.n.EVMStore().DB())
 			tdb := triedb.NewDatabase(diskdb, nil)
 			sdbCache := state.NewDatabase(tdb, nil)
@@ -413,6 +465,7 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 				s.log.Println("rpc: state.New failed (getCode) | err:", err)
 			}
 		}
+
 		if len(code) == 0 {
 			resp.Result = "0x"
 			return resp
@@ -451,6 +504,57 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		val := common.Hash{}
 		if s.n != nil && s.n.EVMStore() != nil && s.n.EVMStore().DB() != nil {
 			root := s.n.StateRootHead()
+			callN := uint64(0)
+			reqN := uint64(0)
+
+			if s.n != nil {
+				reqN = s.n.Height()
+				callN = reqN
+			}
+
+			if len(params) >= 3 {
+				if t, ok := params[2].(string); ok {
+					switch t {
+					case "latest", "pending":
+						callN = reqN
+					case "earliest":
+						callN = 0
+					default:
+						if strings.HasPrefix(t, "0x") {
+							tt := strings.TrimPrefix(t, "0x")
+							if tt != "" {
+								if v, err := strconv.ParseUint(tt, 16, 64); err == nil {
+									callN = v
+								}
+							}
+						} else {
+							if v, err := strconv.ParseUint(t, 10, 64); err == nil {
+								callN = v
+							}
+						}
+					}
+				}
+			}
+
+			if s.n != nil && callN > reqN {
+				resp.Error = &rpcError{Code: -32000, Message: "state unavailable"}
+				return resp
+			}
+
+			if s.n != nil && s.n.DB() != nil {
+				key := []byte("blkmeta/v1/" + strings.TrimPrefix(toHexUint(callN), "0x"))
+				if b, err := s.n.DB().Get(key, nil); err == nil && len(b) > 0 {
+					var bm struct {
+						StateRoot string `json:"stateRoot"`
+					}
+					if err := json.Unmarshal(b, &bm); err == nil {
+						if strings.HasPrefix(bm.StateRoot, "0x") && len(bm.StateRoot) == 66 {
+							root = common.HexToHash(bm.StateRoot)
+						}
+					}
+				}
+			}
+
 			diskdb := rawdb.NewDatabase(s.n.EVMStore().DB())
 			tdb := triedb.NewDatabase(diskdb, nil)
 			sdbCache := state.NewDatabase(tdb, nil)
@@ -460,6 +564,7 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 				s.log.Println("rpc: state.New failed (getStorageAt) | err:", err)
 			}
 		}
+
 		resp.Result = val.Hex()
 		return resp
 
@@ -604,11 +709,13 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			Time:        uint64(time.Now().Unix()),
 			Difficulty:  big.NewInt(0),
 			BaseFee:     big.NewInt(1),
+			Random:      new(common.Hash),
 		}
 		txCtx := vm.TxContext{Origin: from, GasPrice: big.NewInt(1)}
 
-		cfg := params.MainnetChainConfig
-		evm := vm.NewEVM(blockCtx, txCtx, statedbRO, cfg, vm.Config{})
+		cc := *params.AllDevChainProtocolChanges
+		cc.ChainID = new(big.Int).SetUint64(evmChainID)
+		evm := vm.NewEVM(blockCtx, txCtx, statedbRO, &cc, vm.Config{ExtraEips: []int{3855}})
 
 		// Execute as STATICCALL (no state mutation).
 		gas := uint64(3_000_000)
@@ -776,6 +883,11 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 					signer := types.LatestSignerForChainID(chainBig)
 					from, _ := types.Sender(signer, &tx)
 
+					vSig, rSig, sSig := tx.RawSignatureValues()
+					rHex := "0x" + fmt.Sprintf("%064x", rSig)
+					sHex := "0x" + fmt.Sprintf("%064x", sSig)
+					vHex := toHexUint(vSig.Uint64())
+
 					var blockNumber any = nil
 					var blockHash any = nil
 					var txIndex any = nil
@@ -791,25 +903,45 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 					}
 
 					gasPrice := "0x0"
-					if tx.GasPrice() != nil {
-						gasPrice = "0x" + tx.GasPrice().Text(16)
+					maxFee := "0x0"
+					maxPrio := "0x0"
+					if tx.Type() == 2 {
+						if tx.GasFeeCap() != nil {
+							maxFee = "0x" + tx.GasFeeCap().Text(16)
+						}
+						if tx.GasTipCap() != nil {
+							maxPrio = "0x" + tx.GasTipCap().Text(16)
+						}
+						gasPrice = maxFee
+					} else {
+						if tx.GasPrice() != nil {
+							gasPrice = "0x" + tx.GasPrice().Text(16)
+						}
 					}
 
 					resp.Result = map[string]any{
-						"hash":             hashStr,
-						"blockHash":        blockHash,
-						"blockNumber":      blockNumber,
-						"transactionIndex": txIndex,
-						"from":             from.Hex(),
-						"to":               toAny,
-						"nonce":            toHexUint(tx.Nonce()),
-						"value":            "0x" + tx.Value().Text(16),
-						"gas":              toHexUint(tx.Gas()),
-						"gasPrice":         gasPrice,
-						"input":            "0x" + common.Bytes2Hex(tx.Data()),
-						"type":             toHexUint(uint64(tx.Type())),
-						"chainId":          "0x" + chainBig.Text(16),
+						"hash":                 hashStr,
+						"blockHash":            blockHash,
+						"blockNumber":          blockNumber,
+						"transactionIndex":     txIndex,
+						"from":                 from.Hex(),
+						"to":                   toAny,
+						"nonce":                toHexUint(tx.Nonce()),
+						"value":                "0x" + tx.Value().Text(16),
+						"gas":                  toHexUint(tx.Gas()),
+						"gasPrice":             gasPrice,
+						"maxFeePerGas":         maxFee,
+						"maxPriorityFeePerGas": maxPrio,
+						"input":                "0x" + common.Bytes2Hex(tx.Data()),
+						"type":                 toHexUint(uint64(tx.Type())),
+						"chainId":              "0x" + chainBig.Text(16),
+
+						// --- CRITICAL for ethers v6 ---
+						"r": rHex,
+						"s": sHex,
+						"v": vHex,
 					}
+
 					return resp
 				}
 			}

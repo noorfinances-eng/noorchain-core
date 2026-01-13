@@ -1,4 +1,4 @@
-import { JsonRpcProvider, Wallet, Contract, keccak256, toUtf8Bytes, getBytes, Signature } from "ethers";
+import { JsonRpcProvider, Wallet, Contract, keccak256, toUtf8Bytes, getBytes, Signature, solidityPacked } from "ethers";
 import { readFileSync } from "node:fs";
 
 const RPC_URL = process.env.NOOR_RPC_URL ?? "http://127.0.0.1:8545";
@@ -55,9 +55,13 @@ async function main() {
   console.log("meta.periodEnd:", periodEnd.toString());
   console.log("meta.version:", String(version));
 
-  // ---- signature: sign snapshotHash bytes (dev choice) ----
-  const sigHex = await wallet.signMessage(getBytes(snapshotHash));
-  const sig = Signature.from(sigHex);
+  // ---- signature: sign digest expected by PoSSRegistry ----
+    const net = await provider.getNetwork();
+    const chainId = BigInt(net.chainId);
+    const msgHash = keccak256(solidityPacked(["uint256","bytes32"], [chainId, snapshotHash]));
+    const sig = Signature.from(wallet.signingKey.sign(msgHash));
+    console.log("msg.chainId:", chainId.toString());
+    console.log("msg.msgHash:", msgHash);
 
   const sigs = [{
     v: sig.v,     // uint8
