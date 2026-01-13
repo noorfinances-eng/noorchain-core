@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/triedb"
 	"github.com/holiman/uint256"
+	"github.com/syndtr/goleveldb/leveldb/util"
 	"io"
 	"log"
 	"math/big"
@@ -583,7 +584,190 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		return resp
 
 	case "eth_getLogs":
-		resp.Result = []any{}
+		// Minimal eth_getLogs: scan persisted receipts (rcpt/v1/*) and filter logs in-memory.
+		// NOTE: O(n) over receipts; acceptable for local/mainnet-like pack until a proper log index is added.
+		var paramsAny []any
+		if err := json.Unmarshal(req.Params, &paramsAny); err != nil || len(paramsAny) < 1 {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+			return resp
+		}
+
+		filter, ok := paramsAny[0].(map[string]any)
+		if !ok {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid filter"}
+			return resp
+		}
+
+		// Helpers
+		parseQty := func(v any, fallback uint64) uint64 {
+			s, _ := v.(string)
+			s = strings.TrimSpace(s)
+			if s == "" || s == "latest" || s == "pending" {
+				return fallback
+			}
+			if s == "earliest" {
+				return 0
+			}
+			s = strings.TrimPrefix(s, "0x")
+			if s == "" {
+				return fallback
+			}
+			n, err := strconv.ParseUint(s, 16, 64)
+			if err != nil {
+				return fallback
+			}
+			return n
+		}
+
+		// Range
+		latest := uint64(0)
+		if s.n != nil {
+			latest = s.n.Height()
+		}
+		fromN := parseQty(filter["fromBlock"], latest)
+		toN := parseQty(filter["toBlock"], latest)
+		if toN < fromN {
+			// Per geth behavior, empty set.
+			resp.Result = []any{}
+			return resp
+		}
+
+		// Address filter: string or []string
+		addrSet := map[string]bool{}
+		if av, ok := filter["address"]; ok && av != nil {
+			switch t := av.(type) {
+			case string:
+				a := strings.ToLower(strings.TrimSpace(t))
+				if a != "" {
+					addrSet[a] = true
+				}
+			case []any:
+				for _, it := range t {
+					if s2, ok := it.(string); ok {
+						a := strings.ToLower(strings.TrimSpace(s2))
+						if a != "" {
+							addrSet[a] = true
+						}
+					}
+				}
+			}
+		}
+
+		// Topics filter: [] (each element can be null, "0x..", or [] "0x.." for OR)
+		var topicsFilter []any
+		if tv, ok := filter["topics"]; ok {
+			if arr, ok := tv.([]any); ok {
+				topicsFilter = arr
+			}
+		}
+		matchTopics := func(logTopics []string) bool {
+			if len(topicsFilter) == 0 {
+				return true
+			}
+			for i := 0; i < len(topicsFilter); i++ {
+				if i >= len(logTopics) {
+					return false
+				}
+				f := topicsFilter[i]
+				if f == nil {
+					continue
+				}
+				switch x := f.(type) {
+				case string:
+					want := strings.ToLower(strings.TrimSpace(x))
+					if want == "" {
+						continue
+					}
+					if strings.ToLower(logTopics[i]) != want {
+						return false
+					}
+				case []any:
+					// OR set
+					okAny := false
+					for _, oi := range x {
+						if s3, ok := oi.(string); ok {
+							want := strings.ToLower(strings.TrimSpace(s3))
+							if want != "" && strings.ToLower(logTopics[i]) == want {
+								okAny = true
+								break
+							}
+						}
+					}
+					if !okAny {
+						return false
+					}
+				default:
+					// unknown filter shape -> fail closed
+					return false
+				}
+			}
+			return true
+		}
+
+		if s.n == nil || s.n.DB() == nil {
+			resp.Error = &rpcError{Code: -32000, Message: "db not available"}
+			return resp
+		}
+
+		// Scan receipts and collect matching logs.
+		out := make([]any, 0, 8)
+		it := s.n.DB().NewIterator(util.BytesPrefix([]byte("rcpt/v1/")), nil)
+		defer it.Release()
+
+		for it.Next() {
+			b := it.Value()
+
+			var r receiptJSON
+			if err := json.Unmarshal(b, &r); err != nil {
+				continue
+			}
+
+			// blockNumber range check
+			bn := strings.TrimPrefix(strings.TrimSpace(r.BlockNumber), "0x")
+			if bn == "" {
+				continue
+			}
+			h, err := strconv.ParseUint(bn, 16, 64)
+			if err != nil {
+				continue
+			}
+			if h < fromN || h > toN {
+				continue
+			}
+
+			// log-level filtering
+			for _, la := range r.Logs {
+				lm, ok := la.(map[string]any)
+				if !ok {
+					continue
+				}
+
+				// address filter
+				if len(addrSet) > 0 {
+					as, _ := lm["address"].(string)
+					as = strings.ToLower(strings.TrimSpace(as))
+					if as == "" || !addrSet[as] {
+						continue
+					}
+				}
+
+				// topics filter
+				ltAny, _ := lm["topics"].([]any)
+				lt := make([]string, 0, len(ltAny))
+				for _, t := range ltAny {
+					if ts, ok := t.(string); ok {
+						lt = append(lt, ts)
+					}
+				}
+				if !matchTopics(lt) {
+					continue
+				}
+
+				out = append(out, lm)
+			}
+		}
+
+		resp.Result = out
 		return resp
 
 	case "eth_newFilter":

@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/util"
 
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"noorchain-evm-l1/core/config"
@@ -56,8 +58,67 @@ const rcptKVPrefix = "rcpt/v1/"
 // EVM Chain ID (EIP-155) must be tooling/wallet compatible.
 // For NOORCHAIN 2.1 local dev, we pin this to 2121.
 const evmChainID uint64 = 2121
-
 const stateHeadKVKey = "stateroot/v1/head" // persisted in NOOR LevelDB (n.db)
+const headHeightKVKey = "headheight/v1"    // persisted in NOOR LevelDB (n.db)
+
+func u64be(v uint64) []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, v)
+	return b
+}
+
+func readHeadHeight(db *leveldb.DB, headRoot common.Hash) (uint64, bool) {
+	if db == nil {
+		return 0, false
+	}
+
+	// 1) Preferred: direct key
+	if b, err := db.Get([]byte(headHeightKVKey), nil); err == nil && len(b) == 8 {
+		return binary.BigEndian.Uint64(b), true
+	}
+
+	// 2) Recovery: scan blkmeta and try to find the height whose StateRoot matches headRoot.
+	// Also compute max height as fallback.
+	var maxH uint64
+	var matchH uint64
+	var hasMatch bool
+
+	it := db.NewIterator(util.BytesPrefix([]byte(blkMetaPrefix)), nil)
+	defer it.Release()
+
+	for it.Next() {
+		k := string(it.Key()) // "blkmeta/v1/<hex>"
+		suffix := strings.TrimPrefix(k, blkMetaPrefix)
+		if suffix == "" {
+			continue
+		}
+		hv, err := strconv.ParseUint(suffix, 16, 64)
+		if err != nil {
+			continue
+		}
+		if hv > maxH {
+			maxH = hv
+		}
+
+		if headRoot != (common.Hash{}) {
+			bm, err := decodeBlockMeta(it.Value())
+			if err == nil && bm.StateRoot == headRoot {
+				matchH = hv
+				hasMatch = true
+			}
+		}
+	}
+
+	if hasMatch {
+		_ = db.Put([]byte(headHeightKVKey), u64be(matchH), nil)
+		return matchH, true
+	}
+	if maxH > 0 {
+		_ = db.Put([]byte(headHeightKVKey), u64be(maxH), nil)
+		return maxH, true
+	}
+	return 0, false
+}
 
 func rcptKey(txHash string) []byte {
 	h := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(txHash), "0x"))
@@ -146,6 +207,17 @@ func (n *Node) Start() error {
 		return err
 	}
 	n.db = db
+	// Restore chain head height from DB (or recover from blkmeta if missing)
+	headRoot := common.Hash{}
+	if b, err := n.db.Get([]byte(stateHeadKVKey), nil); err == nil && len(b) == 32 {
+		headRoot = common.BytesToHash(b)
+	}
+	if hh, ok := readHeadHeight(n.db, headRoot); ok && hh > 0 {
+		n.mu.Lock()
+		n.height = hh
+		n.mu.Unlock()
+		n.logger.Println("head: restored | height:", hh, "| root:", headRoot.Hex())
+	}
 
 	// M12: open isolated geth DB for EVM world-state (Option A)
 	es, err := evmstate.Open(n.cfg.DataDir, false)
@@ -263,6 +335,24 @@ func (n *Node) loop() {
 		n.logger.Println("evmstate: missing evmStore DB; stateRoot will remain placeholder")
 	}
 
+	// M12.x: restore head height from NOOR LevelDB (preferred key, else recover from blkmeta scan)
+	if n.db != nil {
+		if hh, ok := readHeadHeight(n.db, headRoot); ok {
+			n.mu.Lock()
+			n.height = hh
+			n.mu.Unlock()
+
+			// If headRoot was zero (or not yet loaded), refresh it from the persisted head root key.
+			if headRoot == (common.Hash{}) {
+				if b, err := n.db.Get([]byte(stateHeadKVKey), nil); err == nil && len(b) == 32 {
+					headRoot = common.BytesToHash(b)
+				}
+			}
+
+			n.logger.Println("head: restored | height:", hh, "| root:", headRoot.Hex())
+		}
+	}
+
 	// M12.5.1: optional alloc bootstrap (dev/mainnet genesis allocations)
 	// Applied once per data-dir (guarded by alloc/v1/applied in NOOR LevelDB).
 	if statedb != nil && n.db != nil {
@@ -284,6 +374,7 @@ func (n *Node) loop() {
 					if root, err := statedb.Commit(0, false); err == nil {
 						_ = tdb.Commit(root, false)
 						_ = n.db.Put([]byte(stateHeadKVKey), root.Bytes(), nil)
+						_ = n.db.Put([]byte(headHeightKVKey), u64be(0), nil)
 						_ = n.db.Put([]byte(allocAppliedKVKey), []byte{1}, nil)
 						if st2, err := state.New(root, sdbCache); err == nil {
 							statedb = st2
@@ -292,6 +383,7 @@ func (n *Node) loop() {
 					} else {
 						n.logger.Println("alloc: commit failed:", err)
 					}
+
 				}
 			}
 		}
@@ -578,6 +670,8 @@ func (n *Node) loop() {
 							_ = tdb.Commit(root, false)
 						}
 						_ = n.db.Put([]byte(stateHeadKVKey), root.Bytes(), nil)
+						_ = n.db.Put([]byte(headHeightKVKey), u64be(height), nil)
+
 						if sdbCache != nil {
 							if st2, err := state.New(root, sdbCache); err == nil {
 								statedb = st2
@@ -598,6 +692,8 @@ func (n *Node) loop() {
 				if b, err := encodeBlockMeta(bm); err == nil {
 					_ = n.db.Put(blkMetaKey(height), b, nil)
 				}
+				_ = n.db.Put([]byte(headHeightKVKey), u64be(height), nil)
+
 			}
 
 			if mined > 0 {
