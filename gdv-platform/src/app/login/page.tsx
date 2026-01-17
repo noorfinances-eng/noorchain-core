@@ -32,6 +32,14 @@ export default function LoginPage() {
     return null;
   }
 
+
+  function sanitizeNext(raw: string | null): string | null {
+    if (!raw) return null;
+    // Only allow internal app routes we actually serve (no open redirect).
+    if (raw.startsWith("/curator") || raw.startsWith("/dev")) return raw;
+    return null;
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -44,7 +52,10 @@ export default function LoginPage() {
         return;
       }
       setRole(role);
-      router.push(role === "dev" ? users.dev.landing : users.curator.landing);
+      const params = new URLSearchParams(window.location.search);
+        const next = sanitizeNext(params.get("next"));
+        const fallback = role === "dev" ? users.dev.landing : users.curator.landing;
+        router.push(next ?? fallback);
     } finally {
       setIsSubmitting(false);
     }
