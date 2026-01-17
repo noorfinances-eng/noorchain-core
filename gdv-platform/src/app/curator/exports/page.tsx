@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { CuratorTopBar } from "../../../components/CuratorTopBar";
 function logout() {
   document.cookie = "gdv_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=lax";
   localStorage.removeItem("gdv_role");
@@ -245,13 +246,14 @@ export default function CuratorExportsPage() {
         return <span className={cx(base, "border-red-400/25 bg-red-400/10 text-red-100")}>Failed</span>;
     }
   }
-
-  return (
+return (
     <main className="min-h-screen bg-[#071025] text-white">
       <div className="mx-auto max-w-6xl px-6 py-10 space-y-6">
+
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
+          <CuratorTopBar active="exports" onLogout={logout} />
+
+          <section className="pt-6">
             <div className="text-xs tracking-widest text-white/60">CURATOR · EXPORTS</div>
             <h1 className="mt-2 text-2xl font-semibold">Export Evidence Pack</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -259,38 +261,11 @@ export default function CuratorExportsPage() {
               <Pill>Proof-ready (prototype)</Pill>
               <Pill>Institutional format</Pill>
             </div>
-          </div>
+          </section>
 
-          <div className="hidden sm:flex items-center gap-2">
-            <a
-              href="/curator"
-              className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm text-white/85 hover:border-white/20"
-            >
-              Dashboard
-            </a>
-            <a
-              href="/curator/exports"
-              className="rounded-xl border border-white/25 bg-white/[0.10] px-4 py-2 text-sm text-white/90"
-            >
-              Exports
-            </a>
-            <a
-              href="/dev"
-              className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm text-white/85 hover:border-white/20"
-            >
-              Dev
-            </a>
-            <button
-              type="button"
-              onClick={logout}
-              className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm text-white/85 hover:border-white/20"
-            >
-              Se déconnecter
-            </button>
-          </div>
-        </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+
           {/* Left: Builder */}
           <Card className="lg:col-span-5">
             <div className="p-6">

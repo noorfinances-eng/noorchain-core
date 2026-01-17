@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { CuratorTopBar } from "../../components/CuratorTopBar";
 
 function logout() {
   document.cookie = "gdv_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=lax";
@@ -235,73 +236,10 @@ export default function Home() {
         <div className="absolute inset-0 opacity-[0.08] [background-image:radial-gradient(rgba(255,255,255,0.7)_1px,transparent_1px)] [background-size:22px_22px]" />
       </div>
 
-      {/* Top bar */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/55 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
-              <div className="h-4 w-4 rounded bg-blue-500/70" />
-            </div>
-            <div className="leading-tight">
-              <div className="text-base font-semibold tracking-tight">
-                Curators Hub <span className="text-slate-400">- Graine de Vie</span>
-              </div>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <button className="inline-flex items-center gap-2 rounded-xl bg-blue-500/20 px-4 py-2 text-sm font-medium text-blue-100 ring-1 ring-blue-400/25 hover:bg-blue-500/25">
-              <Icon name="plus" className="h-4 w-4" />
-              Nouvelle campagne
-            </button>
-
-            <div className="flex items-center gap-2 text-slate-300">
-              <button className="rounded-xl bg-white/5 p-2 ring-1 ring-white/10 hover:bg-white/10" aria-label="Historique">
-                <Icon name="clock" />
-              </button>
-              <button className="rounded-xl bg-white/5 p-2 ring-1 ring-white/10 hover:bg-white/10" aria-label="Compte">
-                <Icon name="user" />
-              </button>
-              <button className="rounded-xl bg-white/5 p-2 ring-1 ring-white/10 hover:bg-white/10" aria-label="Menu">
-                <Icon name="menu" />
-              </button>
-              <button className="rounded-xl bg-white/5 p-2 ring-1 ring-white/10 hover:bg-white/10" aria-label="Sync">
-                <Icon name="cloud" />
-              </button>
-              <button className="rounded-xl bg-white/5 p-2 ring-1 ring-white/10 hover:bg-white/10" aria-label="Paramètres">
-                <Icon name="gear" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+        <CuratorTopBar active="dashboard" onLogout={logout} />
 
       <main className="mx-auto max-w-7xl px-6 pb-28 pt-8">
-      <div className="mx-auto max-w-6xl px-6 pt-8 pb-2 flex items-center justify-between">
-        <div className="text-xs tracking-widest text-white/60">CURATOR · DASHBOARD</div>
-        <div className="flex items-center gap-2">
-          <a
-            href="/curator"
-            className="rounded-xl border border-white/25 bg-white/[0.10] px-4 py-2 text-sm text-white/90"
-          >
-            Dashboard
-          </a>
-          <a
-            href="/curator/exports"
-            className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm text-white/85 hover:border-white/20"
-          >
-            Exports
-          </a>
-          <button
-            type="button"
-            onClick={logout}
-            className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2 text-sm text-white/85 hover:border-white/20"
-          >
-            Se déconnecter
-          </button>
-        </div>
-      </div>
-
         {/* Title */}
         <section>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-100">
