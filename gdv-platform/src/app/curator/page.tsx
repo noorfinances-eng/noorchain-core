@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CuratorTopBar } from "../../components/CuratorTopBar";
 
 function logout() {
@@ -161,7 +161,7 @@ function GlassCard({
 }
 
 export default function Home() {
-  const campaigns = useMemo<Campaign[]>(() => [
+ const [campaigns, setCampaigns] = useState<Campaign[]>(() => [
   {
     id: "arbres-2024",
     name: "Plantons des arbres",
@@ -180,15 +180,24 @@ export default function Home() {
     points: 420,
     pendingCount: 2,
   },
-], []);
+]);
 
-  const rows = useMemo<ActionRow[]>(() => [
+  const [rows, setRows] = useState<ActionRow[]>(() => [
   { id: "row-1", anonId: "Élève-001", actionType: "Plantations d'arbres", qty: 12, status: "À valider" },
   { id: "row-2", anonId: "Élève-002", actionType: "Nettoyages de déchets", qty: 3, status: "À valider" },
   { id: "row-3", anonId: "Élève-003", actionType: "Reforestation", qty: 20, status: "À valider" },
   { id: "row-4", anonId: "Élève-001", actionType: "Plantations d'arbres", qty: 6, status: "À valider" },
   { id: "row-5", anonId: "Élève-006", actionType: "Plantations", qty: 5, status: "À valider" },
-], []);
+]);
+
+const [showTableOptions, setShowTableOptions] = useState(false);
+const [hideValidated, setHideValidated] = useState(false);
+const [compactRows, setCompactRows] = useState(false);
+
+const tableRows = useMemo(() => {
+  if (!hideValidated) return rows;
+  return rows.filter((r) => r.status !== "Validé");
+}, [rows, hideValidated]);
 
   const [activeCampaignId, setActiveCampaignId] = useState(campaigns[0]?.id ?? "");
   const [selected, setSelected] = useState<Record<string, boolean>>({
@@ -197,14 +206,63 @@ export default function Home() {
     "row-4": true,
   });
 
+  
+const optionsWrapRef = useRef<HTMLDivElement | null>(null);
+
+useEffect(() => {
+  if (!showTableOptions) return;
+
+  function onKeyDown(e: KeyboardEvent) {
+    if (e.key === "Escape") setShowTableOptions(false);
+  }
+  function onMouseDown(e: MouseEvent) {
+    const el = optionsWrapRef.current;
+    if (!el) return;
+    if (e.target instanceof Node && !el.contains(e.target)) setShowTableOptions(false);
+  }
+
+  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("mousedown", onMouseDown);
+  return () => {
+    window.removeEventListener("keydown", onKeyDown);
+    window.removeEventListener("mousedown", onMouseDown);
+    
+  };
+}, [showTableOptions]);
+
   const activeCampaign = useMemo(
     () => campaigns.find((c) => c.id === activeCampaignId) ?? campaigns[0],
     [activeCampaignId, campaigns]
   );
 
   const selectedCount = useMemo(() => Object.values(selected).filter(Boolean).length, [selected]);
-  const allSelected = useMemo(() => rows.every((r) => selected[r.id]), [rows, selected]);
+  const allSelected = useMemo(
+  () => tableRows.length > 0 && tableRows.every((r) => selected[r.id]),
+  [tableRows, selected]
+);
+  function validateRow(id: string) {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status: "Validé" } : r)));
+    setSelected((s) => ({ ...s, [id]: false }));
+  }
+    function validateSelection() {
+      const ids = Object.entries(selected)
+        .filter(([, v]) => v)
+        .map(([id]) => id);
 
+      if (ids.length === 0) return;
+
+      setRows((prev) =>
+        prev.map((r) => (ids.includes(r.id) ? { ...r, status: "Validé" } : r))
+      );
+
+      setSelected((s) => {
+        const next = { ...s };
+        ids.forEach((id) => {
+          next[id] = false;
+        });
+        return next;
+      });
+    }
   function toggleRow(id: string) {
     setSelected((s) => ({ ...s, [id]: !s[id] }));
   }
@@ -223,9 +281,47 @@ export default function Home() {
 
   function clearSelection() {
     const next: Record<string, boolean> = {};
-    rows.forEach((r) => (next[r.id] = false));
+    tableRows.forEach((r) => (next[r.id] = false));
     setSelected(next);
   }
+  
+  function slugifyId(input: string) {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+}
+
+function createCampaign() {
+  const name = window.prompt("Nom de la campagne ?", "Nouvelle campagne");
+  if (!name) return;
+
+  const period = window.prompt("Période (ex: du 01 Mars au 01 Mai 2024) ?", "campagne continue") ?? "campagne continue";
+  const rule = window.prompt("Règle / objectif (ex: Planter 10 arbres/semaine) ?", "") ?? "";
+
+  const base = slugifyId(name) || "campaign";
+  let id = base;
+  let i = 2;
+  while (campaigns.some((c) => c.id === id)) {
+    id = `${base}-${i++}`;
+  }
+
+  const newC: Campaign = {
+    id,
+    name,
+    period,
+    rule,
+    validatedActions: 0,
+    points: 0,
+    pendingCount: 0,
+  };
+
+  setCampaigns((prev) => [newC, ...prev]);
+  setActiveCampaignId(id);
+}
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -237,7 +333,7 @@ export default function Home() {
       </div>
 
 
-        <CuratorTopBar active="dashboard" onLogout={logout} />
+        <CuratorTopBar active="dashboard" onLogout={logout} onNewCampaign={createCampaign} />
 
       <main className="mx-auto max-w-7xl px-6 pb-28 pt-8">
         {/* Title */}
@@ -307,14 +403,15 @@ export default function Home() {
                   </span>
                   Tout sélectionner
                 </button>
-
-                <button
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-100 ring-1 ring-emerald-400/20 hover:bg-emerald-500/20"
-                >
-                  <Icon name="plus" className="h-4 w-4" />
-                  Valider la sélection
-                </button>
-
+                                 <button
+                    type="button"
+                    onClick={validateSelection}
+                    disabled={selectedCount === 0}
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/15 px-4 py-2 text-sm font-medium text-emerald-100 ring-1 ring-emerald-400/20 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-500/15"
+                  >
+                    <Icon name="plus" className="h-4 w-4" />
+                    Valider la sélection
+                  </button>
                 <button
                   onClick={clearSelection}
                   className="inline-flex items-center gap-2 rounded-xl bg-white/5 px-4 py-2 text-sm text-slate-200 ring-1 ring-white/10 hover:bg-white/10"
@@ -327,13 +424,54 @@ export default function Home() {
               <div className="mt-4 overflow-hidden rounded-2xl border border-white/10">
                 <div className="flex items-center justify-between border-b border-white/10 bg-white/5 px-4 py-3">
                   <div className="text-xs font-medium text-slate-300"> </div>
-                  <div className="flex items-center gap-2 text-slate-300">
-                    <button className="rounded-lg bg-white/5 p-2 ring-1 ring-white/10 hover:bg-white/10" aria-label="Options">
-                      <Icon name="sliders" className="h-4 w-4" />
-                    </button>
-                    <button className="rounded-lg bg-white/5 p-2 ring-1 ring-white/10 hover:bg-white/10" aria-label="Paramètres table">
-                      <Icon name="gear" className="h-4 w-4" />
-                    </button>
+                  <div ref={optionsWrapRef} className="relative flex items-center gap-2 text-slate-300">
+                    <button
+  type="button"
+  onClick={() => setShowTableOptions((v) => !v)}
+  className={cx(
+    "rounded-lg bg-white/5 p-2 ring-1 ring-white/10 hover:bg-white/10",
+    showTableOptions ? "ring-white/25" : null
+  )}
+  aria-label="Options"
+  aria-expanded={showTableOptions}
+>
+  <Icon name="sliders" className="h-4 w-4" />
+</button>
+                   <div
+  className="rounded-lg bg-white/5 p-2 ring-1 ring-white/10 opacity-60 cursor-not-allowed"
+  aria-label="Paramètres table (prototype)"
+  title="Prototype"
+>
+  <Icon name="gear" className="h-4 w-4" />
+</div>
+                    {showTableOptions ? (
+  <div className="absolute right-0 top-11 w-72 rounded-2xl border border-white/10 bg-slate-950/95 p-3 shadow-[0_18px_50px_rgba(0,0,0,0.55)] ring-1 ring-white/10 backdrop-blur-xl">
+    <div className="text-xs font-medium tracking-widest text-slate-400">OPTIONS TABLE</div>
+
+    <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 hover:bg-white/[0.06]">
+      <div className="text-sm text-slate-200">Masquer les actions validées</div>
+      <input
+        type="checkbox"
+        checked={hideValidated}
+        onChange={(e) => setHideValidated(e.target.checked)}
+        className="h-4 w-4 accent-emerald-400"
+      />
+    </label>
+
+    <label className="mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 hover:bg-white/[0.06]">
+      <div className="text-sm text-slate-200">Mode compact</div>
+      <input
+        type="checkbox"
+        checked={compactRows}
+        onChange={(e) => setCompactRows(e.target.checked)}
+        className="h-4 w-4 accent-sky-400"
+      />
+    </label>
+
+    <div className="mt-3 text-xs text-slate-500">Esc pour fermer · clic extérieur pour fermer</div>
+  </div>
+) : null}
+
                   </div>
                 </div>
 
@@ -358,11 +496,11 @@ export default function Home() {
                   </thead>
 
                   <tbody className="divide-y divide-white/10">
-                    {rows.map((r) => {
+                    {tableRows.map((r) => {
                       const isSelected = !!selected[r.id];
                       return (
                         <tr key={r.id} className="bg-slate-950/10">
-                          <td className="px-4 py-3">
+                         <td className={cx("px-4", compactRows ? "py-2" : "py-3")}>
                             <button
                               onClick={() => toggleRow(r.id)}
                               className={cx(
@@ -376,20 +514,37 @@ export default function Home() {
                               ✓
                             </button>
                           </td>
-                          <td className="px-4 py-3 text-slate-200">{r.anonId}</td>
-                          <td className="px-4 py-3 text-slate-300">{r.actionType}</td>
-                          <td className="px-4 py-3 text-slate-200">{r.qty}</td>
-                          <td className="px-4 py-3">
-                            <span className="inline-flex items-center rounded-full bg-amber-500/15 px-3 py-1 text-xs font-medium text-amber-200 ring-1 ring-amber-500/20">
-                              À valider
-                            </span>
+                          <td className={cx("px-4", compactRows ? "py-2" : "py-3", "text-slate-200")}>{r.anonId}</td>
+                          <td className={cx("px-4", compactRows ? "py-2" : "py-3", "text-slate-300")}>{r.actionType}</td>
+                          <td className={cx("px-4", compactRows ? "py-2" : "py-3", "text-slate-200")}>{r.qty}</td>
+                          <td className={cx("px-4", compactRows ? "py-2" : "py-3")}>
+                           <span
+  className={cx(
+    "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ring-1",
+    r.status === "Validé"
+      ? "bg-emerald-500/15 text-emerald-200 ring-emerald-500/20"
+      : "bg-amber-500/15 text-amber-200 ring-amber-500/20"
+  )}
+>
+  {r.status}
+</span>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className={cx("px-4", compactRows ? "py-2" : "py-3")}>
                             <div className="flex justify-end gap-2">
-                              <button className="rounded-lg bg-white/5 p-2 ring-1 ring-white/10 hover:bg-white/10" aria-label="Éditer">
-                                <Icon name="pencil" className="h-4 w-4 text-slate-300" />
-                              </button>
-                              <button className="rounded-lg bg-white/5 p-2 ring-1 ring-white/10 hover:bg-white/10" aria-label="Valider">
+                                                             <button
+                                  type="button"
+                                  onClick={() => window.alert("Éditer (prototype)")}
+                                  className="rounded-lg bg-white/5 p-2 ring-1 ring-white/10 hover:bg-white/10"
+                                  aria-label="Éditer"
+                                >
+                                  <Icon name="pencil" className="h-4 w-4 text-slate-300" />
+                                </button>
+                              <button
+                                type="button"
+                                onClick={() => validateRow(r.id)}
+                                className="rounded-lg bg-white/5 p-2 ring-1 ring-white/10 hover:bg-white/10"
+                                aria-label="Valider"
+                              >
                                 <Icon name="check" className="h-4 w-4 text-slate-300" />
                               </button>
                             </div>
