@@ -18,3 +18,10 @@ data-testnet/
 site/.next/
 site/node_modules/
 site/package-lock.json
+
+# local build + runtime
+artifacts/
+cache/
+data/
+node_modules/
+noorcore
