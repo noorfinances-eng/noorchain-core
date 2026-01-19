@@ -1,0 +1,36 @@
+import hre from "hardhat";
+import { defineChain } from "viem";
+
+const noorchain2121 = defineChain({
+  id: 2121,
+  name: "NOORCHAIN 2.1 Local",
+  nativeCurrency: { name: "NUR", symbol: "NUR", decimals: 18 },
+  rpcUrls: { default: { http: ["http://127.0.0.1:8545"] } },
+});
+
+async function main() {
+  console.log("Deploying Curators Hub v0 contracts...");
+
+  const conn = await hre.network.connect();
+
+  // IMPORTANT: provide chain override so hardhat-viem can resolve chainId 2121
+  const publicClient = await conn.viem.getPublicClient({ chain: noorchain2121 });
+  const [walletClient] = await conn.viem.getWalletClients({ chain: noorchain2121 });
+
+  const curatorSet = await conn.viem.deployContract("CuratorSet", [], {
+    client: { public: publicClient, wallet: walletClient },
+  });
+  console.log("CuratorSet deployed at:", curatorSet.address);
+
+  const possRegistry = await conn.viem.deployContract("PoSSRegistry", [curatorSet.address], {
+    client: { public: publicClient, wallet: walletClient },
+  });
+  console.log("PoSSRegistry deployed at:", possRegistry.address);
+
+  await conn.close();
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exitCode = 1;
+});

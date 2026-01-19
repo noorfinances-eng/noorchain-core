@@ -1,0 +1,29 @@
+{
+  "name": "noorchain-core",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/noorfinances-eng/noorchain-core.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/noorfinances-eng/noorchain-core/issues"
+  },
+  "homepage": "https://github.com/noorfinances-eng/noorchain-core#readme",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.3",
+    "ethers": "^6.16.0",
+    "hardhat": "^3.1.0"
+  }
+}
