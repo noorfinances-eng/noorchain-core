@@ -3,83 +3,82 @@ Version: 2.1
 Last Updated: 2026-01-19
 
 Purpose
-This index is the authoritative entry point for the NOORCHAIN 2.1 documentation maintained in /docs.
-It focuses on the evm-l1 line (sovereign EVM L1) and the operational runbooks used to run and validate a mainnet-like local stack.
+This index is the authoritative entry point for NOORCHAIN 2.1 documentation in /docs.
+The documentation set is ops-first: runbooks and validation gates are the source of truth.
 
-Scope (Active)
-The documents listed below are considered active for NOORCHAIN 2.1 operations, validation, and governance/compliance framing:
-- Node operations (multi-node pack, RPC, world-state, receipts/logs)
-- Minimal dApp/tooling runbooks
-- Genesis and governance/legal/compliance reference materials
+Authoritative (Active)
+- NOORCHAIN_Index_2.1.md
+- README.md
+- RUNBOOK-*.md
+- 2.1 documents listed in this index (architecture, RPC, state, operations, genesis, governance, legal/compliance)
 
-Legacy documentation
-Historical specifications and pilots from earlier iterations (Cosmos/Ethermint-era materials, older phase indices, legacy pilots) have been preserved and moved under:
+Legacy Reference
+Historical documents (including the previous 1.1 reference set) are preserved for traceability under:
   docs/_archive/
+They are non-authoritative for NOORCHAIN 2.1 unless explicitly stated otherwise.
 
 1) Operational Runbooks (Active)
-Use these runbooks for reproducible operations and validation gates.
-
 - RUNBOOK-M5.md
-  Minimal multi-node networking and bootstrap discipline.
-
 - RUNBOOK-M9-CONTRACTS-EXECUTION.md
-  Minimal contract execution wiring (mining/applyTx hook) and receipt persistence gates.
-
 - RUNBOOK-M10-MAINNETLIKE.md
-  Two-node mainnet-like pack: leader/follower behavior, P2P, RPC stability, health endpoints.
-
 - RUNBOOK-M11-DAPPS.md
-  Local tooling and dApp scripts used against the running nodes.
-
 - RUNBOOK-M12-WORLDSTATE-RPC.md
-  World-state integration (Geth StateDB/triedb), stateRoot exposure, and RPC read parity gates.
-
 - RUNBOOK-M13-VALIDATION.md
-  Post-tag validation checklist for the current baseline.
-
 - RUNBOOK-PHASE7-PROOF-OF-LIVENESS.md
-  Controlled proof-of-liveness procedure (minimal exposure).
 
-2) Snapshots / Notes (Active)
-- M6-A.1-SNAPSHOT.md
-  Historical checkpoint notes used during the evm-l1 build-up.
+2) Core 2.1 Documents (Active)
+- ARCHITECTURE_2.1.md
+- RPC_SPEC_2.1.md
+- STATE_MODEL_2.1.md
+- SECURITY_TRUST_MODEL_2.1.md
+- OPERATIONS_PLAYBOOK_2.1.md
+- CHANGELOG_2.1.md
 
-3) Genesis Reference (Active)
-These documents capture the intended genesis posture and supporting governance/security framing.
+3) RPC / Ops / Dev References (Active)
+rpc/
+- rpc/RPC_COMPAT_MATRIX_2.1.md
+- rpc/RPC_ERROR_MODEL_2.1.md
 
-- genesis/Genesis_Overview_1.1_EN.md
-- genesis/Genesis_Overview_1.1_FR.md
+ops/
+- ops/DEPLOYMENT_MODEL_2.1.md
+- ops/INCIDENTS_2.1.md
 
-- genesis/Genesis_Allocation_1.1_EN.md
-- genesis/Genesis_Allocation_1.1_FR.md
+dev/
+- dev/DEV_QUICKSTART_2.1.md
+- dev/TOOLING_HARDHAT_VIEM_2.1.md
+- dev/JSON_RPC_EXAMPLES_2.1.md
 
-- genesis/Genesis_Parameters_1.1.md
-- genesis/Genesis_Parameters_1.1_FR.md
+4) Genesis (Active)
+genesis/
+- genesis/GENESIS_SPEC_2.1.md
+- genesis/GENESIS_CHECKLIST_2.1.md
+- genesis/PARAMETERS_REFERENCE_2.1.md
+- genesis/ALLOC_POLICY_2.1.md
 
-- genesis/Genesis_Governance_1.1.md
-- genesis/Genesis_Governance_1.1_FR.md
+5) Governance (Active)
+governance/
+- governance/GOVERNANCE_MODEL_2.1.md
+- governance/UPGRADE_PROCESS_2.1.md
+- governance/MULTISIG_OPERATIONS_2.1.md
+- governance/INCIDENT_RESPONSE_2.1.md
 
-- genesis/Genesis_Security_Overview_1.1.md
-- genesis/Genesis_Security_Overview_1.1_FR.md
+6) Legal & Compliance (Active)
+legal/
+- legal/LEGAL_LIGHT_POSTURE_2.1.md
+- legal/IP_AND_BRAND_2.1.md
 
-- genesis/Genesis_Migration_Path_1.1.md
-- genesis/Genesis_Migration_Path_1.1_FR.md
-
-4) Governance (Active)
-- governance/Governance_Charter_1.1.md
-- governance/MultiSig_Committee_1.1.md
-
-5) Legal (Active)
-- legal/Legal_Architecture_1.1.md
-- legal/Legal_Light_2025_1.1.md
-- legal/Legal_Notices_1.1.md
-- legal/Foundation_Creation_1.1.md
-- legal/Foundation_Statutes_1.1.md
-
-6) Compliance (Active)
-- compliance/Compliance_Framework_1.1.md
+compliance/
+- compliance/COMPLIANCE_FRAMEWORK_2.1.md
+- compliance/COMMUNICATIONS_POLICY_2.1.md
 
 7) French Entry Point
+fr/
 - fr/README_FR.md
-  French navigation entry point for selected documents.
+
+8) Optional (Active, if maintained)
+- AUDIT_READINESS_2.1.md
+- THREAT_MODEL_2.1.md
+- PRIVACY_DATA_POLICY_2.1.md
+- API_STABILITY_POLICY_2.1.md
+- RELEASE_PROCESS_2.1.md
 
