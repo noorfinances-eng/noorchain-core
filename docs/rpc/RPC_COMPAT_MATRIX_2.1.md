@@ -1,230 +1,388 @@
-# NOORCHAIN 2.1 — RPC Compatibility Matrix (Tooling / Wallets)
+NOORCHAIN 2.1 — RPC Compatibility Matrix
 
-Version: v2.1-draft.0  
-Status: Operator-first reference (non-normative, but precise)  
-Last updated: 2026-01-19 (Europe/Zurich)
+Document ID: RPC_COMPAT_MATRIX_2.1
+Version: v1.0
+Date: January 2026
+Status: Active
+Scope: Defines the JSON-RPC compatibility surface for NOORCHAIN 2.1, including method support level, behavioral constraints, follower routing rules, and validation gates for tooling/wallet compatibility in controlled deployments.
 
-This document summarizes JSON-RPC method support and behavioral constraints for **NOORCHAIN 2.1 (evm-l1)**, with a focus on real-world tooling and wallet expectations.
+Purpose
 
-Authoritative specification remains:
-- `docs/RPC_SPEC_2.1.md`
-- `docs/STATE_MODEL_2.1.md`
+This document defines the RPC compatibility matrix for NOORCHAIN 2.1.
 
----
+It is designed to:
 
-## 0. Compatibility Position
+specify which JSON-RPC methods are supported and at what level
 
-NOORCHAIN 2.1 targets **practical Ethereum tooling compatibility** in controlled environments through a **subset-based JSON-RPC surface**.
+define behavioral expectations (inputs, outputs, error behavior)
 
-Principles:
-- Prefer methods required by standard wallets and SDKs (ethers/viem/Hardhat).
-- Make leader/follower behavior explicit and operationally safe.
-- Unsupported methods fail cleanly (`-32601`) rather than returning misleading placeholders.
+define leader/follower routing rules for specific methods
 
-Chain identity:
-- `chainId` = 2121 (`0x849`)
+provide validation gates for tooling (Hardhat, Viem, wallets)
 
----
+prevent compatibility drift across releases
 
-## 1. Role Semantics (Leader / Follower)
+This matrix is normative for operational compatibility claims.
 
-Default operational model:
-- **Leader** is authoritative for `"latest"` state.
-- **Follower** MAY serve safe reads, but MUST proxy **leader-only** methods when configured with `FollowRPC`.
+Scope and Definitions
 
-If `FollowRPC` is set:
-- Follower MUST proxy all leader-only reads to the leader.
-- This avoids “looks-up-to-date” divergence issues and ensures deterministic tooling results.
+2.1 Node Roles
 
----
+Leader: authoritative state and execution source.
 
-## 2. Method Support Matrix
+Follower: read-only RPC server that may proxy leader-only methods via FollowRPC.
 
-Legend:
-- ✅ Supported
-- ⚠️ Supported with constraints
-- ❌ Not supported (must return `-32601`)
+Reference:
 
-Role:
-- **Any**: can be served locally by leader or follower
-- **Leader-only**: must be served by leader; follower proxies if `FollowRPC` is set
-- **Follower-proxy**: follower returns leader result (operational rule)
+docs/ops/DEPLOYMENT_MODEL_2.1.md
 
-### 2.1 Identity / Network
+2.2 Support Levels
 
-| Method | Support | Role | Notes |
-|---|---:|---|---|
-| `eth_chainId` | ✅ | Any | Returns `0x849` |
-| `net_version` | ✅ | Any | Decimal string `"2121"` |
-| `web3_clientVersion` | ✅ | Any | Informational only |
+Each method is assigned a support level:
 
-### 2.2 Blocks / Headers
+L0 (Unsupported): method not implemented; must return a stable error per error model.
 
-| Method | Support | Role | Notes |
-|---|---:|---|---|
-| `eth_blockNumber` | ✅ | Any | Latest head height |
-| `eth_getBlockByNumber` | ✅ | Any | If height > head → `null`; includes `stateRoot/receiptsRoot/logsBloom` when available |
-| `eth_getBlockByHash` | ⚠️ | Any | Implementation-dependent; document if enabled |
+L1 (Stub/Minimal): method returns structurally valid output but may be incomplete or restricted.
 
-### 2.3 Transaction Path
+L2 (Operational): method works for controlled deployments and tooling use cases; behavior is stable and documented.
 
-| Method | Support | Role | Notes |
-|---|---:|---|---|
-| `eth_sendRawTransaction` | ✅ | Leader-only | Client must sign locally |
-| `eth_getTransactionByHash` | ✅ | Any | `null` if unknown |
-| `eth_getTransactionReceipt` | ✅ | Any | `null` until mined; receipt persists across restarts |
+L3 (Parity Target): method is expected to behave Ethereum-compatibly across leader/follower within defined routing semantics.
 
-### 2.4 World-State Reads
+Support level may differ between leader and follower depending on routing rules.
 
-| Method | Support | Role | Notes |
-|---|---:|---|---|
-| `eth_getBalance` | ✅ | Leader-only | `"latest"` anchored to committed head root |
-| `eth_getTransactionCount` | ✅ | Leader-only | Nonce at `"latest"` |
-| `eth_getCode` | ⚠️ | Leader-only | If enabled: returns bytecode; otherwise `-32601` or `0x` depending on build policy (spec must match reality) |
-| `eth_getStorageAt` | ⚠️ | Leader-only | If enabled: returns 32-byte value; otherwise `-32601` |
+2.3 Routing Classes
 
-### 2.5 Call / Gas
+Local: executed on the node receiving the request.
 
-| Method | Support | Role | Notes |
-|---|---:|---|---|
-| `eth_call` | ✅ | Leader-only | Read-only; `"pending"` treated as `"latest"` |
-| `eth_estimateGas` | ⚠️ | Leader-only | Heuristic; may be conservative |
-| `eth_gasPrice` | ⚠️ | Any | If exposed, may be constant/heuristic |
+Leader-only: must be served from leader (either called directly or proxied by follower).
 
-### 2.6 Logs
+Proxy-safe: follower may proxy to leader with identical semantics.
 
-| Method | Support | Role | Notes |
-|---|---:|---|---|
-| `eth_getLogs` | ⚠️ | Leader-only (recommended) | Bounded/ops-first; large ranges may be rejected or truncated |
+Follower-local: safe to serve locally on follower without proxy.
 
-### 2.7 Not Supported (by design)
+Compatibility Goals
 
-| Method family | Support | Rationale |
-|---|---:|---|
-| `personal_*` | ❌ | No node-managed accounts |
-| `eth_sendTransaction` | ❌ | Requires unlocked accounts |
-| `eth_subscribe` / `eth_unsubscribe` | ❌ | No websocket pubsub baseline |
-| `txpool_*` | ❌ | Not exposed in ops-first baseline |
-| `debug_*` / `trace_*` | ❌ | Not part of baseline surface |
+3.1 Controlled Wallet/Tooling Compatibility
 
-If a method is not explicitly supported, the server MUST return `-32601`.
+Primary compatibility targets:
 
----
+Hardhat / ethers / Viem basic flows
 
-## 3. Wallet Compatibility (Practical)
+transaction submission, receipt retrieval
 
-### 3.1 MetaMask / Browser wallets
-Expected to work when the node provides:
-- `eth_chainId`, `net_version`
-- `eth_blockNumber`, `eth_getBlockByNumber`
-- `eth_getBalance`, `eth_getTransactionCount`
-- `eth_sendRawTransaction`
-- `eth_getTransactionReceipt`
+contract deploy and basic reads
 
-Constraints:
-- No `personal_*` methods: signing remains inside the wallet.
-- If the wallet relies heavily on filters/subscriptions, it may degrade gracefully or require polling.
+block metadata reads for explorers and evidence packs
 
-Operational guidance:
-- Point wallet to **Leader RPC**.
-- If using follower RPC, ensure follower has `FollowRPC` configured so leader-only reads proxy correctly.
+3.2 Evidence and Audit Readiness
 
-### 3.2 Hardware wallets
-Works through the same flow (local signing). No node changes required.
+Compatibility includes:
 
----
+stable method behavior across restarts
 
-## 4. Tooling Compatibility
+deterministic outputs for identical inputs within a given block context
 
-### 4.1 ethers.js
-Works with:
-- chain identity calls
-- tx submission + receipt polling
-- read-only contract calls (`eth_call`)
+coherent block header roots exposure (stateRoot, receiptsRoot, logsBloom)
 
-Sensitive points:
-- Gas estimation may be heuristic; scripts should tolerate higher-than-necessary estimates.
+Reference:
 
-### 4.2 viem
-Works with:
-- explicit chain id
-- `eth_getTransactionCount` correctness (nonces must advance)
-- `eth_getTransactionReceipt.contractAddress` correctness for CREATE deploy flows
+docs/AUDIT_READINESS_2.1.md
 
-### 4.3 Hardhat
-Works with:
-- external network config (RPC URL)
-- local signing via provided private key
-- deployment scripts via `eth_sendRawTransaction`
+docs/STATE_MODEL_2.1.md
 
-Non-goals:
-- no built-in Hardhat network features (forking, tracing, automining semantics).
+Method Matrix
 
-### 4.4 Foundry (forge/cast)
-Works with:
-- `cast send --rpc-url ...` (raw tx submission)
-- `cast call --rpc-url ...` (`eth_call`)
-- `cast receipt` / polling
+The following table defines the current compatibility surface. If a method is not listed, treat it as L0 by default.
 
-If `eth_getCode` and `eth_getStorageAt` are not enabled, some contract inspection workflows will be limited.
+For each method:
 
----
+Leader Support Level
 
-## 5. Known Failure Modes (Actionable)
+Follower Support Level
+
+Routing Rule
+
+Notes / Constraints
+
+Validation Gate
+
+4.1 Identity and Network
+
+Method: web3_clientVersion
+Leader: L1
+Follower: L1
+Routing: Local
+Notes: informational only; must not leak sensitive details.
+Gate: returns non-empty string.
+
+Method: net_version (if supported)
+Leader: L0/L1 (implementation-defined)
+Follower: L0/L1
+Routing: Local
+Notes: may be omitted; prefer eth_chainId for identity.
+Gate: stable error or valid result.
+
+Method: eth_chainId
+Leader: L3
+Follower: L3
+Routing: Follower-local
+Notes: must return 0x849 (2121) for NOORCHAIN 2.1 environments.
+Gate: leader==follower==0x849.
+
+Method: eth_protocolVersion (if supported)
+Leader: L0/L1
+Follower: L0/L1
+Routing: Local
+Notes: optional; stable error acceptable.
+Gate: stable behavior.
+
+4.2 Block and Chain Metadata
+
+Method: eth_blockNumber
+Leader: L3
+Follower: L3
+Routing: Follower-local
+Notes: must be coherent; follower may track independently but must not regress.
+Gate: follower value is coherent with leader (equal or within defined follow semantics).
+
+Method: eth_getBlockByNumber
+Leader: L2/L3
+Follower: L2/L3
+Routing: Proxy-safe
+Notes: must return null when requested block > latest; must include stateRoot/receiptsRoot/logsBloom when available.
+Gate: leader and follower return coherent block metadata for "latest".
+
+Method: eth_getBlockByHash
+Leader: L1/L2
+Follower: L1/L2
+Routing: Proxy-safe
+Notes: optional for some tooling; stable error acceptable if not required by target tools.
+Gate: stable behavior.
+
+Method: eth_getBlockTransactionCountByNumber
+Leader: L0/L1
+Follower: L0/L1
+Routing: Proxy-safe
+Notes: optional; stable error acceptable.
+Gate: stable behavior.
+
+Method: eth_getBlockTransactionCountByHash
+Leader: L0/L1
+Follower: L0/L1
+Routing: Proxy-safe
+Notes: optional; stable error acceptable.
+Gate: stable behavior.
+
+4.3 Accounts and World-State Reads
+
+Method: eth_getBalance
+Leader: L2/L3
+Follower: L2/L3
+Routing: Leader-only (proxy by FollowRPC)
+Notes: follower must route to leader when FollowRPC is configured; do not serve stale local state.
+Gate: leader==follower for a known funded address.
+
+Method: eth_getTransactionCount
+Leader: L2/L3
+Follower: L2/L3
+Routing: Leader-only (proxy by FollowRPC)
+Notes: nonce must be consistent with mined txs; required for contract deploy flows.
+Gate: nonce increments after a mined tx.
+
+Method: eth_getCode
+Leader: L0/L2 (depends on implementation)
+Follower: L0/L2
+Routing: Leader-only (proxy if supported)
+Notes: required for tooling that checks deployed bytecode; if unsupported, must return stable error.
+Gate: for a deployed contract address, returns non-empty 0x... code.
+
+Method: eth_getStorageAt
+Leader: L0/L2
+Follower: L0/L2
+Routing: Leader-only (proxy if supported)
+Notes: required for some contract read flows; if unsupported, stable error.
+Gate: for known storage slot, returns expected 32-byte value.
+
+Method: eth_call
+Leader: L1/L2 (implementation-defined)
+Follower: L1/L2
+Routing: Leader-only (proxy recommended)
+Notes: if implemented, must execute against specified block tag semantics. If not, stable error or bounded stub must be documented.
+Gate: known contract view call returns expected value.
+
+4.4 Transactions and Receipts
+
+Method: eth_sendRawTransaction
+Leader: L2/L3
+Follower: L0/L1 (recommended: reject or proxy by policy)
+Routing: Leader-only
+Notes: submission should be directed to leader; follower should not accept tx submission unless explicitly designed to proxy.
+Gate: tx hash returned, and tx becomes retrievable.
+
+Method: eth_getTransactionByHash
+Leader: L2/L3
+Follower: L2/L3
+Routing: Proxy-safe
+Notes: must return tx fields expected by tooling (from, to, nonce, input, etc.) as available.
+Gate: returns non-null for known tx hash.
+
+Method: eth_getTransactionReceipt
+Leader: L2/L3
+Follower: L2/L3
+Routing: Proxy-safe
+Notes: must return receipt after mining; contractAddress must be set for CREATE.
+Gate: deploy tx receipt includes non-null contractAddress.
+
+Method: eth_getTransactionByBlockNumberAndIndex
+Leader: L0/L1
+Follower: L0/L1
+Routing: Proxy-safe
+Notes: optional; stable error acceptable.
+Gate: stable behavior.
+
+Method: eth_getTransactionByBlockHashAndIndex
+Leader: L0/L1
+Follower: L0/L1
+Routing: Proxy-safe
+Notes: optional; stable error acceptable.
+Gate: stable behavior.
+
+4.5 Logs and Filtering
+
+Method: eth_getLogs
+Leader: L1/L2
+Follower: L1/L2
+Routing: Proxy-safe
+Notes: if supported, must at minimum allow filtering by address and block range in controlled deployments; otherwise stable error.
+Gate: logs for known tx/contract are retrievable.
+
+Method: eth_newFilter / eth_getFilterChanges / eth_uninstallFilter
+Leader: L0
+Follower: L0
+Routing: N/A
+Notes: subscriptions/filters often deferred; must return stable error per model.
+Gate: stable error.
+
+Method: eth_subscribe (WS)
+Leader: L0
+Follower: L0
+Routing: N/A
+Notes: out of scope unless explicitly implemented.
+Gate: stable error.
 
-### 5.1 “Follower returns different nonce/balance than leader”
-Cause:
-- follower served `"latest"` locally without proxying.
+4.6 Gas and Fee Estimation
 
-Fix:
-- configure follower with `FollowRPC` and enforce leader-only proxy routing per `RPC_SPEC_2.1`.
+Method: eth_gasPrice
+Leader: L1/L2
+Follower: L1/L2
+Routing: Follower-local
+Notes: may be constant or policy-driven; must be stable and documented.
+Gate: returns valid quantity.
 
-### 5.2 “Deploy succeeded but contractAddress is null”
-Cause:
-- receipt persistence or CREATE address derivation inconsistent.
+Method: eth_estimateGas
+Leader: L1/L2
+Follower: L1/L2
+Routing: Proxy-safe or leader-only depending on implementation
+Notes: heuristic estimation may be used; must not return malformed responses.
+Gate: returns valid quantity for basic tx.
 
-Fix:
-- receipt storage must include `contractAddress` for CREATE receipts and must survive restarts. Validate with a deploy + receipt read.
+Method: eth_feeHistory
+Leader: L0/L1
+Follower: L0/L1
+Routing: Proxy-safe
+Notes: optional; stable error acceptable.
+Gate: stable behavior.
 
-### 5.3 “eth_call returns empty or inconsistent”
-Cause:
-- call path not anchored to committed head root or execution is constrained.
+4.7 Client/Chain Helpers
 
-Fix:
-- ensure `"latest"` anchor is `stateroot/v1/head` and call execution uses committed state. Document any remaining constraints explicitly.
+Method: eth_getBlockReceipts (if supported)
+Leader: L0/L1
+Follower: L0/L1
+Routing: Proxy-safe
+Notes: optional.
+Gate: stable behavior.
 
-### 5.4 “Tooling expects filters/subscriptions”
-Cause:
-- `eth_newFilter`, `eth_subscribe` not provided.
+Method: eth_syncing
+Leader: L1
+Follower: L1
+Routing: Local
+Notes: may return false in controlled environments; must be stable.
+Gate: stable result.
 
-Fix:
-- use polling patterns (`eth_getLogs` bounded ranges) and receipts. Keep constraints explicit.
+Error Model Requirements (Normative)
 
----
+Unsupported methods (L0) MUST return a stable error structure consistent with the RPC error model document.
 
-## 6. Operational Validation Checklist (Minimal)
+Reference:
 
-These checks should pass on the **leader** after a fresh start (and remain consistent after restart):
+docs/rpc/RPC_ERROR_MODEL_2.1.md
 
-1) `eth_chainId` returns `0x849`
-2) `eth_blockNumber` is non-null and progresses
-3) `eth_getBlockByNumber("latest", false)` returns non-null and includes roots/bloom when available
-4) `eth_getTransactionCount(addr,"latest")` returns a stable nonce
-5) `eth_getBalance(addr,"latest")` returns expected value (including alloc-funded dev accounts if used)
-6) Submit a signed tx:
-   - `eth_sendRawTransaction` → hash
-   - `eth_getTransactionReceipt(hash)` eventually non-null
-   - receipt persists across restart
-7) If follower is enabled with `FollowRPC`:
-   - follower `eth_getBalance` equals leader
-   - follower `eth_getTransactionCount` equals leader
+Validation Gate Set (Compatibility)
 
----
+For a given environment, the minimum compatibility gate set depends on intended tool usage. The following gates are recommended for “wallet/tooling compatible” controlled deployments:
 
-## 7. Change Control
+Gate A — Identity
 
-Any change to RPC behavior (method presence, semantics, constraints) MUST be reflected in:
-- `docs/RPC_SPEC_2.1.md` (authoritative)
-- and this matrix (practical impact)
+eth_chainId == 0x849 (leader and follower)
 
-This file exists to keep operator expectations aligned with real tooling behavior.
+Gate B — Liveness
+
+eth_blockNumber returns valid quantity
+
+eth_getBlockByNumber("latest", false) returns coherent structure
+
+Gate C — Tx Path
+
+eth_sendRawTransaction (leader) returns tx hash
+
+eth_getTransactionByHash returns non-null
+
+eth_getTransactionReceipt returns non-null after mining
+
+Gate D — Deploy
+
+CREATE tx receipt includes contractAddress
+
+eth_getTransactionCount increments for sender
+
+Gate E — World-State Read Parity
+
+eth_getBalance and eth_getTransactionCount match on leader and follower (with follower routing)
+
+Gate F — Contract Read (If eth_call supported)
+
+eth_call against known view returns expected value
+
+Gate G — Persistence
+
+repeat Gate E and Gate C after node restart
+
+Change Control
+
+Any change to support level or behavior of a method is an RPC compatibility change and MUST include:
+
+changelog entry
+
+versioned documentation update
+
+validation gate evidence for the affected methods
+
+References:
+
+docs/CHANGELOG_2.1.md
+
+docs/RELEASE_PROCESS_2.1.md
+
+docs/AUDIT_READINESS_2.1.md
+
+References
+
+docs/RPC_SPEC_2.1.md
+docs/rpc/RPC_ERROR_MODEL_2.1.md
+docs/STATE_MODEL_2.1.md
+docs/ops/DEPLOYMENT_MODEL_2.1.md
+docs/OPERATIONS_PLAYBOOK_2.1.md
+docs/AUDIT_READINESS_2.1.md
+docs/CHANGELOG_2.1.md
+docs/RELEASE_PROCESS_2.1.md
+docs/governance/INCIDENT_RESPONSE_2.1.md
