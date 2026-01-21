@@ -657,8 +657,7 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		}
 
 		if toN < fromN {
-			// Per geth behavior, empty set.
-			resp.Result = []any{}
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params: fromBlock > toBlock"}
 			return resp
 		}
 
