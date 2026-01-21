@@ -35,7 +35,9 @@ export default function RoadmapSection() {
               <li>M10 — Mainnet-like multi-node pack</li>
               <li>M11 — dApps v0 tooling</li>
               <li>M12 — World State + RPC Parity Foundations</li>
-              <li>PHASE 7 — Proof-of-liveness (frozen)</li>
+              <li>M13 — Ethereum-compatible execution hardening (receipts/logs persistence, state-by-block reads)</li>
+              <li>M14 — LogRec index + eth_getLogs (range-based, ordering stability, compat/perf gates)</li>
+              <li>PHASE 7 — Proof-of-liveness (frozen)</li>        
             </ul>
           </div>
 
@@ -43,9 +45,9 @@ export default function RoadmapSection() {
           <div className="mb-6 p-5 border border-white/20 bg-white/10 backdrop-blur-md rounded-xl shadow-sm">
             <h2 className="text-xl font-semibold text-navy mb-2">🔧 In progress</h2>
             <ul className="list-disc pl-6 text-gray-700 space-y-2">
-              <li>M13 - Ethereum-compatible world state</li>
-              <li>EVM execution hardening</li>
-              <li>Operational stability</li>
+              <li>M15 — JSON-RPC Filters (eth_newFilter / eth_getFilterChanges / eth_getFilterLogs / eth_uninstallFilter + block filter)</li>
+              <li>RPC compatibility hardening (wallet/dApp edge-cases, error model consistency)</li>
+              <li>Operational stability (restart invariants, leader/follower parity under load)</li>
             </ul>
           </div>
 
@@ -53,9 +55,11 @@ export default function RoadmapSection() {
           <div className="p-5 border border-white/20 bg-white/10 backdrop-blur-md rounded-xl shadow-sm">
             <h2 className="text-xl font-semibold text-navy mb-2">⏳ Planned</h2>
             <ul className="list-disc pl-6 text-gray-700 space-y-2">
-              <li>Public testnet opening</li>
+              <li>Extended RPC coverage (subscriptions, additional wallet compatibility endpoints)</li>
+              <li>Public testnet opening (gated; staged rollout)</li>
               <li>dApps ecosystem expansion</li>
-              <li>Audits and partnerships</li>
+              <li>Security review and audit readiness</li>
+              <li>Partnerships and integrations</li>
             </ul>
           </div>
 

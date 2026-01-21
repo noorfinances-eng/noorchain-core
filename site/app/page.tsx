@@ -329,7 +329,7 @@ export default function HomePage() {
                     </a>
                   </div>
                   <div className="mt-8 flex flex-wrap gap-2 text-xs text-white/75">
-                    <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">Tagged builds: M10 / M11 / M12/ M13.1</span>
+                    <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">TTagged builds: M10 / M11 / M12 / M13 / M14 (range-based eth_getLogs via LogRec)</span>
                     <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">PoSS: application-layer (not consensus)</span>
                     <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1">Legal-Light posture (no yield, no custody)</span>
                   </div>
@@ -458,7 +458,7 @@ export default function HomePage() {
 
               <div className="relative flex items-start justify-between gap-4 mb-4">
                 <h2 className="text-xl sm:text-2xl font-semibold text-white">Current Project Status</h2>
-                <div className="text-xs text-white/70">Last updated: 2026-01-01</div>
+                <div className="text-xs text-white/70">Last updated: 2026-01-21</div>
               </div>
               <div className="relative space-y-2 text-sm sm:text-base leading-relaxed text-white/90">
                 <div><strong>Network:</strong> Private mainnet-like environment (continuous operation)</div>
@@ -468,7 +468,8 @@ export default function HomePage() {
                 <div><strong>Public access:</strong> Limited by design until feature completeness and security review</div>
                 <div><strong>Proof-of-liveness:</strong> Public status endpoint <span className="font-mono text-white">/liveness.json</span> (minimal signal only)</div>
                 <div><strong>Phase 7 baseline:</strong> Frozen (controlled operation; no additional public surfaces)</div>
-                <div><strong>Reference build:</strong> M10-MAINNETLIKE-STABLE / M11-DAPPS-STABLE / M12.2-WORLDSTATE-RPC-NONCE-BALANCE</div>
+                <div><strong>Reference build:</strong> M10-MAINNETLIKE-STABLE / M11-DAPPS-STABLE / M12.3-VALIDATED (world-state read routing) /
+                M13-EXEC-… (execution hardening) / M14-LOGREC-GETLOGS-FINAL</div>
               </div>
             </div>
 
