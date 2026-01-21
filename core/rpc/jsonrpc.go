@@ -18,6 +18,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -619,6 +620,22 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			}
 			return n
 		}
+		parseHexQty0 := func(v any) uint64 {
+			s, _ := v.(string)
+			s = strings.TrimSpace(s)
+			if s == "" {
+				return 0
+			}
+			s = strings.TrimPrefix(s, "0x")
+			if s == "" {
+				return 0
+			}
+			n, err := strconv.ParseUint(s, 16, 64)
+			if err != nil {
+				return 0
+			}
+			return n
+		}
 
 		// Range
 		latest := uint64(0)
@@ -710,8 +727,16 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			return resp
 		}
 
-		// Scan receipts and collect matching logs.
-		out := make([]any, 0, 8)
+		// Scan receipts and collect matching logs (then sort deterministically).
+		type logItem struct {
+			blockN   uint64
+			txIndex  uint64
+			logIndex uint64
+			txHash   string
+			m        map[string]any
+		}
+
+		items := make([]logItem, 0, 8)
 		it := s.n.DB().NewIterator(util.BytesPrefix([]byte("rcpt/v1/")), nil)
 		defer it.Release()
 
@@ -764,8 +789,38 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 					continue
 				}
 
-				out = append(out, lm)
+				txIdx := parseHexQty0(lm["transactionIndex"])
+				logIdx := parseHexQty0(lm["logIndex"])
+				txh, _ := lm["transactionHash"].(string)
+				txh = strings.ToLower(strings.TrimSpace(txh))
+
+				items = append(items, logItem{
+					blockN:   h,
+					txIndex:  txIdx,
+					logIndex: logIdx,
+					txHash:   txh,
+					m:        lm,
+				})
 			}
+		}
+
+		sort.SliceStable(items, func(i, j int) bool {
+			a, b := items[i], items[j]
+			if a.blockN != b.blockN {
+				return a.blockN < b.blockN
+			}
+			if a.txIndex != b.txIndex {
+				return a.txIndex < b.txIndex
+			}
+			if a.logIndex != b.logIndex {
+				return a.logIndex < b.logIndex
+			}
+			return a.txHash < b.txHash
+		})
+
+		out := make([]any, 0, len(items))
+		for _, it := range items {
+			out = append(out, it.m)
 		}
 
 		resp.Result = out
