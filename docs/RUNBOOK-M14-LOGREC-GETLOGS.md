@@ -14,8 +14,10 @@ Assumptions
 - P2P: leader 127.0.0.1:30303, follower 127.0.0.1:30304
 - Health: leader 127.0.0.1:8081, follower 127.0.0.1:8082
 - Data dirs: ./data/node1, ./data/node2
-- Example contract address (replace as needed):
-  - PoSSRegistry: 0x560Ff18B151045561E9393bb8FaEA15C17BC02Fc
+- Example contract addresses observed in this environment (do not assume these are stable across networks):
+  - 0xC9F398646E19778F2C3D9fF32bb75E5a99FD4E56
+  - 0xADbA8eA8f53bD7dEcFd1771C1bD03ecE6d721cf6
+  - 0xf6d2739f632D5ABa8A96661059581566918253F6
 
 Terminal Discipline
 
@@ -102,13 +104,70 @@ Notes (implementation-level intent)
 - On boot, leader performs an idempotent backfill from persisted receipts into logrec.
 - Follower is expected to return identical results to leader when -follow-rpc is configured and routing is correct.
 
+4.0 Auto-discovery (recommended)
+
+T2
+python3 - <<'PY2'
+import json, urllib.request
+
+RPC="http://127.0.0.1:8545"
+
+def rpc(method, params):
+    req = urllib.request.Request(
+        RPC,
+        data=json.dumps({"jsonrpc":"2.0","id":1,"method":method,"params":params}).encode(),
+        headers={"content-type":"application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=30) as r:
+        out = json.loads(r.read().decode())
+    if "error" in out:
+        raise RuntimeError(out["error"])
+    return out["result"]
+
+head_hex = rpc("eth_blockNumber", [])
+head = int(head_hex, 16)
+
+# Progressive search windows to avoid unbounded scans by default.
+windows = [256, 1024, 4096, 16384, 65536]
+found = []
+used_from = 0
+
+for w in windows:
+    frm = max(0, head - w + 1)
+    used_from = frm
+    logs = rpc("eth_getLogs", [{"fromBlock": hex(frm), "toBlock": head_hex}])
+    if logs:
+        found = logs
+        break
+
+# Last resort (only if still empty): scan from genesis.
+if not found:
+    logs = rpc("eth_getLogs", [{"fromBlock": "0x0", "toBlock": head_hex}])
+    found = logs
+    used_from = 0
+
+print(f"head={head_hex} ({head}) logs_total={len(found)} searched_from={hex(used_from)}")
+if found:
+    blocks = [int(l["blockNumber"],16) for l in found if "blockNumber" in l]
+    addrs = sorted(set(l.get("address") for l in found if l.get("address")))
+    print(f"blocks.min={hex(min(blocks))} blocks.max={hex(max(blocks))}")
+    print("addresses=" + ",".join(addrs))
+    top = max(blocks)
+    print(f"suggested_window: fromBlock={hex(max(0, top-256))} toBlock={hex(top)}")
+PY2
+
+Gate:
+- logs_total > 0
+- Use suggested_window for bounded perf checks (4.1/4.2/4.3) to avoid assuming a specific historical block.
+
 4.1 Sanity: query a narrow window near head
 
 T2
 # Replace FROM/TO once you know a block that contains logs (see 4.2).
 # Example: fromBlock == toBlock for a single block query.
 curl -s -X POST http://127.0.0.1:8545 -H 'content-type: application/json' \
-  --data '{"jsonrpc":"2.0","id":41,"method":"eth_getLogs","params":[{"fromBlock":"latest","toBlock":"latest","address":"0x560Ff18B151045561E9393bb8FaEA15C17BC02Fc"}]}' ; echo
+  --data '{"jsonrpc":"2.0","id":41,"method":"eth_getLogs","params":[{"fromBlock":"latest","toBlock":"latest","address":"0xADbA8eA8f53bD7dEcFd1771C1bD03ecE6d721cf6"}]}' ; echo
 
 Gate: returns a JSON array (possibly empty), without JSON-RPC error.
 
@@ -119,7 +178,7 @@ T2
 # Example: scan last 256 blocks (head-255 .. head).
 # If your node is young, reduce the range.
 curl -s -X POST http://127.0.0.1:8545 -H 'content-type: application/json' \
-  --data '{"jsonrpc":"2.0","id":42,"method":"eth_getLogs","params":[{"fromBlock":"0x0","toBlock":"latest","address":"0x560Ff18B151045561E9393bb8FaEA15C17BC02Fc"}]}' ; echo
+  --data '{"jsonrpc":"2.0","id":42,"method":"eth_getLogs","params":[{"fromBlock":"0x0","toBlock":"latest","address":"0xADbA8eA8f53bD7dEcFd1771C1bD03ecE6d721cf6"}]}' ; echo
 
 Gate: returns a JSON array. If empty, ensure the address is correct and that events were produced.
 
@@ -132,7 +191,7 @@ T2
 # Once you have a known block height H containing multiple logs, pin it:
 # Replace 0xHHH with that block number.
 curl -s -X POST http://127.0.0.1:8545 -H 'content-type: application/json' \
-  --data '{"jsonrpc":"2.0","id":43,"method":"eth_getLogs","params":[{"fromBlock":"0x18c","toBlock":"0x18c","address":"0x560Ff18B151045561E9393bb8FaEA15C17BC02Fc"}]}' ; echo
+  --data '{"jsonrpc":"2.0","id":43,"method":"eth_getLogs","params":[{"fromBlock":"0x18c","toBlock":"0x18c","address":"0xADbA8eA8f53bD7dEcFd1771C1bD03ecE6d721cf6"}]}' ; echo
 
 Gate:
 - Returned logs are in canonical order.
@@ -145,7 +204,7 @@ Run the same queries against follower RPC (8546) and compare results.
 
 T2
 curl -s -X POST http://127.0.0.1:8546 -H 'content-type: application/json' \
-  --data '{"jsonrpc":"2.0","id":51,"method":"eth_getLogs","params":[{"fromBlock":"0x18c","toBlock":"0x18c","address":"0x560Ff18B151045561E9393bb8FaEA15C17BC02Fc"}]}' ; echo
+  --data '{"jsonrpc":"2.0","id":51,"method":"eth_getLogs","params":[{"fromBlock":"0x18c","toBlock":"0x18c","address":"0xADbA8eA8f53bD7dEcFd1771C1bD03ecE6d721cf6"}]}' ; echo
 
 Gate: follower response matches leader response byte-for-byte for the same filter.
 
