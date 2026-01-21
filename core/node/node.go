@@ -53,7 +53,11 @@ const (
 
 // ---- M9 receipts persistence (minimal) ----
 
-const rcptKVPrefix = "rcpt/v1/"
+const (
+	rcptKVPrefix       = "rcpt/v1/"
+	logRecKVPrefix     = "logrec/v1/"
+	logRecAppliedKVKey = "logrec/v1/applied" // set after one-time backfill from receipts
+)
 
 // EVM Chain ID (EIP-155) must be tooling/wallet compatible.
 // For NOORCHAIN 2.1 local dev, we pin this to 2121.
@@ -123,6 +127,97 @@ func readHeadHeight(db *leveldb.DB, headRoot common.Hash) (uint64, bool) {
 func rcptKey(txHash string) []byte {
 	h := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(txHash), "0x"))
 	return []byte(rcptKVPrefix + h)
+}
+func logRecKey(height, txIndex, logIndex uint64) []byte {
+	// Key ordering: heightBE | txIndexBE | logIndexBE
+	// Lexicographic order == canonical order for iteration.
+	prefix := []byte(logRecKVPrefix)
+	b := make([]byte, len(prefix)+24)
+	copy(b, prefix)
+	binary.BigEndian.PutUint64(b[len(prefix)+0:], height)
+	binary.BigEndian.PutUint64(b[len(prefix)+8:], txIndex)
+	binary.BigEndian.PutUint64(b[len(prefix)+16:], logIndex)
+	return b
+}
+
+func parseHexQtyString(s string) (uint64, bool) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, false
+	}
+	s = strings.TrimPrefix(s, "0x")
+	if s == "" {
+		return 0, false
+	}
+	n, err := strconv.ParseUint(s, 16, 64)
+	if err != nil {
+		return 0, false
+	}
+	return n, true
+}
+
+func parseHexQtyAny(v any) (uint64, bool) {
+	s, ok := v.(string)
+	if !ok {
+		return 0, false
+	}
+	return parseHexQtyString(s)
+}
+
+// backfillLogRecIndex builds logrec/v1/* from persisted receipts (rcpt/v1/*) once per data-dir.
+func backfillLogRecIndex(db *leveldb.DB, lg Logger) {
+	if db == nil {
+		return
+	}
+	if _, err := db.Get([]byte(logRecAppliedKVKey), nil); err == nil {
+		return
+	}
+
+	it := db.NewIterator(util.BytesPrefix([]byte(rcptKVPrefix)), nil)
+	defer it.Release()
+
+	var total uint64
+	for it.Next() {
+		var r receiptJSON
+		if err := json.Unmarshal(it.Value(), &r); err != nil {
+			continue
+		}
+
+		bn, ok := parseHexQtyString(r.BlockNumber)
+		if !ok {
+			continue
+		}
+
+		for _, la := range r.Logs {
+			lm, ok := la.(map[string]any)
+			if !ok {
+				continue
+			}
+
+			txi, ok := parseHexQtyAny(lm["transactionIndex"])
+			if !ok {
+				txi2, ok2 := parseHexQtyString(r.TransactionIndex)
+				if !ok2 {
+					continue
+				}
+				txi = txi2
+			}
+			li, ok := parseHexQtyAny(lm["logIndex"])
+			if !ok {
+				continue
+			}
+
+			if b, err := json.Marshal(lm); err == nil {
+				_ = db.Put(logRecKey(bn, txi, li), b, nil)
+				total++
+			}
+		}
+	}
+
+	_ = db.Put([]byte(logRecAppliedKVKey), []byte{1}, nil)
+	if lg != nil {
+		lg.Println("logrec: backfill applied | entries:", total)
+	}
 }
 
 type receiptJSON struct {
@@ -388,11 +483,15 @@ func (n *Node) loop() {
 			}
 		}
 	}
+	// M14-B: one-time backfill of log index from persisted receipts (safe, idempotent).
+	if n.db != nil {
+		backfillLogRecIndex(n.db, n.logger)
+	}
 
 	// M9: execution hook (minimal, step 1)
 	// For now: decode raw tx bytes and log decoded shape.
 	// Next steps will route contract calls + build receipts + persist.
-	applyTx := func(t txpool.Tx, height uint64, txIndex int) *types.Receipt {
+	applyTx := func(t txpool.Tx, height uint64, txIndex int, blockLogBase *uint64) *types.Receipt {
 		if len(t.Raw) == 0 {
 			n.logger.Println("applyTx: empty raw tx | hash:", t.Hash, "| height:", height)
 			return nil
@@ -545,8 +644,13 @@ func (n *Node) loop() {
 		// M9/M13: persist receipt JSON (best-effort) aligned with executed results
 		if n.db != nil {
 			toPtr := tx.To()
+			// Global logIndex within the block (mainnet-like)
+			base := uint64(0)
+			if blockLogBase != nil {
+				base = *blockLogBase
+			}
 
-			// Minimal log encoding (enough for tooling)
+			// Minimal log encoding (enough for tooling) + write-path log index (M14-B)
 			logsAny := make([]any, 0, len(logs))
 			for i := range logs {
 				lg := logs[i]
@@ -554,7 +658,9 @@ func (n *Node) loop() {
 				for _, tp := range lg.Topics {
 					topics = append(topics, tp.Hex())
 				}
-				logsAny = append(logsAny, map[string]any{
+
+				gi := base + uint64(i) // global log index within block
+				lm := map[string]any{
 					"address":          lg.Address.Hex(),
 					"topics":           topics,
 					"data":             "0x" + hex.EncodeToString(lg.Data),
@@ -562,9 +668,18 @@ func (n *Node) loop() {
 					"transactionHash":  rawHash.Hex(),
 					"transactionIndex": toHexUint(uint64(txIndex)),
 					"blockHash":        blockHash.Hex(),
-					"logIndex":         toHexUint(uint64(i)),
+					"logIndex":         toHexUint(gi),
 					"removed":          false,
-				})
+				}
+				logsAny = append(logsAny, lm)
+
+				// logrec/v1/<heightBE><txIndexBE><logIndexBE> -> JSON(logObject)
+				if b, err := json.Marshal(lm); err == nil {
+					_ = n.db.Put(logRecKey(height, uint64(txIndex), gi), b, nil)
+				}
+			}
+			if blockLogBase != nil {
+				*blockLogBase = base + uint64(len(logs))
 			}
 
 			rcpt := receiptJSON{
@@ -640,12 +755,13 @@ func (n *Node) loop() {
 			// M8.A minimal inclusion: mark some pending txs as mined at this height
 			mined := 0
 			receipts := types.Receipts{}
+			blockLogBase := uint64(0)
 			if n.txpool != nil && n.txindex != nil {
 				txs := n.txpool.PopPending(64)
 				for i := range txs {
 					n.txindex.Put(txs[i].Hash, height)
 					// M9: hook point (execution will be extended in next steps)
-					r := applyTx(txs[i], height, i)
+					r := applyTx(txs[i], height, i, &blockLogBase)
 					if r != nil {
 						receipts = append(receipts, r)
 					}

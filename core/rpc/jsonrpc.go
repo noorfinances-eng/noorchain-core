@@ -739,7 +739,8 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			return resp
 		}
 
-		// Scan receipts and collect matching logs (then sort deterministically).
+		// Read log index (logrec/v1/<heightBE><txIndexBE><logIndexBE>) and filter in-memory.
+		// This is range-based (no rcpt/v1 scan), mainnet-like for performance.
 		type logItem struct {
 			blockN   uint64
 			txIndex  uint64
@@ -749,71 +750,82 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		}
 
 		items := make([]logItem, 0, 8)
-		it := s.n.DB().NewIterator(util.BytesPrefix([]byte("rcpt/v1/")), nil)
+
+		prefix := []byte("logrec/v1/")
+
+		putU64BE := func(dst []byte, v uint64) []byte {
+			return append(dst,
+				byte(v>>56), byte(v>>48), byte(v>>40), byte(v>>32),
+				byte(v>>24), byte(v>>16), byte(v>>8), byte(v),
+			)
+		}
+		readU64BE := func(b []byte) uint64 {
+			_ = b[7] // bounds-check hint
+			return uint64(b[0])<<56 | uint64(b[1])<<48 | uint64(b[2])<<40 | uint64(b[3])<<32 |
+				uint64(b[4])<<24 | uint64(b[5])<<16 | uint64(b[6])<<8 | uint64(b[7])
+		}
+		seekKey := func(h uint64) []byte {
+			k := make([]byte, 0, len(prefix)+24)
+			k = append(k, prefix...)
+			k = putU64BE(k, h)
+			k = putU64BE(k, 0)
+			k = putU64BE(k, 0)
+			return k
+		}
+
+		it := s.n.DB().NewIterator(util.BytesPrefix(prefix), nil)
 		defer it.Release()
 
-		for it.Next() {
-			b := it.Value()
-
-			var r receiptJSON
-			if err := json.Unmarshal(b, &r); err != nil {
+		for ok := it.Seek(seekKey(fromN)); ok; ok = it.Next() {
+			k := it.Key()
+			if len(k) < len(prefix)+8 {
 				continue
 			}
 
-			// blockNumber range check
-			bn := strings.TrimPrefix(strings.TrimSpace(r.BlockNumber), "0x")
-			if bn == "" {
-				continue
+			// height is the first 8 bytes after "logrec/v1/"
+			h := readU64BE(k[len(prefix) : len(prefix)+8])
+			if h > toN {
+				break
 			}
-			h, err := strconv.ParseUint(bn, 16, 64)
-			if err != nil {
-				continue
-			}
-			if h < fromN || h > toN {
+
+			var lm map[string]any
+			if err := json.Unmarshal(it.Value(), &lm); err != nil {
 				continue
 			}
 
-			// log-level filtering
-			for _, la := range r.Logs {
-				lm, ok := la.(map[string]any)
-				if !ok {
+			// address filter
+			if len(addrSet) > 0 {
+				as, _ := lm["address"].(string)
+				as = strings.ToLower(strings.TrimSpace(as))
+				if as == "" || !addrSet[as] {
 					continue
 				}
-
-				// address filter
-				if len(addrSet) > 0 {
-					as, _ := lm["address"].(string)
-					as = strings.ToLower(strings.TrimSpace(as))
-					if as == "" || !addrSet[as] {
-						continue
-					}
-				}
-
-				// topics filter
-				ltAny, _ := lm["topics"].([]any)
-				lt := make([]string, 0, len(ltAny))
-				for _, t := range ltAny {
-					if ts, ok := t.(string); ok {
-						lt = append(lt, ts)
-					}
-				}
-				if !matchTopics(lt) {
-					continue
-				}
-
-				txIdx := parseHexQty0(lm["transactionIndex"])
-				logIdx := parseHexQty0(lm["logIndex"])
-				txh, _ := lm["transactionHash"].(string)
-				txh = strings.ToLower(strings.TrimSpace(txh))
-
-				items = append(items, logItem{
-					blockN:   h,
-					txIndex:  txIdx,
-					logIndex: logIdx,
-					txHash:   txh,
-					m:        lm,
-				})
 			}
+
+			// topics filter
+			ltAny, _ := lm["topics"].([]any)
+			lt := make([]string, 0, len(ltAny))
+			for _, t := range ltAny {
+				if ts, ok := t.(string); ok {
+					lt = append(lt, ts)
+				}
+			}
+			if !matchTopics(lt) {
+				continue
+			}
+
+			txIdx := parseHexQty0(lm["transactionIndex"])
+			logIdx := parseHexQty0(lm["logIndex"])
+			txh, _ := lm["transactionHash"].(string)
+			txh = strings.ToLower(strings.TrimSpace(txh))
+
+			items = append(items, logItem{
+				blockN:   h,
+				txIndex:  txIdx,
+				logIndex: logIdx,
+				txHash:   txh,
+				m:        lm,
+			})
 		}
 
 		sort.SliceStable(items, func(i, j int) bool {
