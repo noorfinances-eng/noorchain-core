@@ -644,6 +644,18 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		}
 		fromN := parseQty(filter["fromBlock"], latest)
 		toN := parseQty(filter["toBlock"], latest)
+
+		// Deterministic mainnet-like semantics:
+		// - if fromBlock > head => empty set
+		// - if toBlock > head   => clamp to head
+		if fromN > latest {
+			resp.Result = []any{}
+			return resp
+		}
+		if toN > latest {
+			toN = latest
+		}
+
 		if toN < fromN {
 			// Per geth behavior, empty set.
 			resp.Result = []any{}
