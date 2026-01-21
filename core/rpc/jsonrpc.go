@@ -661,6 +661,13 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			return resp
 		}
 
+		// Hard cap to avoid unbounded scans (client should chunk ranges).
+		const maxBlockRange uint64 = 16384
+		if (toN - fromN + 1) > maxBlockRange {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params: block range too large (max 16384 blocks)"}
+			return resp
+		}
+
 		// Address filter: string or []string
 		addrSet := map[string]bool{}
 		if av, ok := filter["address"]; ok && av != nil {
