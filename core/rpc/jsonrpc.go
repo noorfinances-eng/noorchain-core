@@ -196,6 +196,7 @@ var ethRouting = map[string]routeClass{
 	"eth_getStorageAt":          routeLeaderOnly,
 	"eth_call":                  routeLeaderOnly,
 	"eth_getBlockByNumber":      routeLeaderOnly,
+	"eth_getLogs":               routeLeaderOnly,
 }
 
 func (s *Server) dispatch(req *rpcReq) rpcResp {
@@ -1462,6 +1463,7 @@ func assertRoutingTableStatic() {
 		"eth_getTransactionReceipt": {},
 		"eth_getTransactionByHash":  {},
 		"eth_getBlockByNumber":      {},
+		"eth_getLogs":               {},
 	}
 
 	for m := range ethRouting {
