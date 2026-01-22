@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import NavBar from "../components/NavBar";
 import Footer from "../components/Footer";
 import { Inter } from "next/font/google";
@@ -51,6 +52,7 @@ export default function RootLayout({
         <div className="relative z-10 bg-gradient-to-br from-[#0B1B3A]/80 via-[#0A2D5A]/75 to-[#08324F]/80 border-t border-white/15 backdrop-blur-md text-white">
           <Footer />
         </div>
+        <Analytics />
       </body>
     </html>
   );
