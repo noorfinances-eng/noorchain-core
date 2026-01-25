@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/core/vm"
@@ -44,6 +45,10 @@ type Server struct {
 
 	httpSrv *http.Server
 	ln      net.Listener
+	// M15: JSON-RPC filters (in-memory, leader-only; followers proxy to leader)
+	filtersMu   sync.Mutex
+	filtersNext uint64
+	filters     map[uint64]*rpcFilter
 }
 
 func New(addr, chainID string, n *node.Node, db *leveldb.DB, l *log.Logger) *Server {
@@ -56,6 +61,9 @@ func New(addr, chainID string, n *node.Node, db *leveldb.DB, l *log.Logger) *Ser
 		chainID: chainID,
 		n:       n,
 		evm:     NewEvmMock(db),
+
+		filtersNext: 1,
+		filters:     make(map[uint64]*rpcFilter),
 	}
 	return s
 }
@@ -118,6 +126,88 @@ type rpcResp struct {
 type rpcError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+}
+
+// ---- JSON-RPC filters (M15) ----
+//
+// In-memory filters, leader-only. Followers proxy to leader via routeLeaderOnly.
+// This is sufficient for mainnet-like wallet tooling (viem, ethers) in a controlled environment.
+type rpcFilterKind uint8
+
+const (
+	filterLogs rpcFilterKind = iota
+	filterNewBlocks
+)
+
+type rpcFilter struct {
+	kind rpcFilterKind
+
+	// createdAtHead is the node head height at creation time (used by getFilterLogs semantics).
+	createdAtHead uint64
+
+	// lastSeenHead is the last head height returned by getFilterChanges (cursor).
+	lastSeenHead uint64
+
+	// lastAccess is for TTL/GC.
+	lastAccess time.Time
+
+	// raw filter object as received by eth_newFilter (parsed once, reused).
+	// It follows eth_getLogs semantics: fromBlock/toBlock/address/topics.
+	logsFilter map[string]any
+}
+
+const (
+	// M15: filter lifetime / resource guardrails.
+	// TTL is evaluated opportunistically on filter API calls.
+	rpcFilterTTL = 60 * time.Second
+
+	// Hard cap to prevent unbounded growth.
+	rpcFilterMax = 1024
+)
+
+// filtersGCLocked evicts expired filters and enforces the cap.
+// Caller MUST hold s.filtersMu.
+func (s *Server) filtersGCLocked(now time.Time) {
+	if s.filters == nil || len(s.filters) == 0 {
+		return
+	}
+
+	// TTL eviction
+	if rpcFilterTTL > 0 {
+		for id, f := range s.filters {
+			if f == nil {
+				delete(s.filters, id)
+				continue
+			}
+			if !f.lastAccess.IsZero() && now.Sub(f.lastAccess) > rpcFilterTTL {
+				delete(s.filters, id)
+			}
+		}
+	}
+
+	// Cap eviction (least-recently-accessed)
+	if rpcFilterMax > 0 && len(s.filters) > rpcFilterMax {
+		for len(s.filters) > rpcFilterMax {
+			var oldestID uint64
+			var oldest time.Time
+			first := true
+			for id, f := range s.filters {
+				t := time.Unix(0, 0)
+				if f != nil && !f.lastAccess.IsZero() {
+					t = f.lastAccess
+				}
+				if first || t.Before(oldest) {
+					oldest = t
+					oldestID = id
+					first = false
+				}
+			}
+			delete(s.filters, oldestID)
+			if first {
+				break
+			}
+		}
+	}
 }
 
 // ---- HTTP handler (single + batch) ----
@@ -198,6 +288,13 @@ var ethRouting = map[string]routeClass{
 	"eth_call":                  routeLeaderOnly,
 	"eth_getBlockByNumber":      routeLeaderOnly,
 	"eth_getLogs":               routeLeaderOnly,
+
+	// M15: filters — leader-only (follower proxies to leader to keep filter state consistent).
+	"eth_newFilter":        routeLeaderOnly,
+	"eth_newBlockFilter":   routeLeaderOnly,
+	"eth_getFilterChanges": routeLeaderOnly,
+	"eth_getFilterLogs":    routeLeaderOnly,
+	"eth_uninstallFilter":  routeLeaderOnly,
 }
 
 func (s *Server) dispatch(req *rpcReq) rpcResp {
@@ -857,15 +954,267 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		return resp
 
 	case "eth_newFilter":
-		resp.Result = "0x1"
+		// params: [ filterObject ]
+		var paramsAny []any
+		if err := json.Unmarshal(req.Params, &paramsAny); err != nil || len(paramsAny) < 1 {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+			return resp
+		}
+		filterObj, ok := paramsAny[0].(map[string]any)
+		if !ok {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid filter object"}
+			return resp
+		}
+
+		head := uint64(0)
+		if s.n != nil {
+			head = s.n.Height()
+		}
+
+		saved := make(map[string]any, len(filterObj))
+		for k, v := range filterObj {
+			saved[k] = v
+		}
+
+		s.filtersMu.Lock()
+		s.filtersGCLocked(time.Now())
+		id := s.filtersNext
+		s.filtersNext++
+		s.filters[id] = &rpcFilter{
+			kind:          filterLogs,
+			createdAtHead: head,
+			lastSeenHead:  head,
+			lastAccess:    time.Now(),
+			logsFilter:    saved,
+		}
+		s.filtersMu.Unlock()
+
+		resp.Result = toHexUint(id)
 		return resp
 
 	case "eth_newBlockFilter":
-		resp.Result = "0x1"
+		head := uint64(0)
+		if s.n != nil {
+			head = s.n.Height()
+		}
+
+		s.filtersMu.Lock()
+		s.filtersGCLocked(time.Now())
+		id := s.filtersNext
+		s.filtersNext++
+		s.filters[id] = &rpcFilter{
+			kind:          filterNewBlocks,
+			createdAtHead: head,
+			lastSeenHead:  head,
+			lastAccess:    time.Now(),
+		}
+		s.filtersMu.Unlock()
+
+		resp.Result = toHexUint(id)
+		return resp
+
+	case "eth_getFilterChanges":
+		// params: [ filterId ]
+		var paramsAny []any
+		if err := json.Unmarshal(req.Params, &paramsAny); err != nil || len(paramsAny) < 1 {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+			return resp
+		}
+		idStr, ok := paramsAny[0].(string)
+		if !ok {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid filter id"}
+			return resp
+		}
+		idHex := strings.TrimPrefix(strings.ToLower(strings.TrimSpace(idStr)), "0x")
+		if idHex == "" {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid filter id"}
+			return resp
+		}
+		idU, err := strconv.ParseUint(idHex, 16, 64)
+		if err != nil {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid filter id"}
+			return resp
+		}
+
+		head := uint64(0)
+		if s.n != nil {
+			head = s.n.Height()
+		}
+
+		// Snapshot filter state under lock (do NOT hold lock while calling dispatch).
+		s.filtersMu.Lock()
+		s.filtersGCLocked(time.Now())
+		f, ok := s.filters[idU]
+		if !ok || f == nil {
+			s.filtersMu.Unlock()
+			resp.Error = &rpcError{Code: -32000, Message: "filter not found"}
+			return resp
+		}
+		f.lastAccess = time.Now()
+		kind := f.kind
+		lastSeen := f.lastSeenHead
+		logsFilter := f.logsFilter
+		s.filtersMu.Unlock()
+
+		// Clamp (safety)
+		if head < lastSeen {
+			lastSeen = head
+		}
+		from := lastSeen + 1
+
+		// Block filter: return new block hashes since lastSeen.
+		if kind == filterNewBlocks {
+			out := make([]any, 0, 8)
+			if from <= head {
+				for h := from; h <= head; h++ {
+					// Deterministic mainnet-like behavior in our model:
+					// our canonical block hash is pseudoBlockHash(height), same value exposed by eth_getBlockByNumber.
+					out = append(out, pseudoBlockHash(h).Hex())
+				}
+			}
+
+			s.filtersMu.Lock()
+			if f2, ok := s.filters[idU]; ok && f2 != nil {
+				f2.lastSeenHead = head
+				f2.lastAccess = time.Now()
+			}
+			s.filtersMu.Unlock()
+
+			resp.Result = out
+			return resp
+		}
+
+		// Log filter: return new logs since lastSeen via eth_getLogs(logrec).
+		if kind != filterLogs {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid filter type"}
+			return resp
+		}
+
+		if from > head {
+			s.filtersMu.Lock()
+			if f2, ok := s.filters[idU]; ok && f2 != nil {
+				f2.lastSeenHead = head
+				f2.lastAccess = time.Now()
+			}
+			s.filtersMu.Unlock()
+
+			resp.Result = []any{}
+			return resp
+		}
+
+		fo := make(map[string]any, len(logsFilter)+2)
+		for k, v := range logsFilter {
+			fo[k] = v
+		}
+		fo["fromBlock"] = toHexUint(from)
+		fo["toBlock"] = toHexUint(head)
+
+		pb, _ := json.Marshal([]any{fo})
+		subReq := rpcReq{JSONRPC: "2.0", ID: req.ID, Method: "eth_getLogs", Params: pb}
+		subResp := s.dispatch(&subReq)
+		if subResp.Error != nil {
+			return subResp
+		}
+
+		s.filtersMu.Lock()
+		if f2, ok := s.filters[idU]; ok && f2 != nil {
+			f2.lastSeenHead = head
+			f2.lastAccess = time.Now()
+		}
+		s.filtersMu.Unlock()
+
+		resp.Result = subResp.Result
+		return resp
+
+	case "eth_getFilterLogs":
+		// params: [ filterId ] — returns full logs per stored filter object
+		var paramsAny []any
+		if err := json.Unmarshal(req.Params, &paramsAny); err != nil || len(paramsAny) < 1 {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+			return resp
+		}
+		idStr, ok := paramsAny[0].(string)
+		if !ok {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid filter id"}
+			return resp
+		}
+		idHex := strings.TrimPrefix(strings.ToLower(strings.TrimSpace(idStr)), "0x")
+		if idHex == "" {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid filter id"}
+			return resp
+		}
+		idU, err := strconv.ParseUint(idHex, 16, 64)
+		if err != nil {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid filter id"}
+			return resp
+		}
+
+		// Snapshot under lock
+		s.filtersMu.Lock()
+		s.filtersGCLocked(time.Now())
+		f, ok := s.filters[idU]
+		if !ok || f == nil {
+			s.filtersMu.Unlock()
+			resp.Error = &rpcError{Code: -32000, Message: "filter not found"}
+			return resp
+		}
+		f.lastAccess = time.Now()
+		kind := f.kind
+		logsFilter := f.logsFilter
+		s.filtersMu.Unlock()
+
+		if kind != filterLogs {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid filter type"}
+			return resp
+		}
+
+		fo := make(map[string]any, len(logsFilter))
+		for k, v := range logsFilter {
+			fo[k] = v
+		}
+
+		pb, _ := json.Marshal([]any{fo})
+		subReq := rpcReq{JSONRPC: "2.0", ID: req.ID, Method: "eth_getLogs", Params: pb}
+		subResp := s.dispatch(&subReq)
+		if subResp.Error != nil {
+			return subResp
+		}
+
+		resp.Result = subResp.Result
 		return resp
 
 	case "eth_uninstallFilter":
-		resp.Result = true
+		// params: [ filterId ]
+		var paramsAny []any
+		if err := json.Unmarshal(req.Params, &paramsAny); err != nil || len(paramsAny) < 1 {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+			return resp
+		}
+		idStr, ok := paramsAny[0].(string)
+		if !ok {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid filter id"}
+			return resp
+		}
+		idHex := strings.TrimPrefix(strings.ToLower(strings.TrimSpace(idStr)), "0x")
+		if idHex == "" {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid filter id"}
+			return resp
+		}
+		idU, err := strconv.ParseUint(idHex, 16, 64)
+		if err != nil {
+			resp.Error = &rpcError{Code: -32602, Message: "invalid filter id"}
+			return resp
+		}
+
+		s.filtersMu.Lock()
+		s.filtersGCLocked(time.Now())
+		_, existed := s.filters[idU]
+		if existed {
+			delete(s.filters, idU)
+		}
+		s.filtersMu.Unlock()
+
+		resp.Result = existed
 		return resp
 
 	case "eth_call":
@@ -1549,6 +1898,13 @@ func assertRoutingTableStatic() {
 		"eth_getTransactionByHash":  {},
 		"eth_getBlockByNumber":      {},
 		"eth_getLogs":               {},
+
+		// M15: filters
+		"eth_newFilter":        {},
+		"eth_newBlockFilter":   {},
+		"eth_getFilterChanges": {},
+		"eth_getFilterLogs":    {},
+		"eth_uninstallFilter":  {},
 	}
 
 	for m := range ethRouting {

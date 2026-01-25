@@ -611,7 +611,7 @@ func (n *Node) loop() {
 				"| hash:", t.Hash,
 				"| err:", res.Err,
 				"| usedGas:", res.UsedGas,
-				"| return:", fmt.Sprintf("0x%x", res.Return),
+				"| return:", fmt.Sprintf("0x%x", res.Return()),
 			)
 		}
 
