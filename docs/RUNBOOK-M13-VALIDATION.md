@@ -119,6 +119,42 @@ curl -s -X POST http://127.0.0.1:8546 -H 'content-type: application/json' \
 
 Gate: chainId 0x849 and blockNumber is a non-empty hex quantity.
 
+-- Private Key Gate (MANDATORY for tooling)
+
+Tooling (Hardhat/viem) requires a runtime-exported private key.
+Never commit private keys.
+
+T2
+
+cd /workspaces/noorchain-core
+test -n "${NOOR_PRIVATE_KEY:-}" && echo "PK_SET=YES" || echo "PK_SET=NO"
+echo -n "${NOOR_PRIVATE_KEY:-}" | wc -c
+echo "${NOOR_PRIVATE_KEY:-}" | head -c 2 ; echo
+
+Gate:
+- PK_SET=YES
+- length == 66
+- prefix == 0x
+
+If missing, set it safely:
+
+T2
+
+read -s -p "NOOR_PRIVATE_KEY (0x... len=66): " NOOR_PRIVATE_KEY; echo
+export NOOR_PRIVATE_KEY
+
+Optional (recommended): derive address and confirm it matches the expected dev curator:
+
+T2
+
+node -e "const {Wallet}=require('ethers'); console.log('PK_ADDR=' + new Wallet(process.env.NOOR_PRIVATE_KEY).address)"
+
+Gate:
+- PK_ADDR printed (checksummed address)
+- For local examples, expected dev curator often equals:
+  0x4aA5DA75AFb6e81F433D4720cb7Cb2C6B1BA323c
+
+
 4) PoSS Read Gates (Leader)
 
 T2

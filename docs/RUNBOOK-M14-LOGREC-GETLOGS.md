@@ -30,6 +30,7 @@ Assumptions
   - 0xC9F398646E19778F2C3D9fF32bb75E5a99FD4E56
   - 0xADbA8eA8f53bD7dEcFd1771C1bD03ecE6d721cf6
   - 0xf6d2739f632D5ABa8A96661059581566918253F6
+  Tooling requires NOOR_PRIVATE_KEY exported at runtime (len=66, 0x-prefixed). Never commit.
 
 Terminal Discipline
 - T1 = Nodes only (start/stop/ports/logs)
@@ -97,6 +98,34 @@ ss -ltnp | grep -E '(:30304|:8546|:8082)\b'
 
 Gate
 - all three follower ports LISTEN
+3.5) Private Key Gate (MANDATORY for tooling)
+
+Some M14 validations and any related scripts (Hardhat/viem/ethers) require a runtime-exported private key.
+Never commit private keys.
+
+T2
+cd /workspaces/noorchain-core
+test -n "${NOOR_PRIVATE_KEY:-}" && echo "PK_SET=YES" || echo "PK_SET=NO"
+echo -n "${NOOR_PRIVATE_KEY:-}" | wc -c
+echo "${NOOR_PRIVATE_KEY:-}" | head -c 2 ; echo
+
+Gate
+- PK_SET=YES
+- length == 66
+- prefix == 0x
+
+If missing, set it safely:
+
+T2
+
+read -s -p "NOOR_PRIVATE_KEY (0x... len=66): " NOOR_PRIVATE_KEY; echo
+export NOOR_PRIVATE_KEY
+
+Optional (recommended): derive address and record it for the evidence pack:
+
+T2
+node -e "const {Wallet}=require('ethers'); console.log('PK_ADDR=' + new Wallet(process.env.NOOR_PRIVATE_KEY).address)"
+
 
 4) M14 Validation Suite (A/B/C/D/E) — single-command authoritative gate
 
