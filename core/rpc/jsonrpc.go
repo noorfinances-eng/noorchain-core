@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/triedb"
 	"github.com/holiman/uint256"
 	"github.com/syndtr/goleveldb/leveldb/util"
+	"github.com/gorilla/websocket"
 	"io"
 	"log"
 	"math/big"
@@ -49,6 +50,11 @@ type Server struct {
 	filtersMu   sync.Mutex
 	filtersNext uint64
 	filters     map[uint64]*rpcFilter
+	// M16: WebSocket subscriptions (newHeads)
+	wsMu   sync.Mutex
+	wsNext uint64
+	wsSubs map[uint64]*wsSub
+
 }
 
 func New(addr, chainID string, n *node.Node, db *leveldb.DB, l *log.Logger) *Server {
@@ -64,6 +70,9 @@ func New(addr, chainID string, n *node.Node, db *leveldb.DB, l *log.Logger) *Ser
 
 		filtersNext: 1,
 		filters:     make(map[uint64]*rpcFilter),
+
+			wsNext: 1,
+			wsSubs: make(map[uint64]*wsSub),
 	}
 	return s
 }
@@ -96,6 +105,9 @@ func (s *Server) Start(ctx context.Context) error {
 			s.log.Println("serve error:", err)
 		}
 	}()
+
+		// M16: WS newHeads broadcaster
+	s.startWSNewHeads(ctx)
 
 	return nil
 }
@@ -210,9 +222,260 @@ func (s *Server) filtersGCLocked(now time.Time) {
 	}
 }
 
+
+// ---- WebSocket (M16) ----
+//
+// WS is served on the same addr/path as HTTP JSON-RPC (Upgrade on "/").
+// Until M18, WS subscribe/unsubscribe are leader-only (followers return error).
+
+type wsConn struct {
+	c  *websocket.Conn
+	mu sync.Mutex
+}
+
+func (wc *wsConn) sendJSON(v any) error {
+	wc.mu.Lock()
+	defer wc.mu.Unlock()
+	return wc.c.WriteJSON(v)
+}
+
+type wsSubKind uint8
+
+const (
+	wsSubNewHeads wsSubKind = iota
+	// M17: wsSubLogs reserved
+)
+
+type wsSub struct {
+	id   uint64
+	kind wsSubKind
+	conn *wsConn
+}
+
+var wsUpgrader = websocket.Upgrader{
+	ReadBufferSize:  4096,
+	WriteBufferSize: 4096,
+	CheckOrigin: func(r *http.Request) bool {
+		// Controlled environment: allow all origins.
+		return true
+	},
+}
+
+func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
+	c, err := wsUpgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+	wc := &wsConn{c: c}
+	defer func() {
+		_ = c.Close()
+		s.wsUnsubscribeAll(wc)
+	}()
+
+	for {
+		_, msg, err := c.ReadMessage()
+		if err != nil {
+			return
+		}
+		msg = bytes.TrimSpace(msg)
+		if len(msg) == 0 {
+			continue
+		}
+
+		// Batch: [...]
+		if msg[0] == '[' {
+			var reqs []rpcReq
+			if err := json.Unmarshal(msg, &reqs); err != nil {
+				_ = wc.sendJSON(rpcResp{JSONRPC: "2.0", ID: nil, Error: &rpcError{Code: -32700, Message: "parse error"}})
+				continue
+			}
+			resps := make([]rpcResp, 0, len(reqs))
+			for i := range reqs {
+				resps = append(resps, s.dispatchWS(&reqs[i], wc))
+			}
+			_ = wc.sendJSON(resps)
+			continue
+		}
+
+		// Single: {...}
+		var req rpcReq
+		if err := json.Unmarshal(msg, &req); err != nil {
+			_ = wc.sendJSON(rpcResp{JSONRPC: "2.0", ID: nil, Error: &rpcError{Code: -32700, Message: "parse error"}})
+			continue
+		}
+		resp := s.dispatchWS(&req, wc)
+		_ = wc.sendJSON(resp)
+	}
+}
+
+func (s *Server) dispatchWS(req *rpcReq, wc *wsConn) rpcResp {
+	// Until M18: subscribe/unsubscribe are leader-only.
+	if s.n != nil {
+		cfg := s.n.Config()
+		if strings.TrimSpace(cfg.FollowRPC) != "" {
+			if req.Method == "eth_subscribe" || req.Method == "eth_unsubscribe" {
+				return rpcResp{JSONRPC: "2.0", ID: req.ID, Error: &rpcError{Code: -32000, Message: "leader-only"}}
+			}
+		}
+	}
+
+	switch req.Method {
+	case "eth_subscribe":
+		return s.wsSubscribe(req, wc)
+	case "eth_unsubscribe":
+		return s.wsUnsubscribe(req, wc)
+	default:
+		return s.dispatch(req)
+	}
+}
+
+func (s *Server) wsSubscribe(req *rpcReq, wc *wsConn) rpcResp {
+	resp := rpcResp{JSONRPC: "2.0", ID: req.ID}
+	if req.JSONRPC != "2.0" {
+		resp.Error = &rpcError{Code: -32600, Message: "invalid jsonrpc version"}
+		return resp
+	}
+
+	var params []any
+	if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
+		resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+		return resp
+	}
+
+	typ, _ := params[0].(string)
+	typ = strings.TrimSpace(typ)
+	if typ != "newHeads" {
+		resp.Error = &rpcError{Code: -32601, Message: "subscription type not supported"}
+		return resp
+	}
+
+	s.wsMu.Lock()
+	id := s.wsNext
+	s.wsNext++
+	if s.wsSubs == nil {
+		s.wsSubs = make(map[uint64]*wsSub)
+	}
+	s.wsSubs[id] = &wsSub{id: id, kind: wsSubNewHeads, conn: wc}
+	s.wsMu.Unlock()
+
+	resp.Result = fmt.Sprintf("0x%x", id)
+	return resp
+}
+
+func (s *Server) wsUnsubscribe(req *rpcReq, wc *wsConn) rpcResp {
+	resp := rpcResp{JSONRPC: "2.0", ID: req.ID}
+	if req.JSONRPC != "2.0" {
+		resp.Error = &rpcError{Code: -32600, Message: "invalid jsonrpc version"}
+		return resp
+	}
+
+	var params []any
+	if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
+		resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+		return resp
+	}
+
+	idStr, _ := params[0].(string)
+	idStr = strings.TrimSpace(idStr)
+	if !strings.HasPrefix(idStr, "0x") {
+		resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+		return resp
+	}
+
+	u, err := strconv.ParseUint(strings.TrimPrefix(idStr, "0x"), 16, 64)
+	if err != nil {
+		resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+		return resp
+	}
+
+	ok := false
+	s.wsMu.Lock()
+	if sub, exists := s.wsSubs[u]; exists && sub != nil && sub.conn == wc {
+		delete(s.wsSubs, u)
+		ok = true
+	}
+	s.wsMu.Unlock()
+
+	resp.Result = ok
+	return resp
+}
+
+func (s *Server) wsUnsubscribeAll(wc *wsConn) {
+	s.wsMu.Lock()
+	defer s.wsMu.Unlock()
+	for id, sub := range s.wsSubs {
+		if sub != nil && sub.conn == wc {
+			delete(s.wsSubs, id)
+		}
+	}
+}
+
+func (s *Server) startWSNewHeads(ctx context.Context) {
+	if s.n == nil {
+		return
+	}
+	go func() {
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+
+		last := s.n.Height()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				h := s.n.Height()
+				if h <= last {
+					continue
+				}
+				for i := last + 1; i <= h; i++ {
+					s.wsBroadcastNewHead(i)
+				}
+				last = h
+			}
+		}
+	}()
+}
+
+func (s *Server) wsBroadcastNewHead(height uint64) {
+	// Reuse eth_getBlockByNumber result shape (dev-compatible, includes roots/bloom if blkmeta exists).
+	params := json.RawMessage(fmt.Sprintf(`["%s", false]`, toHexUint(height)))
+	req := rpcReq{JSONRPC: "2.0", ID: json.RawMessage("null"), Method: "eth_getBlockByNumber", Params: params}
+	out := s.dispatch(&req)
+	if out.Error != nil || out.Result == nil {
+		return
+	}
+
+	s.wsMu.Lock()
+	subs := make([]*wsSub, 0, len(s.wsSubs))
+	for _, sub := range s.wsSubs {
+		if sub != nil && sub.kind == wsSubNewHeads && sub.conn != nil {
+			subs = append(subs, sub)
+		}
+	}
+	s.wsMu.Unlock()
+
+	for _, sub := range subs {
+		msg := map[string]any{
+			"jsonrpc": "2.0",
+			"method":  "eth_subscription",
+			"params": map[string]any{
+				"subscription": fmt.Sprintf("0x%x", sub.id),
+				"result":       out.Result,
+			},
+		}
+		_ = sub.conn.sendJSON(msg)
+	}
+}
+
 // ---- HTTP handler (single + batch) ----
 
 func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
+		if websocket.IsWebSocketUpgrade(r) {
+			s.handleWS(w, r)
+			return
+		}
+
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
