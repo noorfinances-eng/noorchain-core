@@ -37,6 +37,8 @@ export default function RoadmapSection() {
               <li>M12 — World State + RPC Parity Foundations</li>
               <li>M13 — Ethereum-compatible execution hardening (receipts/logs persistence, state-by-block reads)</li>
               <li>M14 — LogRec index + eth_getLogs (range-based, ordering stability, compat/perf gates)</li>
+              <li>M15 — JSON-RPC Filters (block + logs) + TTL/GC (leader-only proxy semantics)</li>
+              <li>M16 — WebSocket transport + eth_subscribe(newHeads) + eth_unsubscribe</li>
               <li>PHASE 7 — Proof-of-liveness (frozen)</li>        
             </ul>
           </div>
@@ -45,9 +47,7 @@ export default function RoadmapSection() {
           <div className="mb-6 p-5 border border-white/20 bg-white/10 backdrop-blur-md rounded-xl shadow-sm">
             <h2 className="text-xl font-semibold text-navy mb-2">🔧 In progress</h2>
             <ul className="list-disc pl-6 text-gray-700 space-y-2">
-              <li>M15 — JSON-RPC Filters (eth_newFilter / eth_getFilterChanges / eth_getFilterLogs / eth_uninstallFilter + block filter)</li>
-              <li>RPC compatibility hardening (wallet/dApp edge-cases, error model consistency)</li>
-              <li>Operational stability (restart invariants, leader/follower parity under load)</li>
+              <li>M17 — eth_subscribe(logs) via LogRec (leader-only)_</li>              
             </ul>
           </div>
 
@@ -55,11 +55,11 @@ export default function RoadmapSection() {
           <div className="p-5 border border-white/20 bg-white/10 backdrop-blur-md rounded-xl shadow-sm">
             <h2 className="text-xl font-semibold text-navy mb-2">⏳ Planned</h2>
             <ul className="list-disc pl-6 text-gray-700 space-y-2">
-              <li>Extended RPC coverage (subscriptions, additional wallet compatibility endpoints)</li>
-              <li>Public testnet opening (gated; staged rollout)</li>
+              <li>M18: WS follower proxy leader-only (FollowRPC autoritaire) — parité HTTP+WS</li>
+              <li>M19: WS hardening (limits/timeouts/backpressure/GC subs)</li>
+              <li>M20: compat viem/ethers WS + runbook + evidence pack (incl. Private Key Gate)</li>
+              <li>M21: “Mainnet-like Complete” freeze + RC (tous gates PASS, parité leader/follower HTTP+WS, restart invariants)</li>
               <li>dApps ecosystem expansion</li>
-              <li>Security review and audit readiness</li>
-              <li>Partnerships and integrations</li>
             </ul>
           </div>
 
