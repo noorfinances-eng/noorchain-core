@@ -11,9 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/triedb"
+	"github.com/gorilla/websocket"
 	"github.com/holiman/uint256"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"github.com/gorilla/websocket"
 	"io"
 	"log"
 	"math/big"
@@ -54,7 +54,6 @@ type Server struct {
 	wsMu   sync.Mutex
 	wsNext uint64
 	wsSubs map[uint64]*wsSub
-
 }
 
 func New(addr, chainID string, n *node.Node, db *leveldb.DB, l *log.Logger) *Server {
@@ -71,8 +70,8 @@ func New(addr, chainID string, n *node.Node, db *leveldb.DB, l *log.Logger) *Ser
 		filtersNext: 1,
 		filters:     make(map[uint64]*rpcFilter),
 
-			wsNext: 1,
-			wsSubs: make(map[uint64]*wsSub),
+		wsNext: 1,
+		wsSubs: make(map[uint64]*wsSub),
 	}
 	return s
 }
@@ -106,9 +105,11 @@ func (s *Server) Start(ctx context.Context) error {
 		}
 	}()
 
-		// M16: WS newHeads broadcaster
+	// M16: WS newHeads broadcaster
 	s.startWSNewHeads(ctx)
 
+	// M17: WS logs broadcaster (leader-only; uses logrec via eth_getLogs)
+	s.startWSLogs(ctx)
 	return nil
 }
 
@@ -222,7 +223,6 @@ func (s *Server) filtersGCLocked(now time.Time) {
 	}
 }
 
-
 // ---- WebSocket (M16) ----
 //
 // WS is served on the same addr/path as HTTP JSON-RPC (Upgrade on "/").
@@ -243,13 +243,15 @@ type wsSubKind uint8
 
 const (
 	wsSubNewHeads wsSubKind = iota
-	// M17: wsSubLogs reserved
+	wsSubLogs
 )
 
 type wsSub struct {
-	id   uint64
-	kind wsSubKind
-	conn *wsConn
+	id         uint64
+	kind       wsSubKind
+	conn       *wsConn
+	lastSeen   uint64
+	logsFilter map[string]any
 }
 
 var wsUpgrader = websocket.Upgrader{
@@ -344,7 +346,33 @@ func (s *Server) wsSubscribe(req *rpcReq, wc *wsConn) rpcResp {
 
 	typ, _ := params[0].(string)
 	typ = strings.TrimSpace(typ)
-	if typ != "newHeads" {
+
+	head := uint64(0)
+	if s.n != nil {
+		head = s.n.Height()
+	}
+
+	var kind wsSubKind
+	var logsFilter map[string]any
+
+	switch typ {
+	case "newHeads":
+		kind = wsSubNewHeads
+	case "logs":
+		kind = wsSubLogs
+		lf := map[string]any{}
+		if len(params) >= 2 && params[1] != nil {
+			m, ok := params[1].(map[string]any)
+			if !ok {
+				resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+				return resp
+			}
+			for k, v := range m {
+				lf[k] = v
+			}
+		}
+		logsFilter = lf
+	default:
 		resp.Error = &rpcError{Code: -32601, Message: "subscription type not supported"}
 		return resp
 	}
@@ -355,7 +383,12 @@ func (s *Server) wsSubscribe(req *rpcReq, wc *wsConn) rpcResp {
 	if s.wsSubs == nil {
 		s.wsSubs = make(map[uint64]*wsSub)
 	}
-	s.wsSubs[id] = &wsSub{id: id, kind: wsSubNewHeads, conn: wc}
+	sub := &wsSub{id: id, kind: kind, conn: wc, lastSeen: head, logsFilter: logsFilter}
+	if kind == wsSubNewHeads {
+		sub.lastSeen = 0
+		sub.logsFilter = nil
+	}
+	s.wsSubs[id] = sub
 	s.wsMu.Unlock()
 
 	resp.Result = fmt.Sprintf("0x%x", id)
@@ -468,13 +501,101 @@ func (s *Server) wsBroadcastNewHead(height uint64) {
 	}
 }
 
+func (s *Server) startWSLogs(ctx context.Context) {
+	if s.n == nil {
+		return
+	}
+	go func() {
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+
+		type snap struct {
+			id       uint64
+			conn     *wsConn
+			lastSeen uint64
+			filter   map[string]any
+		}
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				head := s.n.Height()
+
+				// Snapshot subs (avoid holding lock while calling dispatch / writing WS)
+				s.wsMu.Lock()
+				subs := make([]snap, 0, len(s.wsSubs))
+				for _, sub := range s.wsSubs {
+					if sub == nil || sub.kind != wsSubLogs || sub.conn == nil {
+						continue
+					}
+					lf := map[string]any{}
+					if sub.logsFilter != nil {
+						for k, v := range sub.logsFilter {
+							lf[k] = v
+						}
+					}
+					subs = append(subs, snap{id: sub.id, conn: sub.conn, lastSeen: sub.lastSeen, filter: lf})
+				}
+				s.wsMu.Unlock()
+
+				for _, sub := range subs {
+					if head <= sub.lastSeen {
+						continue
+					}
+					from := sub.lastSeen + 1
+
+					fo := make(map[string]any, len(sub.filter)+2)
+					for k, v := range sub.filter {
+						fo[k] = v
+					}
+					fo["fromBlock"] = toHexUint(from)
+					fo["toBlock"] = toHexUint(head)
+
+					pb, _ := json.Marshal([]any{fo})
+					subReq := rpcReq{JSONRPC: "2.0", ID: json.RawMessage("null"), Method: "eth_getLogs", Params: pb}
+					subResp := s.dispatch(&subReq)
+					if subResp.Error != nil || subResp.Result == nil {
+						// do not advance lastSeen on errors (avoid log loss)
+						continue
+					}
+
+					// One notification per log (mainnet-like)
+					arr, ok := subResp.Result.([]any)
+					if ok {
+						for _, it := range arr {
+							msg := map[string]any{
+								"jsonrpc": "2.0",
+								"method":  "eth_subscription",
+								"params": map[string]any{
+									"subscription": fmt.Sprintf("0x%x", sub.id),
+									"result":       it,
+								},
+							}
+							_ = sub.conn.sendJSON(msg)
+						}
+					}
+
+					// Advance lastSeen to head if subscription still exists (avoid racing unsubscribe)
+					s.wsMu.Lock()
+					if cur, ok := s.wsSubs[sub.id]; ok && cur != nil && cur.kind == wsSubLogs && cur.conn == sub.conn {
+						cur.lastSeen = head
+					}
+					s.wsMu.Unlock()
+				}
+			}
+		}
+	}()
+}
+
 // ---- HTTP handler (single + batch) ----
 
 func (s *Server) handleJSONRPC(w http.ResponseWriter, r *http.Request) {
-		if websocket.IsWebSocketUpgrade(r) {
-			s.handleWS(w, r)
-			return
-		}
+	if websocket.IsWebSocketUpgrade(r) {
+		s.handleWS(w, r)
+		return
+	}
 
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
