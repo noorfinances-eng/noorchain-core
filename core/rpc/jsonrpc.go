@@ -19,6 +19,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -132,7 +133,7 @@ type rpcReq struct {
 type rpcResp struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      json.RawMessage `json:"id"`
-	Result  any             `json:"result"`
+	Result  any             `json:"result,omitempty"`
 	Error   *rpcError       `json:"error,omitempty"`
 }
 
@@ -264,6 +265,15 @@ var wsUpgrader = websocket.Upgrader{
 }
 
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
+		// M18: follower WS proxy via FollowRPC (subscribe/unsubscribe + streaming parity).
+	if s.n != nil {
+		cfg := s.n.Config()
+		if strings.TrimSpace(cfg.FollowRPC) != "" {
+			s.handleWSProxy(w, r, cfg.FollowRPC)
+			return
+		}
+	}
+
 	c, err := wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		return
@@ -309,6 +319,84 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		_ = wc.sendJSON(resp)
 	}
 }
+
+
+func (s *Server) handleWSProxy(w http.ResponseWriter, r *http.Request, followRPC string) {
+	// Upgrade downstream (client -> follower)
+	down, err := wsUpgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+	defer func() { _ = down.Close() }()
+
+	upURL, err := wsUpstreamURLFromFollowRPC(followRPC, r.URL.Path, r.URL.RawQuery)
+	if err != nil {
+		return
+	}
+
+	// Dial upstream (follower -> leader)
+	up, _, err := websocket.DefaultDialer.Dial(upURL, nil)
+	if err != nil {
+		return
+	}
+	defer func() { _ = up.Close() }()
+
+	errc := make(chan error, 2)
+
+	// client -> leader
+	go func() {
+		for {
+			mt, msg, err := down.ReadMessage()
+			if err != nil {
+				errc <- err
+				return
+			}
+			if err := up.WriteMessage(mt, msg); err != nil {
+				errc <- err
+				return
+			}
+		}
+	}()
+
+	// leader -> client (notifications included)
+	go func() {
+		for {
+			mt, msg, err := up.ReadMessage()
+			if err != nil {
+				errc <- err
+				return
+			}
+			if err := down.WriteMessage(mt, msg); err != nil {
+				errc <- err
+				return
+			}
+		}
+	}()
+
+	<-errc
+}
+
+func wsUpstreamURLFromFollowRPC(followRPC, path, rawQuery string) (string, error) {
+	u, err := url.Parse(strings.TrimSpace(followRPC))
+	if err != nil {
+		return "", err
+	}
+	scheme := "ws"
+	if strings.EqualFold(u.Scheme, "https") {
+		scheme = "wss"
+	}
+	host := u.Host
+	if strings.TrimSpace(host) == "" {
+		return "", errors.New("empty follow-rpc host")
+	}
+	return (&url.URL{
+		Scheme:   scheme,
+		Host:     host,
+		Path:     path,
+		RawQuery: rawQuery,
+	}).String(), nil
+}
+
 
 func (s *Server) dispatchWS(req *rpcReq, wc *wsConn) rpcResp {
 	// Until M18: subscribe/unsubscribe are leader-only.
