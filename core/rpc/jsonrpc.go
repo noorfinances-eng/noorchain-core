@@ -234,10 +234,57 @@ type wsConn struct {
 	mu sync.Mutex
 }
 
+const (
+	wsMaxMessageBytes int64         = 1 << 20 // 1 MiB
+	wsWriteTimeout    time.Duration = 10 * time.Second
+	wsPongWait        time.Duration = 60 * time.Second
+	wsPingPeriod      time.Duration = 45 * time.Second
+	wsMaxSubsPerConn  int           = 128
+)
+
+func wsApplyHardening(c *websocket.Conn) {
+	c.SetReadLimit(wsMaxMessageBytes)
+	_ = c.SetReadDeadline(time.Now().Add(wsPongWait))
+	c.SetPongHandler(func(string) error {
+		_ = c.SetReadDeadline(time.Now().Add(wsPongWait))
+		return nil
+	})
+}
+
 func (wc *wsConn) sendJSON(v any) error {
 	wc.mu.Lock()
 	defer wc.mu.Unlock()
+	_ = wc.c.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
 	return wc.c.WriteJSON(v)
+}
+
+func (wc *wsConn) writeMessage(mt int, msg []byte) error {
+	wc.mu.Lock()
+	defer wc.mu.Unlock()
+	_ = wc.c.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+	return wc.c.WriteMessage(mt, msg)
+}
+
+func (wc *wsConn) sendPing() error {
+	wc.mu.Lock()
+	defer wc.mu.Unlock()
+	return wc.c.WriteControl(websocket.PingMessage, nil, time.Now().Add(wsWriteTimeout))
+}
+
+func wsPingLoop(wc *wsConn, stop <-chan struct{}) {
+	t := time.NewTicker(wsPingPeriod)
+	defer t.Stop()
+	for {
+		select {
+		case <-t.C:
+			if err := wc.sendPing(); err != nil {
+				_ = wc.c.Close()
+				return
+			}
+		case <-stop:
+			return
+		}
+	}
 }
 
 type wsSubKind uint8
@@ -265,7 +312,7 @@ var wsUpgrader = websocket.Upgrader{
 }
 
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
-		// M18: follower WS proxy via FollowRPC (subscribe/unsubscribe + streaming parity).
+	// M18: follower WS proxy via FollowRPC (subscribe/unsubscribe + streaming parity).
 	if s.n != nil {
 		cfg := s.n.Config()
 		if strings.TrimSpace(cfg.FollowRPC) != "" {
@@ -279,6 +326,10 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	wc := &wsConn{c: c}
+	wsApplyHardening(c)
+	stopPing := make(chan struct{})
+	go wsPingLoop(wc, stopPing)
+	defer close(stopPing)
 	defer func() {
 		_ = c.Close()
 		s.wsUnsubscribeAll(wc)
@@ -320,7 +371,6 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
 func (s *Server) handleWSProxy(w http.ResponseWriter, r *http.Request, followRPC string) {
 	// Upgrade downstream (client -> follower)
 	down, err := wsUpgrader.Upgrade(w, r, nil)
@@ -329,6 +379,11 @@ func (s *Server) handleWSProxy(w http.ResponseWriter, r *http.Request, followRPC
 	}
 	defer func() { _ = down.Close() }()
 
+	downWC := &wsConn{c: down}
+	wsApplyHardening(down)
+	stopDown := make(chan struct{})
+	go wsPingLoop(downWC, stopDown)
+	defer close(stopDown)
 	upURL, err := wsUpstreamURLFromFollowRPC(followRPC, r.URL.Path, r.URL.RawQuery)
 	if err != nil {
 		return
@@ -341,6 +396,11 @@ func (s *Server) handleWSProxy(w http.ResponseWriter, r *http.Request, followRPC
 	}
 	defer func() { _ = up.Close() }()
 
+	upWC := &wsConn{c: up}
+	wsApplyHardening(up)
+	stopUp := make(chan struct{})
+	go wsPingLoop(upWC, stopUp)
+	defer close(stopUp)
 	errc := make(chan error, 2)
 
 	// client -> leader
@@ -351,7 +411,7 @@ func (s *Server) handleWSProxy(w http.ResponseWriter, r *http.Request, followRPC
 				errc <- err
 				return
 			}
-			if err := up.WriteMessage(mt, msg); err != nil {
+			if err := upWC.writeMessage(mt, msg); err != nil {
 				errc <- err
 				return
 			}
@@ -366,7 +426,7 @@ func (s *Server) handleWSProxy(w http.ResponseWriter, r *http.Request, followRPC
 				errc <- err
 				return
 			}
-			if err := down.WriteMessage(mt, msg); err != nil {
+			if err := downWC.writeMessage(mt, msg); err != nil {
 				errc <- err
 				return
 			}
@@ -396,7 +456,6 @@ func wsUpstreamURLFromFollowRPC(followRPC, path, rawQuery string) (string, error
 		RawQuery: rawQuery,
 	}).String(), nil
 }
-
 
 func (s *Server) dispatchWS(req *rpcReq, wc *wsConn) rpcResp {
 	// Until M18: subscribe/unsubscribe are leader-only.
@@ -466,6 +525,18 @@ func (s *Server) wsSubscribe(req *rpcReq, wc *wsConn) rpcResp {
 	}
 
 	s.wsMu.Lock()
+	// M19: hard limit per-connection to avoid resource exhaustion.
+	cnt := 0
+	for _, existing := range s.wsSubs {
+		if existing != nil && existing.conn == wc {
+			cnt++
+		}
+	}
+	if cnt >= wsMaxSubsPerConn {
+		s.wsMu.Unlock()
+		resp.Error = &rpcError{Code: -32000, Message: "too many subscriptions"}
+		return resp
+	}
 	id := s.wsNext
 	s.wsNext++
 	if s.wsSubs == nil {
