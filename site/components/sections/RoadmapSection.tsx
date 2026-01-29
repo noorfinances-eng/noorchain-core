@@ -39,6 +39,11 @@ export default function RoadmapSection() {
               <li>M14 — LogRec index + eth_getLogs (range-based, ordering stability, compat/perf gates)</li>
               <li>M15 — JSON-RPC Filters (block + logs) + TTL/GC (leader-only proxy semantics)</li>
               <li>M16 — WebSocket transport + eth_subscribe(newHeads) + eth_unsubscribe</li>
+              <li>M17 — WebSocket eth_subscribe(logs) (LogRec-based; semantics aligned with eth_getLogs)</li>
+              <li>M18 — WebSocket follower proxy via FollowRPC (streaming parity leader/follower)</li>
+              <li>M19 — WebSocket hardening (global limits, bounded outbox, backpressure, subs GC)/li>
+              <li>M20 — WebSocket compatibility validated (viem + ethers)</li>
+              <li>M21 — Mainnet-like Complete (RC freeze: HTTP+WS parity + restart invariants; tag M21-MAINNETLIKE-COMPLETE-RC)</li>
               <li>PHASE 7 — Proof-of-liveness (frozen)</li>        
             </ul>
           </div>
@@ -47,7 +52,7 @@ export default function RoadmapSection() {
           <div className="mb-6 p-5 border border-white/20 bg-white/10 backdrop-blur-md rounded-xl shadow-sm">
             <h2 className="text-xl font-semibold text-navy mb-2">🔧 In progress</h2>
             <ul className="list-disc pl-6 text-gray-700 space-y-2">
-              <li>M17 — eth_subscribe(logs) via LogRec (leader-only)_</li>              
+              <li>M22 — Full EVM execution (no “proof writes”): real CALL/CREATE, gas/revert, state transitions, receipts/logs correctness, deploy/getCode/eth_call/storage gates</li>              
             </ul>
           </div>
 
@@ -55,10 +60,12 @@ export default function RoadmapSection() {
           <div className="p-5 border border-white/20 bg-white/10 backdrop-blur-md rounded-xl shadow-sm">
             <h2 className="text-xl font-semibold text-navy mb-2">⏳ Planned</h2>
             <ul className="list-disc pl-6 text-gray-700 space-y-2">
-              <li>M18: WS follower proxy leader-only (FollowRPC autoritaire) — parité HTTP+WS</li>
-              <li>M19: WS hardening (limits/timeouts/backpressure/GC subs)</li>
-              <li>M20: compat viem/ethers WS + runbook + evidence pack (incl. Private Key Gate)</li>
-              <li>M21: “Mainnet-like Complete” freeze + RC (tous gates PASS, parité leader/follower HTTP+WS, restart invariants)</li>
+              <li>M22: Full EVM execution (no “proof writes”) — deploy/getCode/eth_call/storage/logs gates</li>
+              <li>M23: Client-grade world state + real stateRoot commit per block (persist accounts/code/storage)</li>
+              <li>M24: Expanded RPC parity (wallet/explorer-grade behaviors; fewer shims)</li>
+              <li>M25: Txpool / pending realism (nonce/pending semantics, inclusion rules)</li>
+              <li>M26: Fee model decision (EIP-1559 or documented legacy) + compatibility surface</li>
+              <li>M27: Global hardening (RPC limits/timeouts, DoS surface, ops runbooks, backup/restore)</li>
               <li>dApps ecosystem expansion</li>
             </ul>
           </div>
