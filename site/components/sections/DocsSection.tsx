@@ -126,6 +126,31 @@ export default function DocsSection() {
             </ul>
           </section>
 
+          {/* PROTOCOL / RC NOTES */}
+          <section className="mb-8 p-6 border border-white/20 rounded-xl bg-white/10 backdrop-blur-md shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
+            <h2 className="text-2xl font-semibold text-navy mb-3">
+              Protocol — Release Candidate (RC)
+            </h2>
+
+            <p className="text-gray-700 leading-relaxed mb-3">
+              Internal verification notes and reproducible evidence for the current
+              RC baseline. These documents are not third-party security audits.
+            </p>
+
+            <ul className="list-disc pl-6 text-gray-700 leading-relaxed space-y-2">
+              <li>
+                <a
+                  href="/docs/M21_RC_VERIFICATION_NOTE_2.1.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  M21 RC Verification Note 2.1 (PDF)
+                </a>
+              </li>
+            </ul>
+          </section>
+
           {/* RESEARCH & POSITION PAPERS */}
           <section className="mb-8 p-6 border border-white/20 rounded-xl bg-white/10 backdrop-blur-md shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
             <h2 className="text-2xl font-semibold text-navy mb-3">
