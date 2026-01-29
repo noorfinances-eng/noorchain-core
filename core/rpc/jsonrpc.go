@@ -52,9 +52,10 @@ type Server struct {
 	filtersNext uint64
 	filters     map[uint64]*rpcFilter
 	// M16: WebSocket subscriptions (newHeads)
-	wsMu   sync.Mutex
-	wsNext uint64
-	wsSubs map[uint64]*wsSub
+	wsMu    sync.Mutex
+	wsNext  uint64
+	wsSubs  map[uint64]*wsSub
+	wsConns map[*wsConn]struct{}
 }
 
 func New(addr, chainID string, n *node.Node, db *leveldb.DB, l *log.Logger) *Server {
@@ -71,8 +72,9 @@ func New(addr, chainID string, n *node.Node, db *leveldb.DB, l *log.Logger) *Ser
 		filtersNext: 1,
 		filters:     make(map[uint64]*rpcFilter),
 
-		wsNext: 1,
-		wsSubs: make(map[uint64]*wsSub),
+		wsNext:  1,
+		wsSubs:  make(map[uint64]*wsSub),
+		wsConns: make(map[*wsConn]struct{}),
 	}
 	return s
 }
@@ -111,6 +113,8 @@ func (s *Server) Start(ctx context.Context) error {
 
 	// M17: WS logs broadcaster (leader-only; uses logrec via eth_getLogs)
 	s.startWSLogs(ctx)
+	// M19.2: WS GC + global caps
+	s.startWSGC(ctx)
 	return nil
 }
 
@@ -229,9 +233,21 @@ func (s *Server) filtersGCLocked(now time.Time) {
 // WS is served on the same addr/path as HTTP JSON-RPC (Upgrade on "/").
 // Until M18, WS subscribe/unsubscribe are leader-only (followers return error).
 
+type wsOutMsg struct {
+	mt   int
+	data []byte
+}
+
 type wsConn struct {
-	c  *websocket.Conn
+	c *websocket.Conn
+	// mu protects gorilla's single-writer requirement across WriteMessage/WriteControl.
 	mu sync.Mutex
+
+	// out is a bounded per-connection outbox to enforce backpressure.
+	out chan wsOutMsg
+
+	closed    chan struct{}
+	closeOnce sync.Once
 }
 
 const (
@@ -240,7 +256,60 @@ const (
 	wsPongWait        time.Duration = 60 * time.Second
 	wsPingPeriod      time.Duration = 45 * time.Second
 	wsMaxSubsPerConn  int           = 128
+
+	// M19.2: global limits + GC
+	wsMaxConnsGlobal int           = 256
+	wsMaxSubsGlobal  int           = 4096
+	wsGCPeriod       time.Duration = 5 * time.Second
+	// M19.2: bounded outbox (backpressure)
+	wsOutboxCap      int           = 256
+	wsEnqueueTimeout time.Duration = 2 * time.Second
 )
+
+func newWSConn(c *websocket.Conn) *wsConn {
+	return &wsConn{
+		c:      c,
+		out:    make(chan wsOutMsg, wsOutboxCap),
+		closed: make(chan struct{}),
+	}
+}
+
+func (wc *wsConn) isClosed() bool {
+	select {
+	case <-wc.closed:
+		return true
+	default:
+		return false
+	}
+}
+
+func (wc *wsConn) closeWith(code int, reason string) {
+	wc.closeOnce.Do(func() {
+		// Signal closure first (stops enqueue + lets writePump exit when possible).
+		close(wc.closed)
+
+		// Force any blocked writer to unblock quickly (best-effort).
+		if uc := wc.c.UnderlyingConn(); uc != nil {
+			_ = uc.SetWriteDeadline(time.Now())
+		}
+
+		// Best-effort close control frame.
+		wc.mu.Lock()
+		_ = wc.c.SetWriteDeadline(time.Now().Add(1 * time.Second))
+		_ = wc.c.WriteControl(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(code, reason),
+			time.Now().Add(1*time.Second),
+		)
+		wc.mu.Unlock()
+
+		_ = wc.c.Close()
+	})
+}
+
+func (wc *wsConn) close() {
+	wc.closeWith(websocket.CloseNormalClosure, "")
+}
 
 func wsApplyHardening(c *websocket.Conn) {
 	c.SetReadLimit(wsMaxMessageBytes)
@@ -251,18 +320,65 @@ func wsApplyHardening(c *websocket.Conn) {
 	})
 }
 
+func (wc *wsConn) enqueue(mt int, msg []byte) error {
+	select {
+	case <-wc.closed:
+		return websocket.ErrCloseSent
+	default:
+	}
+
+	if int64(len(msg)) > wsMaxMessageBytes {
+		wc.closeWith(websocket.CloseMessageTooBig, "message too big")
+		return websocket.ErrCloseSent
+	}
+
+	cp := make([]byte, len(msg))
+	copy(cp, msg)
+
+	// Backpressure: block up to wsEnqueueTimeout for space, then close.
+	t := time.NewTimer(wsEnqueueTimeout)
+	defer t.Stop()
+
+	select {
+	case wc.out <- wsOutMsg{mt: mt, data: cp}:
+		return nil
+	case <-wc.closed:
+		return websocket.ErrCloseSent
+	case <-t.C:
+		wc.closeWith(websocket.CloseTryAgainLater, "backpressure timeout")
+		return websocket.ErrCloseSent
+	}
+}
+
 func (wc *wsConn) sendJSON(v any) error {
-	wc.mu.Lock()
-	defer wc.mu.Unlock()
-	_ = wc.c.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
-	return wc.c.WriteJSON(v)
+	b, err := json.Marshal(v)
+	if err != nil {
+		wc.close()
+		return err
+	}
+	return wc.enqueue(websocket.TextMessage, b)
+}
+
+func (wc *wsConn) writePump() {
+	for {
+		select {
+		case <-wc.closed:
+			return
+		case m := <-wc.out:
+			wc.mu.Lock()
+			_ = wc.c.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+			err := wc.c.WriteMessage(m.mt, m.data)
+			wc.mu.Unlock()
+			if err != nil {
+				wc.close()
+				return
+			}
+		}
+	}
 }
 
 func (wc *wsConn) writeMessage(mt int, msg []byte) error {
-	wc.mu.Lock()
-	defer wc.mu.Unlock()
-	_ = wc.c.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
-	return wc.c.WriteMessage(mt, msg)
+	return wc.enqueue(mt, msg)
 }
 
 func (wc *wsConn) sendPing() error {
@@ -278,7 +394,7 @@ func wsPingLoop(wc *wsConn, stop <-chan struct{}) {
 		select {
 		case <-t.C:
 			if err := wc.sendPing(); err != nil {
-				_ = wc.c.Close()
+				wc.close()
 				return
 			}
 		case <-stop:
@@ -325,14 +441,20 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	wc := &wsConn{c: c}
+	wc := newWSConn(c)
 	wsApplyHardening(c)
+	go wc.writePump()
+	if !s.wsRegisterConn(wc) {
+		wc.closeWith(websocket.CloseTryAgainLater, "too many connections")
+		return
+	}
 	stopPing := make(chan struct{})
 	go wsPingLoop(wc, stopPing)
 	defer close(stopPing)
 	defer func() {
-		_ = c.Close()
+		wc.close()
 		s.wsUnsubscribeAll(wc)
+		s.wsUnregisterConn(wc)
 	}()
 
 	for {
@@ -377,10 +499,12 @@ func (s *Server) handleWSProxy(w http.ResponseWriter, r *http.Request, followRPC
 	if err != nil {
 		return
 	}
-	defer func() { _ = down.Close() }()
 
-	downWC := &wsConn{c: down}
+	downWC := newWSConn(down)
 	wsApplyHardening(down)
+	go downWC.writePump()
+	defer downWC.close()
+
 	stopDown := make(chan struct{})
 	go wsPingLoop(downWC, stopDown)
 	defer close(stopDown)
@@ -394,10 +518,12 @@ func (s *Server) handleWSProxy(w http.ResponseWriter, r *http.Request, followRPC
 	if err != nil {
 		return
 	}
-	defer func() { _ = up.Close() }()
 
-	upWC := &wsConn{c: up}
+	upWC := newWSConn(up)
 	wsApplyHardening(up)
+	go upWC.writePump()
+	defer upWC.close()
+
 	stopUp := make(chan struct{})
 	go wsPingLoop(upWC, stopUp)
 	defer close(stopUp)
@@ -537,6 +663,11 @@ func (s *Server) wsSubscribe(req *rpcReq, wc *wsConn) rpcResp {
 		resp.Error = &rpcError{Code: -32000, Message: "too many subscriptions"}
 		return resp
 	}
+	if wsMaxSubsGlobal > 0 && len(s.wsSubs) >= wsMaxSubsGlobal {
+		s.wsMu.Unlock()
+		resp.Error = &rpcError{Code: -32000, Message: "too many subscriptions (global)"}
+		return resp
+	}
 	id := s.wsNext
 	s.wsNext++
 	if s.wsSubs == nil {
@@ -600,6 +731,68 @@ func (s *Server) wsUnsubscribeAll(wc *wsConn) {
 			delete(s.wsSubs, id)
 		}
 	}
+}
+
+func (s *Server) wsRegisterConn(wc *wsConn) bool {
+	s.wsMu.Lock()
+	defer s.wsMu.Unlock()
+
+	if s.wsConns == nil {
+		s.wsConns = make(map[*wsConn]struct{})
+	}
+
+	// Opportunistic cleanup
+	for c := range s.wsConns {
+		if c == nil || c.isClosed() {
+			delete(s.wsConns, c)
+		}
+	}
+
+	if wsMaxConnsGlobal > 0 && len(s.wsConns) >= wsMaxConnsGlobal {
+		return false
+	}
+	s.wsConns[wc] = struct{}{}
+	return true
+}
+
+func (s *Server) wsUnregisterConn(wc *wsConn) {
+	s.wsMu.Lock()
+	defer s.wsMu.Unlock()
+	delete(s.wsConns, wc)
+	for id, sub := range s.wsSubs {
+		if sub != nil && sub.conn == wc {
+			delete(s.wsSubs, id)
+		}
+	}
+}
+
+func (s *Server) startWSGC(ctx context.Context) {
+	if s.n == nil {
+		return
+	}
+	go func() {
+		ticker := time.NewTicker(wsGCPeriod)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				s.wsMu.Lock()
+				for c := range s.wsConns {
+					if c == nil || c.isClosed() {
+						delete(s.wsConns, c)
+					}
+				}
+				for id, sub := range s.wsSubs {
+					if sub == nil || sub.conn == nil || sub.conn.isClosed() {
+						delete(s.wsSubs, id)
+					}
+				}
+				s.wsMu.Unlock()
+			}
+		}
+	}()
 }
 
 func (s *Server) startWSNewHeads(ctx context.Context) {
