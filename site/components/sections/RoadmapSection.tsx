@@ -41,7 +41,7 @@ export default function RoadmapSection() {
               <li>M16 — WebSocket transport + eth_subscribe(newHeads) + eth_unsubscribe</li>
               <li>M17 — WebSocket eth_subscribe(logs) (LogRec-based; semantics aligned with eth_getLogs)</li>
               <li>M18 — WebSocket follower proxy via FollowRPC (streaming parity leader/follower)</li>
-              <li>M19 — WebSocket hardening (global limits, bounded outbox, backpressure, subs GC)/li>
+              <li>M19 — WebSocket hardening (global limits, bounded outbox, backpressure, subs GC)</li>
               <li>M20 — WebSocket compatibility validated (viem + ethers)</li>
               <li>M21 — Mainnet-like Complete (RC freeze: HTTP+WS parity + restart invariants; tag M21-MAINNETLIKE-COMPLETE-RC)</li>
               <li>PHASE 7 — Proof-of-liveness (frozen)</li>        
