@@ -1712,6 +1712,27 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			saved[k] = v
 		}
 
+		// Normalize default fromBlock/toBlock for filter semantics.
+		// In eth_newFilter, "fromBlock":"latest" (or missing) means "start after current head".
+		if fb, ok := saved["fromBlock"].(string); ok {
+			tag := strings.ToLower(strings.TrimSpace(fb))
+			if tag == "" || tag == "latest" || tag == "pending" {
+				saved["fromBlock"] = toHexUint(head + 1)
+			} else if tag == "earliest" {
+				saved["fromBlock"] = "0x0"
+			}
+		} else if _, ok := saved["fromBlock"]; !ok {
+			saved["fromBlock"] = toHexUint(head + 1)
+		}
+		if tb, ok := saved["toBlock"].(string); ok {
+			tag := strings.ToLower(strings.TrimSpace(tb))
+			if tag == "" || tag == "pending" {
+				saved["toBlock"] = "latest"
+			}
+		} else if _, ok := saved["toBlock"]; !ok {
+			saved["toBlock"] = "latest"
+		}
+
 		s.filtersMu.Lock()
 		s.filtersGCLocked(time.Now())
 		id := s.filtersNext
