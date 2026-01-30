@@ -2169,7 +2169,7 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		}
 		hashStr := params[0]
 		if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
-			resp.Result = nil
+			resp.Result = json.RawMessage("null")
 			return resp
 
 		}
@@ -2212,7 +2212,11 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 					if err := json.Unmarshal(b2, &pr); err == nil {
 						if pr.Error == nil {
 							// could be null or object
-							resp.Result = pr.Result
+							if pr.Result == nil {
+								resp.Result = json.RawMessage("null")
+							} else {
+								resp.Result = pr.Result
+							}
 							return resp
 
 						}
@@ -2222,7 +2226,7 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		}
 		rcpt := s.evm.GetTransactionReceipt(common.HexToHash(hashStr))
 		if rcpt == nil {
-			resp.Result = nil
+			resp.Result = json.RawMessage("null")
 			return resp
 
 		}
@@ -2239,7 +2243,7 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 
 		hashStr := strings.TrimSpace(params[0])
 		if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
-			resp.Result = nil
+			resp.Result = json.RawMessage("null")
 			return resp
 		}
 		// M12.3: fast-path — read persisted raw tx (tx/v1/<hash>) and return real fields.
@@ -2325,7 +2329,7 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 
 		// Fallback: legacy dev mock store (pre-M8.A)
 		if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
-			resp.Result = nil
+			resp.Result = json.RawMessage("null")
 			return resp
 
 		}
@@ -2337,7 +2341,7 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		s.evm.mu.Unlock()
 
 		if tx == nil {
-			resp.Result = nil
+			resp.Result = json.RawMessage("null")
 			return resp
 
 		}
@@ -2493,7 +2497,7 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		}
 		// If asked height is above current, return null (Ethereum-compatible)
 		if s.n != nil && n > reqN {
-			resp.Result = nil
+			resp.Result = json.RawMessage("null")
 			return resp
 		}
 
@@ -2574,6 +2578,10 @@ func (s *Server) proxyToLeader(req *rpcReq) rpcResp {
 	var out rpcResp
 	if err := json.Unmarshal(b, &out); err != nil {
 		return rpcResp{JSONRPC: "2.0", ID: req.ID, Error: &rpcError{Code: -32603, Message: "invalid leader response"}}
+	}
+	// Preserve JSON-RPC shape: some clients require an explicit result:null field
+	if out.Error == nil && out.Result == nil {
+		out.Result = json.RawMessage("null")
 	}
 	return out
 }
