@@ -56,6 +56,12 @@ type Server struct {
 	wsNext  uint64
 	wsSubs  map[uint64]*wsSub
 	wsConns map[*wsConn]struct{}
+
+	// M24: pending/txpool realism (best-effort, in-memory; leader-only)
+	pendingMu       sync.Mutex
+	pendingMaxNonce map[common.Address]uint64
+	pendingSeen     map[common.Address]time.Time
+
 }
 
 func New(addr, chainID string, n *node.Node, db *leveldb.DB, l *log.Logger) *Server {
@@ -177,7 +183,7 @@ type rpcFilter struct {
 const (
 	// M15: filter lifetime / resource guardrails.
 	// TTL is evaluated opportunistically on filter API calls.
-	rpcFilterTTL = 60 * time.Second
+	rpcFilterTTL = 10 * time.Minute
 
 	// Hard cap to prevent unbounded growth.
 	rpcFilterMax = 1024
@@ -226,6 +232,64 @@ func (s *Server) filtersGCLocked(now time.Time) {
 			}
 		}
 	}
+}
+
+// ---- Pending pool (M24) ----
+//
+// Goal: make eth_getTransactionCount(...,"pending") behave sanely for tooling.
+// Best-effort only: record locally-seen pending tx nonces and expire them by TTL.
+// Leader-only by routing; followers proxy via FollowRPC.
+
+const pendingTTL = 2 * time.Minute
+const pendingMaxAddrs = 2048
+
+func (s *Server) pendingRecord(from common.Address, nonce uint64) {
+    s.pendingMu.Lock()
+    defer s.pendingMu.Unlock()
+
+    if s.pendingMaxNonce == nil {
+        s.pendingMaxNonce = make(map[common.Address]uint64)
+    }
+    if s.pendingSeen == nil {
+        s.pendingSeen = make(map[common.Address]time.Time)
+    }
+
+    if cur, ok := s.pendingMaxNonce[from]; !ok || nonce > cur {
+        s.pendingMaxNonce[from] = nonce
+    }
+    s.pendingSeen[from] = time.Now()
+
+    // hard cap: if abused, reset (best-effort safety)
+    if len(s.pendingSeen) > pendingMaxAddrs {
+        s.pendingMaxNonce = make(map[common.Address]uint64)
+        s.pendingSeen = make(map[common.Address]time.Time)
+    }
+}
+
+func (s *Server) pendingNextNonce(addr common.Address, committed uint64) uint64 {
+    s.pendingMu.Lock()
+    defer s.pendingMu.Unlock()
+
+    now := time.Now()
+    if s.pendingSeen != nil {
+        for a, t := range s.pendingSeen {
+            if now.Sub(t) > pendingTTL {
+                delete(s.pendingSeen, a)
+                if s.pendingMaxNonce != nil {
+                    delete(s.pendingMaxNonce, a)
+                }
+            }
+        }
+    }
+
+    if s.pendingMaxNonce == nil {
+        return committed
+    }
+    if max, ok := s.pendingMaxNonce[addr]; ok && max >= committed {
+        return max + 1
+    }
+    return committed
+    return committed
 }
 
 // ---- WebSocket (M16) ----
@@ -1023,6 +1087,8 @@ var ethRouting = map[string]routeClass{
 	"eth_getStorageAt":          routeLeaderOnly,
 	"eth_call":                  routeLeaderOnly,
 	"eth_getBlockByNumber":      routeLeaderOnly,
+	"eth_getBlockTransactionCountByNumber": routeLeaderOnly,
+	"eth_getBlockTransactionCountByHash":   routeLeaderOnly,
 	"eth_getLogs":               routeLeaderOnly,
 
 	// M15: filters — leader-only (follower proxies to leader to keep filter state consistent).
@@ -1186,6 +1252,22 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		} else if s.evm != nil {
 			// Fallback to legacy mock
 			nonce = s.evm.GetTransactionCount(addr)
+		}
+
+		// M24: pending semantics — include locally-seen pending nonces (best-effort)
+
+		if len(params) >= 2 {
+
+		    if tag, ok := params[1].(string); ok {
+
+		        if strings.EqualFold(strings.TrimSpace(tag), "pending") {
+
+		            nonce = s.pendingNextNonce(addr, nonce)
+
+		        }
+
+		    }
+
 		}
 
 		resp.Result = toHexUint(nonce)
@@ -2017,6 +2099,7 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		if len(paramsAny) >= 2 {
 			if tag, ok := paramsAny[1].(string); ok {
 				t := strings.TrimSpace(strings.ToLower(tag))
+
 				switch t {
 				case "latest", "pending":
 					callN = reqN
@@ -2142,6 +2225,22 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 
 		h := crypto.Keccak256Hash(rawBytes)
 
+
+		// M24: record locally-seen pending tx nonce (for eth_getTransactionCount pending)
+
+		{
+
+		    chainBig := new(big.Int).SetUint64(evmChainID)
+
+		    signer := types.LatestSignerForChainID(chainBig)
+
+		    if from, err := types.Sender(signer, &tx); err == nil {
+
+		        s.pendingRecord(from, tx.Nonce())
+
+		    }
+
+		}
 		// Persist raw tx for eth_getTransactionByHash (wallet+tooling compatibility)
 		if s.evm != nil && s.evm.db != nil {
 			k := "tx/v1/" + strings.ToLower(strings.TrimPrefix(h.Hex(), "0x"))
@@ -2405,6 +2504,265 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		}
 		return resp
 
+
+	case "eth_getBlockTransactionCountByNumber":
+
+		// params: [ blockNumberOrTag ]
+
+		reqN := uint64(0)
+
+		if s.n != nil {
+
+			reqN = s.n.Height()
+
+		}
+
+		n := reqN
+
+
+		var params []any
+
+		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
+
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+
+			return resp
+
+		}
+
+		tag, ok := params[0].(string)
+
+		if !ok {
+
+			resp.Error = &rpcError{Code: -32602, Message: "invalid block tag"}
+
+			return resp
+
+		}
+
+		t := strings.TrimSpace(strings.ToLower(tag))
+
+		isPending := false
+
+		switch t {
+
+		case "latest":
+                                          n = reqN
+                                  case "pending":
+                                          n = reqN + 1
+                                          isPending = true
+
+		case "earliest":
+
+			n = 0
+
+		default:
+
+			if strings.HasPrefix(t, "0x") {
+
+				tt := strings.TrimPrefix(t, "0x")
+
+				if tt == "" {
+
+					resp.Error = &rpcError{Code: -32602, Message: "invalid block number"}
+
+					return resp
+
+				}
+
+				v, err := strconv.ParseUint(tt, 16, 64)
+
+				if err != nil {
+
+					resp.Error = &rpcError{Code: -32602, Message: "invalid block number"}
+
+					return resp
+
+				}
+
+				n = v
+
+			} else {
+
+				v, err := strconv.ParseUint(t, 10, 64)
+
+				if err != nil {
+
+					resp.Error = &rpcError{Code: -32602, Message: "invalid block number"}
+
+					return resp
+
+				}
+
+				n = v
+
+			}
+
+		}
+
+
+		if !isPending && s.n != nil && n > reqN {
+
+			resp.Result = json.RawMessage("null")
+
+			return resp
+
+		}
+
+
+		// noorcore currently mines 0/1 tx per block; infer via transactionsRoot in blkmeta.
+
+		const emptyTxTrieRoot = "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
+
+		txCount := uint64(0)
+
+		if s.n != nil && s.n.DB() != nil {
+
+			key := []byte("blkmeta/v1/" + strings.TrimPrefix(toHexUint(n), "0x"))
+
+			if b, err := s.n.DB().Get(key, nil); err == nil && len(b) > 0 {
+
+				var bm struct {
+
+					TransactionsRoot string `json:"transactionsRoot"`
+
+				}
+
+				if err := json.Unmarshal(b, &bm); err == nil {
+
+					if strings.HasPrefix(bm.TransactionsRoot, "0x") && len(bm.TransactionsRoot) == 66 && !strings.EqualFold(bm.TransactionsRoot, emptyTxTrieRoot) {
+
+						txCount = 1
+
+					}
+
+				}
+
+			}
+
+		}
+
+
+		resp.Result = toHexUint(txCount)
+
+		return resp
+
+
+	case "eth_getBlockTransactionCountByHash":
+
+		// params: [ "0x...blockHash..." ]
+
+		var params []string
+
+		if err := json.Unmarshal(req.Params, &params); err != nil || len(params) < 1 {
+
+			resp.Error = &rpcError{Code: -32602, Message: "invalid params"}
+
+			return resp
+
+		}
+
+		hashStr := strings.TrimSpace(params[0])
+
+		if !strings.HasPrefix(hashStr, "0x") || len(hashStr) != 66 {
+
+			resp.Result = json.RawMessage("null")
+
+			return resp
+
+		}
+
+		if s.n == nil {
+
+			resp.Result = json.RawMessage("null")
+
+			return resp
+
+		}
+
+
+		head := s.n.Height()
+
+
+		// Reverse pseudoBlockHash within a bounded window (tooling compatibility).
+
+		found := false
+
+		n := uint64(0)
+
+		start := uint64(0)
+
+		if head > 8192 {
+
+			start = head - 8192
+
+		}
+
+		for i := head; ; i-- {
+
+			if strings.EqualFold(pseudoBlockHash(i).Hex(), hashStr) {
+
+				n = i
+
+				found = true
+
+				break
+
+			}
+
+			if i == start {
+
+				break
+
+			}
+
+		}
+
+		if !found {
+
+			resp.Result = json.RawMessage("null")
+
+			return resp
+
+		}
+
+
+		const emptyTxTrieRoot2 = "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
+
+		txCount := uint64(0)
+
+		if s.n.DB() != nil {
+
+			key := []byte("blkmeta/v1/" + strings.TrimPrefix(toHexUint(n), "0x"))
+
+			if b, err := s.n.DB().Get(key, nil); err == nil && len(b) > 0 {
+
+				var bm struct {
+
+					TransactionsRoot string `json:"transactionsRoot"`
+
+				}
+
+				if err := json.Unmarshal(b, &bm); err == nil {
+
+					if strings.HasPrefix(bm.TransactionsRoot, "0x") && len(bm.TransactionsRoot) == 66 && !strings.EqualFold(bm.TransactionsRoot, emptyTxTrieRoot2) {
+
+						txCount = 1
+
+					}
+
+				}
+
+			}
+
+		}
+
+
+		resp.Result = toHexUint(txCount)
+
+		return resp
+
+
 	case "eth_getBlockByHash":
 		// Minimal: ignore hash input, return latest block (dev-compatible)
 		resp.Result = nil
@@ -2470,6 +2828,7 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		}
 		// default: latest
 		n := reqN
+		isPending := false
 		var params []any
 		if err := json.Unmarshal(req.Params, &params); err == nil && len(params) >= 1 {
 			if tag, ok := params[0].(string); ok {
@@ -2535,6 +2894,12 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 					}
 				}
 			}
+		}
+
+		if isPending {
+
+		    timestamp = toHexUint(uint64(time.Now().Unix()))
+
 		}
 
 		resp.Result = blockResp{
@@ -2672,6 +3037,8 @@ func assertRoutingTableStatic() {
 		"eth_getTransactionReceipt": {},
 		"eth_getTransactionByHash":  {},
 		"eth_getBlockByNumber":      {},
+		"eth_getBlockTransactionCountByNumber": {},
+		"eth_getBlockTransactionCountByHash":   {},
 		"eth_getLogs":               {},
 
 		// M15: filters
