@@ -2428,7 +2428,7 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 				"size":             "0x0",
 				"gasLimit":         "0x1c9c380",
 				"gasUsed":          "0x0",
-				"timestamp":        toHexUint(uint64(time.Now().Unix())),
+				"timestamp":        toHexUint(0),
 				"mixHash":          "0x" + strings.Repeat("0", 64),
 				"baseFeePerGas":    "0x1",
 				"transactions":     []any{},
@@ -2504,16 +2504,26 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 		// M12: if persisted block metadata exists, expose real roots/bloom
 		logsBloom := "0x" + strings.Repeat("0", 512)
 		stateRoot := "0x" + strings.Repeat("0", 64)
+                  txRoot := "0x" + strings.Repeat("0", 64)
 		receiptsRoot := "0x" + strings.Repeat("0", 64)
+                  timestamp := toHexUint(0)
 		if s.n != nil && s.n.DB() != nil {
 			key := []byte("blkmeta/v1/" + strings.TrimPrefix(toHexUint(n), "0x"))
 			if b, err := s.n.DB().Get(key, nil); err == nil {
 				var bm struct {
+					Timestamp    uint64 `json:"timestamp"`
+					TransactionsRoot string `json:"transactionsRoot"`
 					LogsBloomHex string `json:"logsBloom"`
 					StateRoot    string `json:"stateRoot"`
 					ReceiptsRoot string `json:"receiptsRoot"`
 				}
 				if err := json.Unmarshal(b, &bm); err == nil {
+                                          if bm.Timestamp != 0 {
+                                                  timestamp = toHexUint(bm.Timestamp)
+                                          }
+                                          if strings.HasPrefix(bm.TransactionsRoot, "0x") && len(bm.TransactionsRoot) == 66 {
+                                                  txRoot = bm.TransactionsRoot
+                                          }
 					if strings.HasPrefix(bm.LogsBloomHex, "0x") && len(bm.LogsBloomHex) == 514 {
 						logsBloom = bm.LogsBloomHex
 					}
@@ -2534,7 +2544,7 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			Nonce:            "0x0000000000000000",
 			Sha3Uncles:       "0x" + strings.Repeat("0", 64),
 			LogsBloom:        logsBloom,
-			TransactionsRoot: "0x" + strings.Repeat("0", 64),
+			TransactionsRoot: txRoot,
 			StateRoot:        stateRoot,
 			ReceiptsRoot:     receiptsRoot,
 			Miner:            "0x" + strings.Repeat("0", 40),
@@ -2544,7 +2554,7 @@ func (s *Server) dispatch(req *rpcReq) rpcResp {
 			Size:             "0x0",
 			GasLimit:         "0x1c9c380", // 30,000,000
 			GasUsed:          "0x0",
-			Timestamp:        toHexUint(uint64(time.Now().Unix())),
+			Timestamp:        timestamp,
 			MixHash:          "0x" + strings.Repeat("0", 64),
 			BaseFeePerGas:    "0x1",
 			Transactions:     []any{},

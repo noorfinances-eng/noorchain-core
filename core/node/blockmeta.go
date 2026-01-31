@@ -16,8 +16,10 @@ const blkMetaPrefix = "blkmeta/v1/"
 
 type blockMeta struct {
 	Height       uint64      `json:"height"`
+	Timestamp    uint64      `json:"timestamp"` // unix seconds
 	BlockHash    common.Hash `json:"blockHash"`
 	StateRoot    common.Hash `json:"stateRoot"`
+	TransactionsRoot common.Hash `json:"transactionsRoot"`
 	ReceiptsRoot common.Hash `json:"receiptsRoot"`
 	LogsBloomHex string      `json:"logsBloom"` // 0x + 512 hex chars (256 bytes)
 }

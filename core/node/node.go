@@ -755,9 +755,10 @@ func (n *Node) loop() {
 			// M8.A minimal inclusion: mark some pending txs as mined at this height
 			mined := 0
 			receipts := types.Receipts{}
+			txs := []txpool.Tx{}
 			blockLogBase := uint64(0)
 			if n.txpool != nil && n.txindex != nil {
-				txs := n.txpool.PopPending(64)
+                                  txs = n.txpool.PopPending(64)
 				for i := range txs {
 					n.txindex.Put(txs[i].Hash, height)
 					// M9: hook point (execution will be extended in next steps)
@@ -774,6 +775,21 @@ func (n *Node) loop() {
 				bloom := types.CreateBloom(receipts)
 				receiptsRoot := types.DeriveSha(receipts, trie.NewStackTrie(nil))
 
+                                  txsGeth := types.Transactions{}
+
+                                  for i := range txs {
+
+                                  	tx := new(types.Transaction)
+
+                                  	if err := tx.UnmarshalBinary(txs[i].Raw); err == nil {
+
+                                  		txsGeth = append(txsGeth, tx)
+
+                                  	}
+
+                                  }
+
+                                  txRoot := types.DeriveSha(txsGeth, trie.NewStackTrie(nil))
 				// M12.2: compute stateRoot from geth StateDB + triedb (persisted), fallback to placeholder
 				stateRoot := pseudoBlockHash(height)
 				if statedb != nil {
@@ -800,9 +816,11 @@ func (n *Node) loop() {
 
 				bm := blockMeta{
 					Height:       height,
+					Timestamp:    uint64(time.Now().Unix()),
 					BlockHash:    pseudoBlockHash(height),
 					StateRoot:    stateRoot,
 					ReceiptsRoot: receiptsRoot,
+					TransactionsRoot: txRoot,
 					LogsBloomHex: "0x" + hex.EncodeToString(bloom[:]),
 				}
 				if b, err := encodeBlockMeta(bm); err == nil {
